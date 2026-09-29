@@ -2,7 +2,7 @@ import type {APIPromise} from "../core/api-promise";
 import {readDialogueAudio, readSpeechAudio, type DialogueAudio, type SpeechAudio} from "../core/audio";
 import {checkMilliseconds, sleep, type HttpClient, type IdempotentRequestOptions, type RequestOptions} from "../core/http";
 import {readEnvelope, type WithRequestId} from "../core/parse";
-import {WaitTimeoutError} from "../errors";
+import {APIConnectionError, APIError, RateLimitError, WaitTimeoutError} from "../errors";
 import type {SynthesizeDialogueRequest, SynthesizeSpeechRequest, TtsJob} from "../types/tts";
 
 /** What the audio calls accept: the WAV, or an error in the API's JSON envelope. */
@@ -11,15 +11,28 @@ const AUDIO = "audio/wav, application/json";
 /** The statuses a job never leaves. */
 const FINAL = new Set(["succeeded", "failed"]);
 
+/** The statuses of a poll failure that don't end the wait: the same ones the safe retry class would retry. */
+const PASSING_STATUS = new Set([429, 500, 502, 503, 504]);
+
+/**
+ * Whether a poll failure lets the wait continue rather than end it at once: a
+ * connection failure (a timeout included), or a status in PASSING_STATUS.
+ */
+function isPassing(error: unknown): boolean {
+    return error instanceof APIConnectionError || (error instanceof APIError && PASSING_STATUS.has(error.status));
+}
+
 /** The options of `tts.jobs.createAndWait`: a call's options, with `timeout` bounding the whole wait. */
 export interface WaitOptions extends Omit<IdempotentRequestOptions, "timeout"> {
     /** Milliseconds between polls: 2000 by default. */
     pollInterval?: number;
     /**
      * Milliseconds to wait for the job to finish, counted from when it is
-     * created: 600000 (10 minutes) by default. When it runs out, the call
-     * rejects with WaitTimeoutError, which carries the job as last seen. Each
-     * request keeps the client's own timeout.
+     * created: 600000 (10 minutes) by default. A poll that fails with a
+     * connection error, a timeout, or a 429, 500, 502, 503 or 504 doesn't end
+     * the wait: it is tried again at the next interval. When timeout runs
+     * out, the call rejects with WaitTimeoutError, which carries the job as
+     * last seen. Each request keeps the client's own timeout.
      */
     timeout?: number;
 }
@@ -50,10 +63,14 @@ export class TtsJobs {
     /**
      * Creates a job, then polls it every `pollInterval` until it has
      * `succeeded` or `failed`, and resolves with it in either state: check
-     * `status`, then fetch a succeeded job's WAV with `audio(job.id)`. When
-     * `timeout` runs out first, it rejects with WaitTimeoutError, which
-     * carries the job as last seen, and a poll still in flight is abandoned.
-     * The caller's `signal` stops the wait at any point.
+     * `status`, then fetch a succeeded job's WAV with `audio(job.id)`. A poll
+     * that fails with a connection error, a timeout, or a 429, 500, 502, 503
+     * or 504 doesn't end the wait: it is tried again at the next interval,
+     * honouring a 429's Retry-After. Any other error, such as a 401, 403 or
+     * 404, rejects the wait at once. When `timeout` runs out first, it
+     * rejects with WaitTimeoutError, which carries the job as last seen, and
+     * a poll still in flight is abandoned. The caller's `signal` stops the
+     * wait at any point.
      */
     async createAndWait(params: SynthesizeSpeechRequest, options: WaitOptions = {}): Promise<WithRequestId<TtsJob>> {
         const {pollInterval = 2000, timeout = 600_000, signal, idempotencyKey, ...requestOptions} = options;
@@ -61,13 +78,22 @@ export class TtsJobs {
         checkMilliseconds("timeout", timeout);
         let job = await this.create(params, {...requestOptions, idempotencyKey, signal});
         const deadline = Date.now() + timeout;
+        let wait = pollInterval;
         while (!FINAL.has(job.status)) {
             const left = deadline - Date.now();
             if (left <= 0) throw new WaitTimeoutError(job);
-            await sleep(Math.min(pollInterval, left), signal);
+            await sleep(Math.min(wait, left), signal);
             signal?.throwIfAborted();
             if (Date.now() >= deadline) throw new WaitTimeoutError(job);
-            job = await this.#poll(job, deadline, requestOptions, signal);
+            try {
+                job = await this.#poll(job, deadline, requestOptions, signal);
+                wait = pollInterval;
+            } catch (error) {
+                // The caller's own abort always wins, whatever the poll's error looks like.
+                signal?.throwIfAborted();
+                if (!isPassing(error)) throw error;
+                wait = error instanceof RateLimitError && error.retry_after !== null ? Math.max(pollInterval, error.retry_after * 1000) : pollInterval;
+            }
         }
         return job;
     }

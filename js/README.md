@@ -121,6 +121,8 @@ try {
 - `timeout` counts from when the job is created: 10 minutes by default. A poll still in flight when it runs out is abandoned.
 - `tts.jobs.create` and `tts.jobs.retrieve` let you poll on your own terms.
 - **Download a job's audio promptly.** The server keeps it for 24 hours after the job finishes; after that, `tts.jobs.audio` rejects with `GoneError`, code `audio_expired`.
+- A poll that fails on a connection error, a timeout, a 429 or a 500, 502, 503 or 504 is tried again at the next interval until the deadline. Any other error rejects the wait at once.
+- Pass your own `idempotencyKey`. If the wait rejects, calling `createAndWait` again with the same key and parameters picks up the same job instead of queuing and billing a second one: a known key answers 200 with the job it created, whatever its state, and is released 24 hours after the job finishes.
 
 ## Uploads
 

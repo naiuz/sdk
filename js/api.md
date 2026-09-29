@@ -58,7 +58,7 @@ Each method takes an options object last: `RequestOptions` (`timeout`, `maxRetri
 
 ### `tts.jobs.createAndWait(params: SynthesizeSpeechRequest, options?: WaitOptions): Promise<WithRequestId<TtsJob>>`
 
-Creates a job, polls it until it has `succeeded` or `failed`, and resolves with it. Rejects with `WaitTimeoutError`, carrying the job as last seen, when the wait runs out.
+Creates a job, polls it until it has `succeeded` or `failed`, and resolves with it. Rejects with `WaitTimeoutError`, carrying the job as last seen, when the wait runs out. A poll that fails with a connection error, a timeout, or a 429, 500, 502, 503 or 504 is retried at the next interval until the deadline; any other error rejects at once. Pass your own `idempotencyKey` to pick up the same job if the wait rejects, instead of queuing and billing a second one.
 
 | Option | Type | |
 |---|---|---|

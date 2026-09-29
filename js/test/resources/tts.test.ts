@@ -1,10 +1,11 @@
+import {getEventListeners} from "node:events";
 import {afterEach, describe, expect, expectTypeOf, it, vi} from "vitest";
 import {DialogueAudio, SpeechAudio} from "../../src/core/audio";
 import {HttpClient} from "../../src/core/http";
-import {GoneError, InsufficientQuotaError, NeuronAIError, WaitTimeoutError} from "../../src/errors";
+import {AuthenticationError, GoneError, InsufficientQuotaError, NeuronAIError, WaitTimeoutError} from "../../src/errors";
 import type {TtsJob, TtsJobStatus} from "../../src/types/tts";
 import {testClient} from "../helpers/client";
-import {apiError, envelope, hang, mockFetch} from "../helpers/mock-fetch";
+import {apiError, envelope, hang, mockFetch, refused} from "../helpers/mock-fetch";
 
 const job = (status: TtsJob["status"]): TtsJob => ({
     id: "job-1",
@@ -228,6 +229,62 @@ describe("tts.jobs.createAndWait", () => {
         await expect(jobs.createAndWait({text: "Salom"}, {pollInterval: 0})).rejects.toThrow("pollInterval must be a number of milliseconds from 1 to 2147483647.");
         await expect(jobs.createAndWait({text: "Salom"}, {timeout: Number.NaN})).rejects.toThrow("timeout must be a number of milliseconds from 1 to 2147483647.");
         expect(requests).toHaveLength(0);
+    });
+
+    it("keeps polling through a burst of passing failures, then resolves once the job succeeds", async () => {
+        vi.useFakeTimers();
+        const controller = new AbortController();
+        const {fetch, requests} = mockFetch(queued(), apiError(502, "bad_gateway"), refused(), apiError(429, "rate_limited", {"retry-after": "5"}), polled("succeeded"));
+        const wait = testClient(fetch).tts.jobs.createAndWait({text: "Salom"}, {signal: controller.signal});
+        await vi.advanceTimersByTimeAsync(2000);
+        expect(requests).toHaveLength(2);
+        await vi.advanceTimersByTimeAsync(2000);
+        expect(requests).toHaveLength(3);
+        await vi.advanceTimersByTimeAsync(2000);
+        expect(requests).toHaveLength(4);
+        // The 429's Retry-After is 5 s: the next poll must not arrive at the plain 2 s pollInterval.
+        await vi.advanceTimersByTimeAsync(2000);
+        expect(requests).toHaveLength(4);
+        await vi.advanceTimersByTimeAsync(3000);
+        expect(requests).toHaveLength(5);
+        const done = await wait;
+        expect(done.status).toBe("succeeded");
+        expect(vi.getTimerCount()).toBe(0);
+        expect(getEventListeners(controller.signal, "abort")).toHaveLength(0);
+    });
+
+    it("ends the wait at once on an error it can't outlast, such as a 401", async () => {
+        vi.useFakeTimers();
+        const {fetch, requests} = mockFetch(queued(), apiError(401, "invalid_api_key"));
+        const caught = testClient(fetch).tts.jobs.createAndWait({text: "Salom"}).catch((error: unknown) => error);
+        await vi.advanceTimersByTimeAsync(2000);
+        const error = await caught;
+        expect(error).toBeInstanceOf(AuthenticationError);
+        expect(requests).toHaveLength(2);
+    });
+
+    it("ends the wait with WaitTimeoutError when passing failures run past the deadline", async () => {
+        vi.useFakeTimers();
+        const {fetch, requests} = mockFetch(queued(), apiError(503, "unavailable"), apiError(503, "unavailable"));
+        const caught = testClient(fetch).tts.jobs.createAndWait({text: "Salom"}, {timeout: 5000}).catch((error: unknown) => error);
+        await vi.advanceTimersByTimeAsync(5000);
+        const error = await caught;
+        expect(error).toBeInstanceOf(WaitTimeoutError);
+        expect((error as WaitTimeoutError).job).toMatchObject({status: "queued", id: "job-1"});
+        expect(requests).toHaveLength(3);
+    });
+
+    it("rejects with the caller's reason when they abort while a poll is failing", async () => {
+        vi.useFakeTimers();
+        const reason = new Error("The caller gave up.");
+        const controller = new AbortController();
+        const {fetch, requests} = mockFetch(queued(), apiError(502, "bad_gateway"), hang);
+        const waiting = testClient(fetch).tts.jobs.createAndWait({text: "Salom"}, {signal: controller.signal}).catch((error: unknown) => error);
+        await vi.advanceTimersByTimeAsync(4000);
+        expect(requests).toHaveLength(3);
+        controller.abort(reason);
+        await expect(waiting).resolves.toBe(reason);
+        expect(requests).toHaveLength(3);
     });
 });
 
