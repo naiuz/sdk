@@ -16,12 +16,12 @@ The schema is `fixture.schema.json`.
 
 - **`call`:** what the caller passes.
   - `path_params`: path parameters.
-  - `params`: the request's fields or query parameters, under the API's own snake_case names.
+  - `params`: the request's fields or query parameters, under the API's own snake_case names. A query parameter the caller leaves out is not sent, and fixtures never pass `null` for one.
   - `files`: uploads, each `{filename, content_type, base64}`.
   - `options.idempotency_key`: for the five idempotent operations.
 - **`request`:** what must go over the wire.
   - `method`.
-  - `path`, relative to the base URL `…/api/v1`, with path parameters percent-encoded.
+  - `path`, relative to the base URL `…/api/v1`, with path parameters percent-encoded: every character outside RFC 3986's unreserved set (`A–Z a–z 0–9 - . _ ~`) becomes UTF-8 `%XX`.
   - `query`: values as strings.
   - `headers`: lower-case names. The SDK must send at least these, with these values. For a multipart body, `content-type` must start with the value given.
   - `body`: `null`, `{json}`, or `{multipart: {fields, files}}`. Array fields such as `tags` are sent as repeated `tags[]` parts.

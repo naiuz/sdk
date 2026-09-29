@@ -36,6 +36,15 @@ function closeObjectSchemas(node) {
     for (const value of Object.values(node)) closeObjectSchemas(value);
 }
 
+/**
+ * A path parameter value, percent-encoded per RFC 3986: every character
+ * outside the unreserved set (A-Z a-z 0-9 - . _ ~) becomes UTF-8 %XX.
+ * encodeURIComponent alone leaves !'()* unencoded, which RFC 3986 reserves.
+ */
+function encodePathParameter(value) {
+    return encodeURIComponent(value).replaceAll("!", "%21").replaceAll("'", "%27").replaceAll("(", "%28").replaceAll(")", "%29").replaceAll("*", "%2A");
+}
+
 /** A query value as the server reads it: numbers for numeric schemas and enums, booleans for booleans. */
 function coerceQueryValue(text, schema) {
     const types = [schema?.type].flat().filter(Boolean);
@@ -77,7 +86,7 @@ export function createValidator({document, operations, fixtureSchema}) {
         const declared = parametersOf(document, entry).filter((parameter) => parameter.in === "path").map((parameter) => parameter.name);
         for (const name of declared) if (!Object.hasOwn(given, name)) problems.push(`call.path_params lacks ${name}`);
         for (const name of Object.keys(given)) if (!declared.includes(name)) problems.push(`call.path_params.${name} is not a path parameter of ${fixture.operationId}`);
-        const expected = template.replace(/\{([^}]+)\}/g, (whole, name) => (Object.hasOwn(given, name) ? encodeURIComponent(given[name]) : whole));
+        const expected = template.replace(/\{([^}]+)\}/g, (whole, name) => (Object.hasOwn(given, name) ? encodePathParameter(given[name]) : whole));
         if (fixture.request.path !== expected) problems.push(`request.path is ${fixture.request.path}; the call sends ${expected}`);
         return problems;
     }
@@ -112,7 +121,9 @@ export function createValidator({document, operations, fixtureSchema}) {
             problems.push(...against(schema.pointer, coerceQueryValue(text, schema.value), `request.query.${name}`));
         }
         if (!entry.operation.requestBody) {
-            const sent = Object.fromEntries(Object.entries(fixture.call.params ?? {}).map(([name, value]) => [name, String(value)]));
+            const params = fixture.call.params ?? {};
+            for (const [name, value] of Object.entries(params)) if (value === null) problems.push(`call.params.${name} is null: leave a query parameter out rather than passing null`);
+            const sent = Object.fromEntries(Object.entries(params).map(([name, value]) => [name, String(value)]));
             if (!sameJson(sent, query)) problems.push("request.query must equal call.params, each value as a string: the SDK sends the caller's query as it is");
         } else if (Object.keys(query).length > 0) {
             problems.push(`${fixture.operationId} takes its parameters in the body, not the query`);

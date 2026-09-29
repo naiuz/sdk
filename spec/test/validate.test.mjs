@@ -276,3 +276,13 @@ test("26. a success status the operation doesn't declare fails even when it decl
     // createChatCompletion declares "default" (added above); 201 is not one of its declared statuses.
     expectProblem(edit(stream(), (f) => { f.response.status = 201; }), /status 201 is not declared for createChatCompletion/);
 });
+
+test("27. a path parameter is encoded per RFC 3986, not just encodeURIComponent", () => {
+    // encodeURIComponent leaves ! unencoded; RFC 3986 reserves it, so it must become %21.
+    expectProblem(edit(remove(), (f) => { f.call.path_params = {id: "a!b"}; f.request.path = "/tts/voices/a!b"; }), /request\.path is \/tts\/voices\/a!b; the call sends \/tts\/voices\/a%21b/);
+    assert.deepEqual(validate(edit(remove(), (f) => { f.call.path_params = {id: "a!b"}; f.request.path = "/tts/voices/a%21b"; })), [], "the RFC-3986-encoded path holds");
+});
+
+test("28. a null query value fails, with a message to leave the parameter out", () => {
+    expectProblem(edit(list(), (f) => { f.call.params = {limit: null}; f.request.query = {}; }), /call\.params\.limit is null: leave a query parameter out rather than passing null/);
+});
