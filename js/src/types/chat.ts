@@ -27,9 +27,15 @@ export interface CreateChatCompletionRequest {
      * including a string of only whitespace such as `\n`.
      */
     stop?: string | string[] | null;
-    /** Streaming is not supported by this version of the SDK yet: `true` makes `create()` reject. */
+    /** `true` streams the answer as it is generated: `create()` then resolves to a Stream of ChatCompletionChunk, not a ChatCompletion. */
     stream?: boolean | null;
 }
+
+/** A chat completion request that streams the answer. */
+export type CreateChatCompletionRequestStreaming = CreateChatCompletionRequest & {stream: true};
+
+/** A chat completion request that doesn't stream the answer. */
+export type CreateChatCompletionRequestNonStreaming = CreateChatCompletionRequest & {stream?: false | null};
 
 /** The assistant's message. */
 export interface ChatCompletionMessage {
@@ -70,4 +76,46 @@ export interface ChatCompletion {
     choices: ChatCompletionChoice[];
     /** The tokens billed. */
     usage: ChatCompletionUsage;
+}
+
+/** The piece of the assistant's message a chunk carries. */
+export interface ChatCompletionChunkDelta {
+    /** `assistant`, on the stream's first chunk only. */
+    role?: "assistant" | (string & {});
+    /** The next piece of the answer's text. */
+    content?: string;
+}
+
+/** A chunk's choice: the next piece of the assistant's message. */
+export interface ChatCompletionChunkChoice {
+    /** The choice's position, from 0. */
+    index: number;
+    /** The next piece of the message: the role on the first chunk, then the text piece by piece. The chunk that ends the answer may leave it empty. */
+    delta: ChatCompletionChunkDelta;
+    /** `null` until the chunk that ends the answer, which names why it stopped, such as `stop`. */
+    finish_reason: string | null;
+}
+
+/**
+ * One event of a streamed chat completion (`stream: true`). The API document
+ * describes these chunks in prose, not as a schema, so this type follows
+ * that prose and the contract fixture: first a chunk whose delta holds the
+ * role, then one for each piece of the answer, the last of them naming the
+ * finish reason, and then, when the model reports its token counts, a chunk
+ * with no choices and `usage`. Every chunk repeats the same `id`, `created`
+ * and `model`.
+ */
+export interface ChatCompletionChunk {
+    /** The completion's id, the same on every chunk. */
+    id: string;
+    /** Always `chat.completion.chunk`. */
+    object: "chat.completion.chunk" | (string & {});
+    /** When the completion was created, in Unix seconds. */
+    created: number;
+    /** The model's id. */
+    model: string;
+    /** One choice holding the next piece of the message; empty on the final usage chunk. */
+    choices: ChatCompletionChunkChoice[];
+    /** The tokens billed: on the last chunk only, and only when the model reports its token counts. */
+    usage?: ChatCompletionUsage;
 }

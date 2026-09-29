@@ -3,14 +3,13 @@ import {NeuronAI} from "../../src/client";
 import {SpeechAudio} from "../../src/core/audio";
 import {Page} from "../../src/core/pagination";
 import {makeAPIError} from "../../src/errors";
-import {comparable, DEFERRED_FIXTURES, DEFERRED_METHODS, expectRequest, FIXTURE_KEY, listFixtures, loadFixture, OPERATIONS, projectError, projectResult, replay, resolveMethod} from "./harness";
+import {comparable, expectRequest, FIXTURE_KEY, listFixtures, loadFixture, OPERATIONS, projectError, projectResult, replay, resolveMethod} from "./harness";
 
 const fixtures = listFixtures();
-const replayable = fixtures.filter((file) => !DEFERRED_FIXTURES.includes(file));
 const tsPaths = [...Object.values(OPERATIONS.operations), ...Object.values(OPERATIONS.helpers)].map((entry) => entry.ts);
 
-describe("every replayable fixture", () => {
-    it.each(replayable)("%s sends its request and returns its result", async (file) => {
+describe("every fixture", () => {
+    it.each(fixtures)("%s sends its request and returns its result", async (file) => {
         const fixture = loadFixture(file);
         const {request, result} = await replay(fixture);
         await expectRequest(request, fixture.request);
@@ -18,7 +17,7 @@ describe("every replayable fixture", () => {
     });
 });
 
-describe("every error fixture, deferred ones included", () => {
+describe("every error fixture", () => {
     const errors = fixtures.filter((file) => loadFixture(file).response.status >= 400);
 
     it.each(errors)("%s maps its answer to its error", (file) => {
@@ -29,37 +28,16 @@ describe("every error fixture, deferred ones included", () => {
     });
 });
 
-describe("what waits for a later version", () => {
-    it("names only real fixtures and methods", () => {
-        console.info(
-            [
-                `Deferred: ${String(DEFERRED_FIXTURES.length)} fixtures and ${String(DEFERRED_METHODS.length)} methods.`,
-                ...DEFERRED_FIXTURES.map((file) => `  fixture ${file}`),
-                ...DEFERRED_METHODS.map((method) => `  method ${method}`),
-            ].join("\n"),
-        );
-        for (const file of DEFERRED_FIXTURES) expect(fixtures, file).toContain(file);
-        for (const method of DEFERRED_METHODS) expect(tsPaths, method).toContain(method);
-    });
-
-    it.each(DEFERRED_FIXTURES)("%s can't replay yet", async (file) => {
-        await expect(replay(loadFixture(file))).rejects.toThrow(/is not on the client|streaming arrives in a later version/);
-    });
-});
-
 describe("coverage", () => {
     const client = new NeuronAI({apiKey: FIXTURE_KEY});
 
-    it.each(tsPaths)("client.%s exists, unless it is deferred", (tsPath) => {
-        if (DEFERRED_METHODS.includes(tsPath)) expect(resolveMethod(client, tsPath), `client.${tsPath} exists now: take it off DEFERRED_METHODS`).toBeUndefined();
-        else expect(resolveMethod(client, tsPath)).toBeTypeOf("function");
+    it.each(tsPaths)("client.%s exists", (tsPath) => {
+        expect(resolveMethod(client, tsPath)).toBeTypeOf("function");
     });
 
-    it("replays a fixture for every operation whose method exists", () => {
-        const replayed = new Set(replayable.map((file) => file.split("/")[0]));
-        for (const [operationId, {ts}] of Object.entries(OPERATIONS.operations)) {
-            if (!DEFERRED_METHODS.includes(ts)) expect(replayed, operationId).toContain(operationId);
-        }
+    it("replays a fixture for every operation", () => {
+        const replayed = new Set(fixtures.map((file) => file.split("/")[0]));
+        for (const operationId of Object.keys(OPERATIONS.operations)) expect(replayed, operationId).toContain(operationId);
     });
 });
 

@@ -3,6 +3,7 @@ import {expect} from "vitest";
 import {NeuronAI} from "../../src/client";
 import {DialogueAudio, SpeechAudio} from "../../src/core/audio";
 import {Page} from "../../src/core/pagination";
+import {Stream} from "../../src/core/streaming";
 import {APIError, RateLimitError} from "../../src/errors";
 import {mockFetch, type SentRequest} from "../helpers/mock-fetch";
 import {readSpec, SPEC_DIR} from "../helpers/spec";
@@ -56,19 +57,6 @@ const DOCUMENT = readSpec("openapi.json") as {paths: Record<string, Record<strin
 
 /** The key every fixture's client is built with. */
 export const FIXTURE_KEY = "nai_test_fixture_key";
-
-/**
- * Fixtures this version of the SDK can't replay yet: speech audio, multipart
- * uploads and chat streaming come in a later version. When one starts to
- * replay, a test fails until it leaves this list.
- */
-export const DEFERRED_FIXTURES: readonly string[] = ["createChatCompletion/streamed.json"];
-
-/**
- * Methods from spec/operations.json that the client doesn't have yet. When
- * one appears, a test fails until it leaves this list.
- */
-export const DEFERRED_METHODS: readonly string[] = [];
 
 const COMPATIBLE_OPERATIONS = new Set(["createChatCompletion", "listModels", "createEmbedding", "rerank"]);
 const PAGE_OPERATIONS = new Set(["listVoices", "listApiKeys"]);
@@ -189,6 +177,14 @@ function projectAudio(operationId: string, audio: SpeechAudio): unknown {
     return {...fields, turns: audio.turns, turn_count: audio.turn_count};
 }
 
+/** A stream in the README's `{chunks}` shape: every chunk before `[DONE]`, as the stream yields it. */
+async function projectStream(value: unknown): Promise<unknown> {
+    if (!(value instanceof Stream)) throw new Error("A call with stream: true should return a Stream, but didn't.");
+    const chunks: unknown[] = [];
+    for await (const chunk of value as Stream<unknown>) chunks.push(chunk);
+    return {chunks};
+}
+
 /** A thrown APIError in the README's `{error: {...}}` shape. Anything else is thrown on, since no fixture expects it. */
 export function projectError(error: unknown): unknown {
     if (!(error instanceof APIError)) throw error;
@@ -226,7 +222,8 @@ export function comparable(value: unknown): unknown {
  * Replays a fixture as the README says: a client with the fixture key, the
  * default base URL and no retries, whose fetch answers the call's one request
  * with the fixture's response. Resolves to the request sent and the
- * projected result; rejects when the client has no method for the operation.
+ * projected result; a call with `stream: true` is read to its end. Rejects
+ * when the client has no method for the operation.
  */
 export async function replay(fixture: Fixture): Promise<{request: SentRequest | undefined; result: unknown}> {
     const {fetch, requests} = mockFetch(() => responseFor(fixture));
@@ -236,7 +233,8 @@ export async function replay(fixture: Fixture): Promise<{request: SentRequest | 
     if (method === undefined) throw new Error(`client.${ts} is not on the client`);
     let result: unknown;
     try {
-        result = projectResult(fixture.operationId, await method(...argumentsFor(fixture)));
+        const value = await method(...argumentsFor(fixture));
+        result = fixture.call.params?.stream === true ? await projectStream(value) : projectResult(fixture.operationId, value);
     } catch (error) {
         result = projectError(error);
     }
