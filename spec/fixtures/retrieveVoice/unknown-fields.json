@@ -1,0 +1,66 @@
+{
+  "description": "A voice answered with fields the API document doesn't declare yet: the SDK doesn't fail on them.",
+  "operationId": "retrieveVoice",
+  "call": {
+    "path_params": {
+      "id": "uz-malika"
+    }
+  },
+  "request": {
+    "method": "GET",
+    "path": "/tts/voices/uz-malika",
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json",
+      "x-request-id": "00000000-0000-4000-8000-000000000031"
+    },
+    "body": {
+      "json": {
+        "data": {
+          "id": "uz-malika",
+          "name": "Malika",
+          "language": "uz",
+          "tags": [
+            "warm",
+            "female"
+          ],
+          "type": "stock",
+          "category": "conversational",
+          "ref_text": null,
+          "created_at": null,
+          "gender": "female"
+        },
+        "meta": {
+          "deprecated": false
+        },
+        "request_id": "00000000-0000-4000-8000-000000000031"
+      }
+    }
+  },
+  "unknown_fields": [
+    "/data/gender",
+    "/meta"
+  ],
+  "result": {
+    "data": {
+      "id": "uz-malika",
+      "name": "Malika",
+      "language": "uz",
+      "tags": [
+        "warm",
+        "female"
+      ],
+      "type": "stock",
+      "category": "conversational",
+      "ref_text": null,
+      "created_at": null
+    },
+    "request_id": "00000000-0000-4000-8000-000000000031"
+  }
+}

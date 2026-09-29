@@ -1,0 +1,48 @@
+{
+  "description": "An id with characters outside RFC 3986's unreserved set is percent-encoded as UTF-8; this one names no voice.",
+  "operationId": "retrieveVoice",
+  "call": {
+    "path_params": {
+      "id": "O'zbek ovozi (№2)!*"
+    }
+  },
+  "request": {
+    "method": "GET",
+    "path": "/tts/voices/O%27zbek%20ovozi%20%28%E2%84%962%29%21%2A",
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 404,
+    "headers": {
+      "content-type": "application/json",
+      "x-request-id": "00000000-0000-4000-8000-000000000033"
+    },
+    "body": {
+      "json": {
+        "error": {
+          "type": "invalid_request_error",
+          "code": "not_found",
+          "message": "Voice not found.",
+          "param": null
+        },
+        "request_id": "00000000-0000-4000-8000-000000000033"
+      }
+    }
+  },
+  "result": {
+    "error": {
+      "class": "NotFoundError",
+      "status": 404,
+      "type": "invalid_request_error",
+      "code": "not_found",
+      "message": "Voice not found.",
+      "param": null,
+      "fields": null,
+      "request_id": "00000000-0000-4000-8000-000000000033",
+      "retry_after": null
+    }
+  }
+}

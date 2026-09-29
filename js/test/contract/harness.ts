@@ -2,6 +2,7 @@ import {readdirSync} from "node:fs";
 import {expect} from "vitest";
 import {NeuronAI} from "../../src/client";
 import {DialogueAudio, SpeechAudio} from "../../src/core/audio";
+import {isRecord} from "../../src/core/json";
 import {Page} from "../../src/core/pagination";
 import {Stream} from "../../src/core/streaming";
 import {APIError, RateLimitError} from "../../src/errors";
@@ -37,6 +38,8 @@ export interface Fixture {
         headers: Record<string, string>;
         body: null | {json: unknown} | {base64: string} | {sse: string[]};
     };
+    /** JSON Pointers to fields of the response body that the API document doesn't declare: the result leaves them out. */
+    unknown_fields?: string[];
     result: unknown;
 }
 
@@ -177,16 +180,24 @@ function projectAudio(operationId: string, audio: SpeechAudio): unknown {
     return {...fields, turns: audio.turns, turn_count: audio.turn_count};
 }
 
-/** A stream in the README's `{chunks}` shape: every chunk before `[DONE]`, as the stream yields it. */
+/**
+ * A stream in the README's shape: `{chunks}`, every chunk before `[DONE]` as
+ * the stream yields it, and, when the stream fails part-way, `error` beside
+ * the chunks that came before it.
+ */
 async function projectStream(value: unknown): Promise<unknown> {
     if (!(value instanceof Stream)) throw new Error("A call with stream: true should return a Stream, but didn't.");
     const chunks: unknown[] = [];
-    for await (const chunk of value as Stream<unknown>) chunks.push(chunk);
+    try {
+        for await (const chunk of value as Stream<unknown>) chunks.push(chunk);
+    } catch (error) {
+        return {chunks, ...projectError(error)};
+    }
     return {chunks};
 }
 
 /** A thrown APIError in the README's `{error: {...}}` shape. Anything else is thrown on, since no fixture expects it. */
-export function projectError(error: unknown): unknown {
+export function projectError(error: unknown): {error: Record<string, unknown>} {
     if (!(error instanceof APIError)) throw error;
     return {
         error: {
@@ -201,6 +212,26 @@ export function projectError(error: unknown): unknown {
             retry_after: error instanceof RateLimitError ? error.retry_after : null,
         },
     };
+}
+
+/**
+ * The result without the fields the fixture's `unknown_fields` names: an SDK
+ * may keep a field it doesn't know or drop it, so the README leaves them out
+ * of the comparison.
+ */
+export function withoutUnknownFields(result: unknown, fixture: Fixture): unknown {
+    const copy = structuredClone(result);
+    for (const pointer of fixture.unknown_fields ?? []) {
+        const segments = pointer
+            .slice(1)
+            .split("/")
+            .map((segment) => segment.replaceAll("~1", "/").replaceAll("~0", "~"));
+        const name = segments.pop() ?? "";
+        let parent: unknown = copy;
+        for (const segment of segments) parent = isRecord(parent) ? parent[segment] : undefined;
+        if (isRecord(parent)) Reflect.deleteProperty(parent, name);
+    }
+    return copy;
 }
 
 /**
@@ -220,12 +251,12 @@ export function comparable(value: unknown): unknown {
 
 /**
  * Replays a fixture as the README says: a client with the fixture key, the
- * default base URL and no retries, whose fetch answers the call's one request
- * with the fixture's response. Resolves to the request sent and the
+ * default base URL and no retries, whose fetch answers the call's request
+ * with the fixture's response. Resolves to every request sent and the
  * projected result; a call with `stream: true` is read to its end. Rejects
  * when the client has no method for the operation.
  */
-export async function replay(fixture: Fixture): Promise<{request: SentRequest | undefined; result: unknown}> {
+export async function replay(fixture: Fixture): Promise<{requests: SentRequest[]; result: unknown}> {
     const {fetch, requests} = mockFetch(() => responseFor(fixture));
     const client = new NeuronAI({apiKey: FIXTURE_KEY, maxRetries: 0, fetch});
     const {ts} = operation(fixture.operationId);
@@ -238,7 +269,7 @@ export async function replay(fixture: Fixture): Promise<{request: SentRequest | 
     } catch (error) {
         result = projectError(error);
     }
-    return {request: requests[0], result};
+    return {requests, result};
 }
 
 /**
@@ -266,17 +297,20 @@ async function multipartOf(form: FormData | null): Promise<{fields: Record<strin
 }
 
 /**
- * Asserts the SDK sent the fixture's request: method, path, query, every
- * fixture header with its value, and the body. A multipart body's
- * content-type only has to start with the fixture's, since fetch adds the
- * boundary after it.
+ * Asserts the SDK sent exactly one request, and that it is the fixture's:
+ * method, path, query (every key once), every fixture header with its value,
+ * and the body. A multipart body's content-type only has to start with the
+ * fixture's, since fetch adds the boundary after it.
  */
-export async function expectRequest(sent: SentRequest | undefined, expected: Fixture["request"]): Promise<void> {
+export async function expectRequest(requests: readonly SentRequest[], expected: Fixture["request"]): Promise<void> {
+    expect(requests, "the call sends exactly one request").toHaveLength(1);
+    const [sent] = requests;
     if (sent === undefined) throw new Error("The call sent no request.");
     const multipart = expected.body !== null && "multipart" in expected.body;
     expect(sent.method).toBe(expected.method);
     expect(`${sent.url.origin}${sent.url.pathname}`).toBe(`https://my.neuronai.uz/api/v1${expected.path}`);
-    expect(Object.fromEntries(sent.url.searchParams)).toEqual(expected.query ?? {});
+    // Every pair, sorted, so a key sent twice can't pass for one sent once.
+    expect([...sent.url.searchParams].sort()).toEqual(Object.entries(expected.query ?? {}).sort());
     for (const [name, value] of Object.entries(expected.headers)) {
         const actual = sent.headers.get(name);
         if (multipart && name === "content-type") expect(actual?.startsWith(value), `${name}: ${String(actual)}`).toBe(true);

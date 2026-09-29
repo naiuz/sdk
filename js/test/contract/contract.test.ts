@@ -3,7 +3,8 @@ import {NeuronAI} from "../../src/client";
 import {SpeechAudio} from "../../src/core/audio";
 import {Page} from "../../src/core/pagination";
 import {makeAPIError} from "../../src/errors";
-import {comparable, expectRequest, FIXTURE_KEY, listFixtures, loadFixture, OPERATIONS, projectError, projectResult, replay, resolveMethod} from "./harness";
+import type {SentRequest} from "../helpers/mock-fetch";
+import {comparable, expectRequest, FIXTURE_KEY, listFixtures, loadFixture, OPERATIONS, projectError, projectResult, replay, resolveMethod, withoutUnknownFields} from "./harness";
 
 const fixtures = listFixtures();
 const tsPaths = [...Object.values(OPERATIONS.operations), ...Object.values(OPERATIONS.helpers)].map((entry) => entry.ts);
@@ -11,9 +12,9 @@ const tsPaths = [...Object.values(OPERATIONS.operations), ...Object.values(OPERA
 describe("every fixture", () => {
     it.each(fixtures)("%s sends its request and returns its result", async (file) => {
         const fixture = loadFixture(file);
-        const {request, result} = await replay(fixture);
-        await expectRequest(request, fixture.request);
-        expect(comparable(result)).toEqual(comparable(fixture.result));
+        const {requests, result} = await replay(fixture);
+        await expectRequest(requests, fixture.request);
+        expect(comparable(withoutUnknownFields(result, fixture))).toEqual(comparable(fixture.result));
     });
 });
 
@@ -38,6 +39,21 @@ describe("coverage", () => {
     it("replays a fixture for every operation", () => {
         const replayed = new Set(fixtures.map((file) => file.split("/")[0]));
         for (const operationId of Object.keys(OPERATIONS.operations)) expect(replayed, operationId).toContain(operationId);
+    });
+});
+
+describe("expectRequest", () => {
+    const sent = (url: string): SentRequest => ({url: new URL(url), method: "GET", headers: new Headers({authorization: `Bearer ${FIXTURE_KEY}`}), body: null, form: null, signal: null});
+    const expected = {method: "GET", path: "/tts/voices", query: {limit: "3"}, headers: {authorization: `Bearer ${FIXTURE_KEY}`}, body: null};
+
+    it("fails when the call sends a query key twice", async () => {
+        await expect(expectRequest([sent("https://my.neuronai.uz/api/v1/tts/voices?limit=2&limit=3")], expected)).rejects.toThrow();
+        await expect(expectRequest([sent("https://my.neuronai.uz/api/v1/tts/voices?limit=3")], expected)).resolves.toBeUndefined();
+    });
+
+    it("fails when the call sends more than one request", async () => {
+        const once = sent("https://my.neuronai.uz/api/v1/tts/voices?limit=3");
+        await expect(expectRequest([once, once], expected)).rejects.toThrow(/exactly one request/);
     });
 });
 

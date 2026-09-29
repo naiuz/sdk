@@ -73,6 +73,13 @@
         }
       }
     },
+    "unknown_fields": {
+      "description": "JSON Pointers into response.body.json, each naming a field the API document doesn't declare. The validator skips them; result leaves them out.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^(/[^/]+)+$"}
+    },
     "result": {}
   },
   "$defs": {

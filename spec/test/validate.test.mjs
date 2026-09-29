@@ -286,3 +286,19 @@ test("27. a path parameter is encoded per RFC 3986, not just encodeURIComponent"
 test("28. a null query value fails, with a message to leave the parameter out", () => {
     expectProblem(edit(list(), (f) => { f.call.params = {limit: null}; f.request.query = {}; }), /call\.params\.limit is null: leave a query parameter out rather than passing null/);
 });
+
+test("29. a field the document doesn't declare holds when unknown_fields names it, as a field the API adds later would", () => {
+    const later = (f) => { f.response.body.json.meta = {deprecated: false}; };
+    expectProblem(edit(list(), later), /response\.body\.json must NOT have unevaluated properties/);
+    assert.deepEqual(validate(edit(list(), (f) => { later(f); f.unknown_fields = ["/meta"]; })), []);
+});
+
+test("30. unknown_fields names only fields the body has and the document doesn't declare, as JSON Pointers", () => {
+    expectProblem(edit(list(), (f) => { f.unknown_fields = ["/meta"]; }), /unknown_fields names \/meta, which is not a field of response\.body\.json/);
+    expectProblem(edit(list(), (f) => { f.unknown_fields = ["/request_id"]; }), /unknown_fields names \/request_id, but the API document declares it/);
+    expectProblem(edit(list(), (f) => { f.unknown_fields = ["meta"]; }), /unknown_fields\/0 must match pattern/);
+});
+
+test("31. unknown_fields on a response without a JSON body fails", () => {
+    expectProblem(edit(remove(), (f) => { f.unknown_fields = ["/data"]; }), /unknown_fields applies only to a JSON response body/);
+});

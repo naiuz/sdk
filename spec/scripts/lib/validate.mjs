@@ -18,6 +18,33 @@ function sameJson(a, b) {
     return JSON.stringify(canonical(a)) === JSON.stringify(canonical(b));
 }
 
+/** A JSON Pointer's segments, unescaped: `~1` is `/` and `~0` is `~`. */
+function segmentsOf(pointer) {
+    return pointer.slice(1).split("/").map((segment) => segment.replaceAll("~1", "/").replaceAll("~0", "~"));
+}
+
+/** Whether `pointer` names a member of an object inside `value`. */
+function namesMember(value, pointer) {
+    const segments = segmentsOf(pointer);
+    const name = segments.pop();
+    let parent = value;
+    for (const segment of segments) parent = parent !== null && typeof parent === "object" ? parent[segment] : undefined;
+    return parent !== null && typeof parent === "object" && !Array.isArray(parent) && Object.hasOwn(parent, name);
+}
+
+/** A copy of `value` without the members `pointers` name. */
+function withoutMembers(value, pointers) {
+    const copy = structuredClone(value);
+    for (const pointer of pointers) {
+        const segments = segmentsOf(pointer);
+        const name = segments.pop();
+        let parent = copy;
+        for (const segment of segments) parent = parent?.[segment];
+        if (parent !== null && typeof parent === "object") delete parent[name];
+    }
+    return copy;
+}
+
 /**
  * Closes every object schema in place: a schema object that declares
  * `properties` but neither `additionalProperties` nor `unevaluatedProperties`
@@ -175,6 +202,8 @@ export function createValidator({document, operations, fixtureSchema}) {
         const declaredHeaders = new Set(Object.keys(response.value.headers ?? {}).map((name) => name.toLowerCase()));
         for (const name of Object.keys(headers)) if (name !== "content-type" && !declaredHeaders.has(name)) problems.push(`response header ${name} is not declared for status ${key}`);
         if (declaredHeaders.has("x-request-id") && !headers["x-request-id"]) problems.push("response.headers lacks x-request-id");
+        const unknown = fixture.unknown_fields ?? [];
+        if (unknown.length > 0 && (body === null || !Object.hasOwn(body, "json"))) problems.push("unknown_fields applies only to a JSON response body");
 
         if (body === null) {
             if (Object.keys(content).length > 0) problems.push(`status ${key} carries a body (${Object.keys(content).join(", ")})`);
@@ -184,7 +213,13 @@ export function createValidator({document, operations, fixtureSchema}) {
         if (Object.hasOwn(body, "json")) {
             if (!content["application/json"]) return [...problems, `status ${key} has no JSON body`];
             if (contentType !== "application/json") problems.push("response.headers.content-type must be application/json");
-            problems.push(...against(`${response.pointer}/content/application~1json/schema`, body.json, "response.body.json"));
+            const schema = `${response.pointer}/content/application~1json/schema`;
+            for (const pointer of unknown) {
+                if (!namesMember(body.json, pointer)) problems.push(`unknown_fields names ${pointer}, which is not a field of response.body.json`);
+                // Truly unknown: with only the other unknown fields left out, the body must still fail against the document.
+                else if (against(schema, withoutMembers(body.json, unknown.filter((other) => other !== pointer)), "").length === 0) problems.push(`unknown_fields names ${pointer}, but the API document declares it: take it off unknown_fields`);
+            }
+            problems.push(...against(schema, withoutMembers(body.json, unknown), "response.body.json"));
             if (typeof body.json?.request_id === "string" && headers["x-request-id"] !== undefined && body.json.request_id !== headers["x-request-id"]) problems.push("response.body.json.request_id must equal the x-request-id header");
             return problems;
         }

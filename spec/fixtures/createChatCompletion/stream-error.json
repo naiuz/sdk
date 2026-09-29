@@ -1,0 +1,97 @@
+{
+  "description": "A stream whose model fails part-way: an error event takes the place of the rest, then [DONE].",
+  "operationId": "createChatCompletion",
+  "call": {
+    "params": {
+      "model": "gemma-4-26b-a4b",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Salom!"
+        }
+      ],
+      "stream": true
+    }
+  },
+  "request": {
+    "method": "POST",
+    "path": "/chat/completions",
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key",
+      "content-type": "application/json"
+    },
+    "body": {
+      "json": {
+        "model": "gemma-4-26b-a4b",
+        "messages": [
+          {
+            "role": "user",
+            "content": "Salom!"
+          }
+        ],
+        "stream": true
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "text/event-stream",
+      "x-accel-buffering": "no",
+      "x-request-id": "00000000-0000-4000-8000-000000000032"
+    },
+    "body": {
+      "sse": [
+        "{\"id\":\"chatcmpl-01m3n6\",\"object\":\"chat.completion.chunk\",\"created\":1790000000,\"model\":\"gemma-4-26b-a4b\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\"},\"finish_reason\":null}]}",
+        "{\"id\":\"chatcmpl-01m3n6\",\"object\":\"chat.completion.chunk\",\"created\":1790000000,\"model\":\"gemma-4-26b-a4b\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"Salom\"},\"finish_reason\":null}]}",
+        "{\"error\":{\"type\":\"server_error\",\"code\":\"upstream_error\",\"message\":\"The model is temporarily unavailable. Please try again later.\",\"param\":null},\"request_id\":\"00000000-0000-4000-8000-000000000032\"}",
+        "[DONE]"
+      ]
+    }
+  },
+  "result": {
+    "chunks": [
+      {
+        "id": "chatcmpl-01m3n6",
+        "object": "chat.completion.chunk",
+        "created": 1790000000,
+        "model": "gemma-4-26b-a4b",
+        "choices": [
+          {
+            "index": 0,
+            "delta": {
+              "role": "assistant"
+            },
+            "finish_reason": null
+          }
+        ]
+      },
+      {
+        "id": "chatcmpl-01m3n6",
+        "object": "chat.completion.chunk",
+        "created": 1790000000,
+        "model": "gemma-4-26b-a4b",
+        "choices": [
+          {
+            "index": 0,
+            "delta": {
+              "content": "Salom"
+            },
+            "finish_reason": null
+          }
+        ]
+      }
+    ],
+    "error": {
+      "class": "APIError",
+      "status": 200,
+      "type": "server_error",
+      "code": "upstream_error",
+      "message": "The model is temporarily unavailable. Please try again later.",
+      "param": null,
+      "fields": null,
+      "request_id": "00000000-0000-4000-8000-000000000032",
+      "retry_after": null
+    }
+  }
+}
