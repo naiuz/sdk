@@ -47,3 +47,4 @@ export type {Chat, Completions} from "./resources/chat";
 export type * from "./types/chat";
 export type * from "./types/uploads";
 export {SpeechAudio, DialogueAudio} from "./core/audio";
+export {Stream} from "./core/streaming";
