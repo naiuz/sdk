@@ -10,9 +10,10 @@ export const PINNED_PATH = fileURLToPath(new URL("../openapi.json", import.meta.
 export async function fetchLiveDocument(url, fetchImpl = fetch) {
     let response;
     try {
-        response = await fetchImpl(url, {headers: {accept: "application/json"}});
+        response = await fetchImpl(url, {headers: {accept: "application/json"}, signal: AbortSignal.timeout(30_000)});
     } catch (error) {
-        throw new Error(`Could not reach ${url}: ${error.message}`);
+        const cause = error.cause?.message ? ` (${error.cause.message})` : "";
+        throw new Error(`Could not reach ${url}: ${error.message}${cause}`);
     }
     if (!response.ok) throw new Error(`${url} answered ${response.status}`);
     let document;

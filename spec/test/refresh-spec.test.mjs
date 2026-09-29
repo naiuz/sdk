@@ -26,8 +26,14 @@ async function pinnedFile(content) {
 
 test("pins the live document in the canonical text", async () => {
     const path = await pinnedFile();
-    assert.equal(await run({check: false, pinnedPath: path, fetchImpl: fakeFetch(doc()), log: quiet}), 0);
+    let options;
+    const fetchImpl = async (url, opts) => {
+        options = opts;
+        return fakeFetch(doc())();
+    };
+    assert.equal(await run({check: false, pinnedPath: path, fetchImpl, log: quiet}), 0);
     assert.equal(await readFile(path, "utf8"), toPinnedText(doc()));
+    assert.ok(options.signal instanceof AbortSignal, "fetch is given an AbortSignal");
 });
 
 test("finds no drift when the live document matches the pinned one", async () => {
@@ -45,7 +51,7 @@ test("reports drift, names the new operation, and leaves the pinned file alone",
 });
 
 for (const [name, fetchImpl, message] of [
-    ["an unreachable host", async () => { throw new Error("getaddrinfo ENOTFOUND my.neuronai.uz"); }, /Could not reach .*ENOTFOUND/],
+    ["an unreachable host", async () => { throw new TypeError("fetch failed", {cause: new Error("getaddrinfo ENOTFOUND my.neuronai.uz")}); }, /Could not reach .*ENOTFOUND/],
     ["a non-200 answer", fakeFetch("Service Unavailable", 503), /answered 503/],
     ["a body that is not JSON", fakeFetch("<html>down</html>"), /did not return JSON/],
     ["JSON that is not an OpenAPI document", fakeFetch({hello: "world"}), /did not return an OpenAPI document/],
