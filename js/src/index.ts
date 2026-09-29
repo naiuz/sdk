@@ -31,3 +31,7 @@ export type * from "./types/shared";
 export type * from "./types/voices";
 export type * from "./types/tts";
 export type * from "./types/api-keys";
+export type * from "./types/models";
+export type * from "./types/embeddings";
+export type * from "./types/rerank";
+export type * from "./types/chat";

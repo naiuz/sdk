@@ -3,6 +3,10 @@ import {globalFetch, isBrowser, readEnv, userAgent} from "./core/runtime";
 import {NeuronAIError} from "./errors";
 import {Account} from "./resources/account";
 import {ApiKeys} from "./resources/api-keys";
+import {Chat} from "./resources/chat";
+import {Embeddings} from "./resources/embeddings";
+import {Models} from "./resources/models";
+import {Rerank} from "./resources/rerank";
 import {Tts} from "./resources/tts";
 import {Voices} from "./resources/voices";
 
@@ -66,6 +70,14 @@ export class NeuronAI {
     readonly tts: Tts;
     /** Your organization's API keys. */
     readonly apiKeys: ApiKeys;
+    /** The chat models available to your account. */
+    readonly models: Models;
+    /** Dense vectors for text. */
+    readonly embeddings: Embeddings;
+    /** Document reranking. */
+    readonly rerank: Rerank;
+    /** Chat completions. */
+    readonly chat: Chat;
 
     /**
      * Throws NeuronAIError at once when there is no API key, when an option
@@ -99,5 +111,9 @@ export class NeuronAI {
         this.voices = new Voices(http);
         this.tts = new Tts(http);
         this.apiKeys = new ApiKeys(http);
+        this.models = new Models(http);
+        this.embeddings = new Embeddings(http);
+        this.rerank = new Rerank(http);
+        this.chat = new Chat(http);
     }
 }
