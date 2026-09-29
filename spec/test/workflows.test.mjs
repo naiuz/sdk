@@ -13,10 +13,23 @@ test("CI checks the contract on every pull request and every push to main", asyn
 });
 
 test("no workflow runs an action major built for Node 20", async () => {
-    for (const name of ["ci.yml", "drift.yml"]) {
+    for (const name of ["ci.yml", "drift.yml", "js.yml"]) {
         const text = await read(name);
         assert.doesNotMatch(text, /actions\/(checkout|setup-node)@v[1-4]\b/);
     }
+});
+
+test("the JavaScript SDK's checks run on Node 20, 22 and 24 when js/ or spec/ changes", async () => {
+    const js = await read("js.yml");
+    assert.match(js, /pull_request:\n\s+paths:\n\s+- "js\/\*\*"\n\s+- "spec\/\*\*"\n\s+- "\.github\/workflows\/js\.yml"\n/);
+    assert.match(js, /push:\n\s+branches: \[main\]\n\s+paths:\n\s+- "js\/\*\*"\n\s+- "spec\/\*\*"\n\s+- "\.github\/workflows\/js\.yml"\n/);
+    assert.match(js, /node: \[20, 22, 24\]/);
+    assert.match(js, /node-version: \$\{\{ matrix\.node \}\}/);
+    assert.match(js, /working-directory: js\n/);
+    assert.match(js, /cache-dependency-path: js\/package-lock\.json/);
+    const steps = ["npm ci", "npm run lint", "npm run typecheck", "npm test", "npm run build"].map((command) => js.indexOf(`run: ${command}\n`));
+    assert.ok(steps.every((index) => index > 0), "every step is there");
+    assert.deepEqual([...steps].sort((a, b) => a - b), steps, "in this order");
 });
 
 test("the drift job runs daily and on demand, and only reports drift as drift", async () => {
