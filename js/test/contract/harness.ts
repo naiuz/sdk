@@ -1,0 +1,233 @@
+import {readdirSync} from "node:fs";
+import {expect} from "vitest";
+import {NeuronAI} from "../../src/client";
+import {Page} from "../../src/core/pagination";
+import {APIError, RateLimitError} from "../../src/errors";
+import {mockFetch, type SentRequest} from "../helpers/mock-fetch";
+import {readSpec, SPEC_DIR} from "../helpers/spec";
+
+/** One contract fixture, as spec/fixture.schema.json defines it. */
+export interface Fixture {
+    description: string;
+    operationId: string;
+    call: {
+        path_params?: Record<string, string>;
+        params?: Record<string, unknown>;
+        files?: Record<string, {filename: string; content_type: string; base64: string}>;
+        options?: {idempotency_key?: string};
+    };
+    request: {
+        method: string;
+        path: string;
+        query?: Record<string, string>;
+        headers: Record<string, string>;
+        body: null | {json: unknown} | {multipart: unknown};
+    };
+    response: {
+        status: number;
+        headers: Record<string, string>;
+        body: null | {json: unknown} | {base64: string} | {sse: string[]};
+    };
+    result: unknown;
+}
+
+interface OperationMap {
+    base_path: string;
+    operations: Record<string, {http: string; ts: string}>;
+    helpers: Record<string, {ts: string}>;
+}
+
+interface OpenAPIOperation {
+    parameters?: {in: string}[];
+    requestBody?: unknown;
+}
+
+/** spec/operations.json: every operation's HTTP route and SDK method. */
+export const OPERATIONS = readSpec("operations.json") as OperationMap;
+const DOCUMENT = readSpec("openapi.json") as {paths: Record<string, Record<string, OpenAPIOperation | undefined> | undefined>};
+
+/** The key every fixture's client is built with. */
+export const FIXTURE_KEY = "nai_test_fixture_key";
+
+/**
+ * Fixtures this version of the SDK can't replay yet: speech audio, multipart
+ * uploads and chat streaming come in a later version. When one starts to
+ * replay, a test fails until it leaves this list.
+ */
+export const DEFERRED_FIXTURES: readonly string[] = [
+    "createChatCompletion/streamed.json",
+    "createTranscription/uzbek.json",
+    "createVoice/created.json",
+    "downloadTtsJobAudio/wav.json",
+    "replaceVoiceAudio/replaced.json",
+    "synthesizeDialogue/two-turns.json",
+    "synthesizeSpeech/insufficient-balance.json",
+    "synthesizeSpeech/rate-limited.json",
+    "synthesizeSpeech/stock-voice.json",
+    "synthesizeSpeech/unauthenticated.json",
+    "synthesizeSpeech/validation-error.json",
+];
+
+/**
+ * Methods from spec/operations.json that the client doesn't have yet. When
+ * one appears, a test fails until it leaves this list.
+ */
+export const DEFERRED_METHODS: readonly string[] = [
+    "tts.synthesize",
+    "tts.dialogue",
+    "tts.jobs.audio",
+    "tts.jobs.createAndWait",
+    "voices.create",
+    "voices.replaceAudio",
+    "stt.transcribe",
+];
+
+const COMPATIBLE_OPERATIONS = new Set(["createChatCompletion", "listModels", "createEmbedding", "rerank"]);
+
+/** Every fixture file under spec/fixtures, as `<operationId>/<name>.json`, sorted. */
+export function listFixtures(): string[] {
+    const root = new URL("fixtures/", SPEC_DIR);
+    return readdirSync(root, {withFileTypes: true})
+        .filter((entry) => entry.isDirectory())
+        .flatMap((directory) =>
+            readdirSync(new URL(`${directory.name}/`, root))
+                .filter((name) => name.endsWith(".json"))
+                .map((name) => `${directory.name}/${name}`),
+        )
+        .sort();
+}
+
+/** One fixture, parsed. */
+export function loadFixture(file: string): Fixture {
+    return readSpec(`fixtures/${file}`) as Fixture;
+}
+
+function operation(operationId: string): {method: string; path: string; ts: string} {
+    const entry = OPERATIONS.operations[operationId];
+    if (entry === undefined) throw new Error(`${operationId} is not in spec/operations.json`);
+    const [method = "", path = ""] = entry.http.split(" ");
+    return {method, path, ts: entry.ts};
+}
+
+/**
+ * The method a ts path such as `tts.jobs.create` names on the client, bound
+ * to its resource; undefined when the client has no such method.
+ */
+export function resolveMethod(client: NeuronAI, tsPath: string): ((...args: unknown[]) => unknown) | undefined {
+    const names = tsPath.split(".");
+    const methodName = names.pop() ?? "";
+    let owner: unknown = client;
+    for (const name of names) owner = typeof owner === "object" && owner !== null ? (owner as Record<string, unknown>)[name] : undefined;
+    if (typeof owner !== "object" || owner === null) return undefined;
+    const method = (owner as Record<string, unknown>)[methodName];
+    if (typeof method !== "function") return undefined;
+    const callable = method as (...args: unknown[]) => unknown;
+    return (...args) => callable.apply(owner, args);
+}
+
+/** Whether the operation's method takes a params argument: the operation has a body or query parameters. */
+function takesParams(operationId: string): boolean {
+    const {method, path} = operation(operationId);
+    const described = DOCUMENT.paths[`${OPERATIONS.base_path}${path}`]?.[method.toLowerCase()];
+    if (described === undefined) throw new Error(`${operationId} is not in spec/openapi.json`);
+    return described.requestBody !== undefined || (described.parameters ?? []).some((parameter) => parameter.in === "query");
+}
+
+/** A fixture's call as the SDK's arguments: the path parameters in path order, then params, then options. */
+export function argumentsFor(fixture: Fixture): unknown[] {
+    const {path} = operation(fixture.operationId);
+    const pathParams = [...path.matchAll(/\{([^}]+)\}/g)].map(([, name = ""]) => fixture.call.path_params?.[name]);
+    const params = takesParams(fixture.operationId) ? [fixture.call.params ?? {}] : [];
+    const idempotencyKey = fixture.call.options?.idempotency_key;
+    return [...pathParams, ...params, idempotencyKey === undefined ? undefined : {idempotencyKey}];
+}
+
+/** The fixture's canned answer, as fetch gives it. */
+export function responseFor(fixture: Fixture): Response {
+    const {status, headers, body} = fixture.response;
+    let content: BodyInit | null = null;
+    if (body !== null && "json" in body) content = JSON.stringify(body.json);
+    if (body !== null && "base64" in body) content = Uint8Array.from(Buffer.from(body.base64, "base64"));
+    if (body !== null && "sse" in body) content = body.sse.map((data) => `data: ${data}\n\n`).join("");
+    return new Response(content, {status, headers});
+}
+
+/**
+ * The SDK's result in the fixtures README's `result` shape: a Page as
+ * `{data, next_cursor, request_id}`, a compatible endpoint's body as
+ * `{body, cost}`, any other object as `{data, request_id}`, and nothing (a
+ * 204) as null.
+ */
+export function projectResult(operationId: string, value: unknown): unknown {
+    if (value === undefined) return null;
+    if (value instanceof Page) return {data: value.data as unknown, next_cursor: value.next_cursor, request_id: value.request_id};
+    const attached = value as {request_id?: unknown; cost?: unknown};
+    if (COMPATIBLE_OPERATIONS.has(operationId)) return {body: value, cost: attached.cost ?? null};
+    return {data: value, request_id: attached.request_id ?? null};
+}
+
+/** A thrown APIError in the README's `{error: {...}}` shape. Anything else is thrown on, since no fixture expects it. */
+export function projectError(error: unknown): unknown {
+    if (!(error instanceof APIError)) throw error;
+    return {
+        error: {
+            class: error.name,
+            status: error.status,
+            type: error.type,
+            code: error.code,
+            message: error.message,
+            param: error.param,
+            fields: error.fields,
+            request_id: error.request_id,
+            retry_after: error instanceof RateLimitError ? error.retry_after : null,
+        },
+    };
+}
+
+/**
+ * A JSON value ready to compare under the README's rules: a key holding null
+ * or undefined is dropped, so it matches a key that is absent. toEqual then
+ * ignores key order and compares numbers by value.
+ */
+export function comparable(value: unknown): unknown {
+    if (Array.isArray(value)) return value.map(comparable);
+    if (typeof value !== "object" || value === null) return value;
+    return Object.fromEntries(
+        Object.entries(value)
+            .filter(([, item]) => item !== null && item !== undefined)
+            .map(([key, item]) => [key, comparable(item)]),
+    );
+}
+
+/**
+ * Replays a fixture as the README says: a client with the fixture key, the
+ * default base URL and no retries, whose fetch answers the call's one request
+ * with the fixture's response. Resolves to the request sent and the
+ * projected result; rejects when the client has no method for the operation.
+ */
+export async function replay(fixture: Fixture): Promise<{request: SentRequest | undefined; result: unknown}> {
+    const {fetch, requests} = mockFetch(() => responseFor(fixture));
+    const client = new NeuronAI({apiKey: FIXTURE_KEY, maxRetries: 0, fetch});
+    const {ts} = operation(fixture.operationId);
+    const method = resolveMethod(client, ts);
+    if (method === undefined) throw new Error(`client.${ts} is not on the client`);
+    let result: unknown;
+    try {
+        result = projectResult(fixture.operationId, await method(...argumentsFor(fixture)));
+    } catch (error) {
+        result = projectError(error);
+    }
+    return {request: requests[0], result};
+}
+
+/** Asserts the SDK sent the fixture's request: method, path, query, every fixture header with its value, and the body. */
+export function expectRequest(sent: SentRequest | undefined, expected: Fixture["request"]): void {
+    if (sent === undefined) throw new Error("The call sent no request.");
+    expect(sent.method).toBe(expected.method);
+    expect(`${sent.url.origin}${sent.url.pathname}`).toBe(`https://my.neuronai.uz/api/v1${expected.path}`);
+    expect(Object.fromEntries(sent.url.searchParams)).toEqual(expected.query ?? {});
+    for (const [name, value] of Object.entries(expected.headers)) expect(sent.headers.get(name), name).toBe(value);
+    if (expected.body === null) expect(sent.body).toBeNull();
+    else if ("json" in expected.body) expect(JSON.parse(sent.body ?? "null")).toStrictEqual(expected.body.json);
+    else throw new Error("The fixture sends a multipart body, which this version's harness doesn't check yet.");
+}
