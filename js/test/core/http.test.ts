@@ -443,11 +443,11 @@ describe("the attempt a reader runs in", () => {
         expect(late).toBe("read after 60 ms");
     });
 
-    it("keeps the caller's signal wired to a reader that adopts the attempt, until it cleans up", async () => {
+    it("keeps the caller's signal wired to a reader that adopts the attempt, so its abort still reaches it", async () => {
         const controller = new AbortController();
         const {fetch} = mockFetch(envelope({}));
         const {http} = httpClient(fetch);
-        const {attempt, cleanup} = await http.request({...balance, options: {signal: controller.signal}}, (_response, handed: Attempt) => {
+        const {attempt} = await http.request({...balance, options: {signal: controller.signal}}, (_response, handed: Attempt) => {
             handed.disarm();
             return Promise.resolve({attempt: handed, cleanup: handed.adopt()});
         });
@@ -455,8 +455,20 @@ describe("the attempt a reader runs in", () => {
         const reason = new Error("The caller gave up.");
         controller.abort(reason);
         expect(attempt.signal.reason).toBe(reason);
+    });
+
+    it("unwires the caller's signal once an adopted attempt's cleanup runs, so a later abort no longer reaches it", async () => {
+        const controller = new AbortController();
+        const {fetch} = mockFetch(envelope({}));
+        const {http} = httpClient(fetch);
+        const {attempt, cleanup} = await http.request({...balance, options: {signal: controller.signal}}, (_response, handed: Attempt) => {
+            handed.disarm();
+            return Promise.resolve({attempt: handed, cleanup: handed.adopt()});
+        });
         cleanup();
         expect(getEventListeners(controller.signal, "abort")).toHaveLength(0);
+        controller.abort(new Error("The caller gave up."));
+        expect(attempt.signal.aborted).toBe(false);
     });
 });
 
