@@ -37,6 +37,8 @@ export interface APIRequest {
     pathParams?: Record<string, string>;
     /** The query. Undefined and null values are left out. */
     query?: Record<string, QueryValue>;
+    /** The Accept header: `application/json` unless the call answers with something else, such as audio. */
+    accept?: string;
     /** Sent as JSON when defined. */
     body?: unknown;
     /**
@@ -221,7 +223,7 @@ export class HttpClient {
         // Each group goes over the ones before it: the SDK's own headers, the client's
         // defaultHeaders, the call's Idempotency-Key, then the call's extraHeaders.
         set("authorization", `Bearer ${this.#apiKey}`);
-        set("accept", "application/json");
+        set("accept", request.accept ?? "application/json");
         set("user-agent", this.#userAgent);
         if (request.body !== undefined && request.multipart === undefined) set("content-type", "application/json");
         for (const [name, value] of Object.entries(this.#defaultHeaders)) set(name, value);

@@ -30,6 +30,13 @@ describe("a request", () => {
         expect(sent?.headers.get("user-agent")).toBe("naiuz-js/test (Node 20.19)");
     });
 
+    it("sends a call's own Accept in place of JSON's", async () => {
+        const {fetch, requests} = mockFetch(envelope({}));
+        const {http} = httpClient(fetch);
+        await http.request({...balance, accept: "audio/wav, application/json"}, readEnvelope);
+        expect(requests[0]?.headers.get("accept")).toBe("audio/wav, application/json");
+    });
+
     it("sends a body as JSON with its content type, and no content type without a body", async () => {
         const {fetch, requests} = mockFetch(envelope({id: "k1"}), new Response(null, {status: 204}));
         const {http} = httpClient(fetch);

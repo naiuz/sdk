@@ -24,6 +24,43 @@ export interface SynthesizeSpeechRequest {
     speed?: number | null;
 }
 
+/** One turn of a dialogue: who speaks, and what. */
+export interface DialogueTurn {
+    /** The voice that speaks the turn: a stock voice or one of your clones, up to 128 characters. */
+    voice_id: string;
+    /**
+     * The turn's text. Length is measured as spoken length, the same measure
+     * billing uses: an emotion tag counts as one character, however long its
+     * name is spelled.
+     */
+    text: string;
+    /** The turn's own language, over the dialogue's. */
+    language?: SpeechLanguage | null;
+    /** The turn's own quality, over the dialogue's: `fast`, `standard` or `high`. */
+    quality?: SpeechQuality | null;
+    /** The turn's own speed, over the dialogue's, from 0.5 to 2. */
+    speed?: number | null;
+}
+
+/**
+ * A multi-speaker script to render into one WAV file, billed per character,
+ * per turn, at that turn's own rate. Over 8000 characters in all answers 413
+ * `input_too_large`, and a single turn over its own limit answers 422
+ * `invalid_request`.
+ */
+export interface SynthesizeDialogueRequest {
+    /** The script: 1 to 100 turns. */
+    turns: DialogueTurn[];
+    /** Milliseconds of silence between turns, from 0 to 5000. */
+    gap_ms?: number | null;
+    /** The language of each turn that doesn't set its own. */
+    language?: SpeechLanguage | null;
+    /** The quality of each turn that doesn't set its own: `fast`, `standard` or `high`. */
+    quality?: SpeechQuality | null;
+    /** The speed of each turn that doesn't set its own, from 0.5 to 2. */
+    speed?: number | null;
+}
+
 /** Why a job failed. */
 export interface TtsJobError {
     /** `insufficient_balance`, `voice_unavailable`, `synthesis_failed`, `storage_failed` or `queue_timeout`. None of them is charged. */

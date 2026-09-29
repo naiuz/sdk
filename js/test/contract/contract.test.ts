@@ -1,5 +1,6 @@
 import {describe, expect, it} from "vitest";
 import {NeuronAI} from "../../src/client";
+import {SpeechAudio} from "../../src/core/audio";
 import {Page} from "../../src/core/pagination";
 import {makeAPIError} from "../../src/errors";
 import {comparable, DEFERRED_FIXTURES, DEFERRED_METHODS, expectRequest, FIXTURE_KEY, listFixtures, loadFixture, OPERATIONS, projectError, projectResult, replay, resolveMethod} from "./harness";
@@ -71,5 +72,8 @@ describe("projectResult", () => {
             throw new Error("not called");
         });
         expect(() => projectResult("retrieveApiKey", page)).toThrow(/retrieveApiKey/);
+
+        expect(() => projectResult("synthesizeSpeech", {request_id: "req-1"})).toThrow(/synthesizeSpeech/);
+        expect(() => projectResult("retrieveVoice", new SpeechAudio(new Uint8Array(), new Headers()))).toThrow(/retrieveVoice/);
     });
 });

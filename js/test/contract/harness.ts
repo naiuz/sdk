@@ -1,6 +1,7 @@
 import {readdirSync} from "node:fs";
 import {expect} from "vitest";
 import {NeuronAI} from "../../src/client";
+import {DialogueAudio, SpeechAudio} from "../../src/core/audio";
 import {Page} from "../../src/core/pagination";
 import {APIError, RateLimitError} from "../../src/errors";
 import {mockFetch, type SentRequest} from "../helpers/mock-fetch";
@@ -58,14 +59,7 @@ export const DEFERRED_FIXTURES: readonly string[] = [
     "createChatCompletion/streamed.json",
     "createTranscription/uzbek.json",
     "createVoice/created.json",
-    "downloadTtsJobAudio/wav.json",
     "replaceVoiceAudio/replaced.json",
-    "synthesizeDialogue/two-turns.json",
-    "synthesizeSpeech/insufficient-balance.json",
-    "synthesizeSpeech/rate-limited.json",
-    "synthesizeSpeech/stock-voice.json",
-    "synthesizeSpeech/unauthenticated.json",
-    "synthesizeSpeech/validation-error.json",
 ];
 
 /**
@@ -73,9 +67,6 @@ export const DEFERRED_FIXTURES: readonly string[] = [
  * one appears, a test fails until it leaves this list.
  */
 export const DEFERRED_METHODS: readonly string[] = [
-    "tts.synthesize",
-    "tts.dialogue",
-    "tts.jobs.audio",
     "tts.jobs.createAndWait",
     "voices.create",
     "voices.replaceAudio",
@@ -84,6 +75,7 @@ export const DEFERRED_METHODS: readonly string[] = [
 
 const COMPATIBLE_OPERATIONS = new Set(["createChatCompletion", "listModels", "createEmbedding", "rerank"]);
 const PAGE_OPERATIONS = new Set(["listVoices", "listApiKeys"]);
+const AUDIO_OPERATIONS = new Set(["synthesizeSpeech", "synthesizeDialogue", "downloadTtsJobAudio"]);
 
 /** Every fixture file under spec/fixtures, as `<operationId>/<name>.json`, sorted. */
 export function listFixtures(): string[] {
@@ -155,19 +147,42 @@ export function responseFor(fixture: Fixture): Response {
 
 /**
  * The SDK's result in the fixtures README's `result` shape: a Page as
- * `{data, next_cursor, request_id}`, a compatible endpoint's body as
- * `{body, cost}`, any other object as `{data, request_id}`, and nothing (a
- * 204) as null.
+ * `{data, next_cursor, request_id}`, audio as its bytes in base64 and each
+ * header's field, a compatible endpoint's body as `{body, cost}`, any other
+ * object as `{data, request_id}`, and nothing (a 204) as null. The shape
+ * comes from the operation, and a result of another shape throws.
  */
 export function projectResult(operationId: string, value: unknown): unknown {
     if (value === undefined) return null;
     if (PAGE_OPERATIONS.has(operationId) !== (value instanceof Page)) {
         throw new Error(PAGE_OPERATIONS.has(operationId) ? `${operationId} should return a page, but didn't.` : `${operationId} should not return a page, but did.`);
     }
+    if (AUDIO_OPERATIONS.has(operationId) !== (value instanceof SpeechAudio)) {
+        throw new Error(AUDIO_OPERATIONS.has(operationId) ? `${operationId} should return audio, but didn't.` : `${operationId} should not return audio, but did.`);
+    }
     if (value instanceof Page) return {data: value.data as unknown, next_cursor: value.next_cursor, request_id: value.request_id};
+    if (value instanceof SpeechAudio) return projectAudio(operationId, value);
     const attached = value as {request_id?: unknown; cost?: unknown};
     if (COMPATIBLE_OPERATIONS.has(operationId)) return {body: value, cost: attached.cost ?? null};
     return {data: value, request_id: attached.request_id ?? null};
+}
+
+/** Audio in the README's shape: the bytes in base64 and each header's field, plus a dialogue's turns and turn count. */
+function projectAudio(operationId: string, audio: SpeechAudio): unknown {
+    const fields = {
+        audio_base64: Buffer.from(audio.audio).toString("base64"),
+        content_type: audio.content_type,
+        cost: audio.cost,
+        character_count: audio.character_count,
+        balance: audio.balance,
+        voice_custom: audio.voice_custom,
+        latency_ms: audio.latency_ms,
+        replayed: audio.replayed,
+        request_id: audio.request_id,
+    };
+    if (operationId !== "synthesizeDialogue") return fields;
+    if (!(audio instanceof DialogueAudio)) throw new Error("synthesizeDialogue should return a DialogueAudio, but didn't.");
+    return {...fields, turns: audio.turns, turn_count: audio.turn_count};
 }
 
 /** A thrown APIError in the README's `{error: {...}}` shape. Anything else is thrown on, since no fixture expects it. */
