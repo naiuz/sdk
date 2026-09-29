@@ -38,13 +38,18 @@ export class SSEDecoder {
 const CLOSED = new NeuronAIError("The stream was closed.");
 const STALLED = new NeuronAIError("The stream stalled.");
 
+/** How long, at most, the stream keeps reading the body after [DONE] to let the connection end cleanly and be reused; never longer than this even when the call's own timeout is larger. */
+const MAX_DRAIN_MS = 5_000;
+
 /**
  * A streamed answer: loop over it with `for await` for each chunk, as the
  * server sends it. The request stays open while you read. Leaving the loop
  * early (`break`, `return` or an error) or calling `close()` aborts it, and
- * the server stops generating. The call's timeout bounds the wait for each
- * piece of the stream, not the whole of it. A stream can be read once: read
- * it or close it.
+ * the server stops generating. Reading to `[DONE]` instead lets the body run
+ * to its own end, so the connection can be reused, bounded so a body that
+ * never ends doesn't hang the stream. The call's timeout bounds the wait for
+ * each piece of the stream, not the whole of it. A stream can be read once:
+ * read it or close it.
  */
 export class Stream<T> implements AsyncIterable<T> {
     readonly #response: Response;
@@ -66,17 +71,16 @@ export class Stream<T> implements AsyncIterable<T> {
 
     /** Stops the stream: the request is aborted, the server stops generating, and a loop reading the stream ends. Calling it again does nothing. */
     close(): void {
-        if (this.#closed) return;
-        this.#closed = true;
-        this.#attempt.abort(CLOSED);
-        this.#release();
+        this.#finish(true);
     }
 
     /**
      * The stream as bytes of newline-delimited JSON, one chunk per line, to
      * pass on, such as the body of your own Response. It reads the stream,
      * so use it in place of a loop over the stream. Cancelling it closes the
-     * stream.
+     * stream at once, even before its first pull: an async generator queues
+     * `return()` behind a pending `next()`, which would otherwise leave the
+     * request open until the next piece arrives or the read times out.
      */
     toReadableStream(): ReadableStream<Uint8Array> {
         const chunks = this[Symbol.asyncIterator]();
@@ -91,7 +95,8 @@ export class Stream<T> implements AsyncIterable<T> {
                     controller.error(error);
                 }
             },
-            async cancel() {
+            cancel: async () => {
+                this.close();
                 await chunks.return();
             },
         });
@@ -103,12 +108,17 @@ export class Stream<T> implements AsyncIterable<T> {
         const reader = this.#response.body?.getReader();
         const decoder = new TextDecoder();
         const events = new SSEDecoder();
+        // Whether ending the generator should abort the request: cleared once a drain after [DONE] reaches the body's own end.
+        let abort = true;
         try {
             for (;;) {
                 const bytes = reader === undefined ? null : await this.#next(reader);
                 if (this.#isClosed()) return;
                 for (const data of events.push(bytes === null ? decoder.decode() : decoder.decode(bytes, {stream: true}))) {
-                    if (data === "[DONE]") return;
+                    if (data === "[DONE]") {
+                        if (reader !== undefined) abort = await this.#drain(reader);
+                        return;
+                    }
                     yield this.#parse(data);
                     // The loop reading the stream may have closed it meanwhile.
                     if (this.#isClosed()) return;
@@ -116,14 +126,50 @@ export class Stream<T> implements AsyncIterable<T> {
                 if (bytes === null) throw new APIConnectionError("The stream ended before [DONE]: the answer may be cut short.");
             }
         } finally {
-            this.close();
+            this.#finish(abort);
             if (reader !== undefined) void reader.cancel().catch(() => undefined);
         }
     }
 
-    /** Whether close() has run: a method, so a check after an await or a yield isn't narrowed away. */
+    /** Whether the stream has finished: a method, so a check after an await or a yield isn't narrowed away. */
     #isClosed(): boolean {
         return this.#closed;
+    }
+
+    /** Ends the stream once: unwires the caller's signal, and aborts the request unless told not to. A stream that read to [DONE] and then drained the body cleanly leaves the connection alone. */
+    #finish(abort: boolean): void {
+        if (this.#closed) return;
+        this.#closed = true;
+        if (abort) this.#attempt.abort(CLOSED);
+        this.#release();
+    }
+
+    /**
+     * After [DONE], reads whatever the server still sends and discards it,
+     * until the body ends, so the connection can be reused rather than look
+     * like a client that left mid-answer. Bounded, since a body that never
+     * ends would otherwise hang the stream. Resolves to whether the request
+     * should still be aborted: only when the bound elapses first or the read
+     * fails: a body that ends in time needs no abort at all.
+     */
+    async #drain(reader: ReadableStreamDefaultReader<Uint8Array>): Promise<boolean> {
+        const limit = Math.min(this.#attempt.timeout, MAX_DRAIN_MS);
+        const controller = new AbortController();
+        const timer = setTimeout(() => {
+            controller.abort();
+        }, limit);
+        try {
+            for (;;) {
+                if (this.#isClosed()) return false;
+                const {done} = await untilAborted(reader.read(), controller.signal);
+                if (done) return false;
+            }
+        } catch {
+            // Our own limit elapsed, or the read itself failed: either way, the answer was already complete.
+            return true;
+        } finally {
+            clearTimeout(timer);
+        }
     }
 
     /** The next piece of the body, or null at its end, waiting at most the call's timeout for it. */

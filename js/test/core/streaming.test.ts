@@ -18,7 +18,7 @@ const sse = (events: string[]): Response =>
     new Response(events.map((data) => `data: ${data}\n\n`).join(""), {status: 200, headers: {"content-type": "text/event-stream", "x-request-id": "req-stream"}});
 
 /** An event stream whose body the test writes piece by piece. */
-function live(): {response: Response; send: (piece: string | Uint8Array) => void; fail: (error: Error) => void; cancelled: () => boolean} {
+function live(): {response: Response; send: (piece: string | Uint8Array) => void; end: () => void; fail: (error: Error) => void; cancelled: () => boolean} {
     let controller: ReadableStreamDefaultController<Uint8Array> | undefined;
     let cancelled = false;
     const body = new ReadableStream<Uint8Array>({
@@ -33,6 +33,9 @@ function live(): {response: Response; send: (piece: string | Uint8Array) => void
         response: new Response(body, {status: 200, headers: {"content-type": "text/event-stream"}}),
         send: (piece) => {
             controller?.enqueue(typeof piece === "string" ? new TextEncoder().encode(piece) : piece);
+        },
+        end: () => {
+            controller?.close();
         },
         fail: (error) => {
             controller?.error(error);
@@ -91,6 +94,30 @@ describe("a stream", () => {
         expect(await collect(stream)).toEqual({chunks: [JSON.parse(chunk(1)), JSON.parse(chunk(2))], error: null});
     });
 
+    it("reads the body to the end after [DONE], leaving the request's connection untouched", async () => {
+        const body = live();
+        const {stream, sent} = await open(body.response);
+        body.send(`data: ${chunk(1)}\n\ndata: [DONE]\n\n: a comment after [DONE]\n`);
+        body.end();
+        const {chunks, error} = await collect(stream);
+        expect(chunks).toEqual([JSON.parse(chunk(1))]);
+        expect(error).toBeNull();
+        expect(sent?.signal?.aborted).toBe(false);
+    });
+
+    it("gives up draining the body after [DONE] once its own limit passes, without an error", async () => {
+        const body = live();
+        const {stream, sent} = await open(body.response, {timeout: 50});
+        body.send(`data: ${chunk(1)}\n\ndata: [DONE]\n\n`);
+        const reading = collect(stream);
+        await pause(10);
+        expect(sent?.signal?.aborted).toBe(false);
+        const {chunks, error} = await reading;
+        expect(chunks).toEqual([JSON.parse(chunk(1))]);
+        expect(error).toBeNull();
+        expect(sent?.signal?.aborted).toBe(true);
+    });
+
     it("raises an error event as APIError with the answer's status 200, after the chunks before it", async () => {
         const {stream} = await open(sse([chunk(1), UPSTREAM_ERROR, "[DONE]"]));
         const {chunks, error} = await collect(stream);
@@ -135,6 +162,7 @@ describe("a stream", () => {
         const {stream} = await open(body.response);
         body.send(bytes.slice(0, split));
         body.send(bytes.slice(split));
+        body.end();
         expect((await collect(stream)).chunks).toEqual([{text: "Salom 👋"}]);
     });
 
@@ -208,6 +236,34 @@ describe("a stream", () => {
         const {stream} = await open(sse([chunk(1), chunk(2), "[DONE]"]));
         const text = await new Response(stream.toReadableStream()).text();
         expect(text).toBe(`${chunk(1)}\n${chunk(2)}\n`);
+    });
+
+    it("cancelling toReadableStream() while a pull is waiting on the network aborts the request at once", async () => {
+        const body = live();
+        const controller = new AbortController();
+        const {stream, sent} = await open(body.response, {signal: controller.signal});
+        body.send(`data: ${chunk(1)}\n\n`);
+        const reader = stream.toReadableStream().getReader();
+        await reader.read();
+        // Lets the next pull start and reach its own pending read on the network, so cancelling below finds a pending next() to queue behind.
+        await pause(0);
+        const cancelling = reader.cancel();
+        await pause(10);
+        expect(sent?.signal?.aborted).toBe(true);
+        expect(getEventListeners(controller.signal, "abort")).toHaveLength(0);
+        await cancelling;
+    });
+
+    it("cancelling toReadableStream() before its first pull still aborts the request", async () => {
+        const body = live();
+        const controller = new AbortController();
+        const {stream, sent} = await open(body.response, {signal: controller.signal});
+        const reader = stream.toReadableStream().getReader();
+        const cancelling = reader.cancel();
+        await pause(10);
+        expect(sent?.signal?.aborted).toBe(true);
+        expect(getEventListeners(controller.signal, "abort")).toHaveLength(0);
+        await cancelling;
     });
 
     it("raises APIError for a success answer that isn't an event stream", async () => {
