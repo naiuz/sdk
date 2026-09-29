@@ -7,6 +7,13 @@ import {APIError, RateLimitError} from "../../src/errors";
 import {mockFetch, type SentRequest} from "../helpers/mock-fetch";
 import {readSpec, SPEC_DIR} from "../helpers/spec";
 
+/** An upload in a fixture: its filename, content type and bytes. */
+interface FixtureFile {
+    filename: string;
+    content_type: string;
+    base64: string;
+}
+
 /** One contract fixture, as spec/fixture.schema.json defines it. */
 export interface Fixture {
     description: string;
@@ -14,7 +21,7 @@ export interface Fixture {
     call: {
         path_params?: Record<string, string>;
         params?: Record<string, unknown>;
-        files?: Record<string, {filename: string; content_type: string; base64: string}>;
+        files?: Record<string, FixtureFile>;
         options?: {idempotency_key?: string};
     };
     request: {
@@ -22,7 +29,7 @@ export interface Fixture {
         path: string;
         query?: Record<string, string>;
         headers: Record<string, string>;
-        body: null | {json: unknown} | {multipart: unknown};
+        body: null | {json: unknown} | {multipart: {fields: Record<string, unknown>; files: Record<string, FixtureFile>}};
     };
     response: {
         status: number;
@@ -55,22 +62,13 @@ export const FIXTURE_KEY = "nai_test_fixture_key";
  * uploads and chat streaming come in a later version. When one starts to
  * replay, a test fails until it leaves this list.
  */
-export const DEFERRED_FIXTURES: readonly string[] = [
-    "createChatCompletion/streamed.json",
-    "createTranscription/uzbek.json",
-    "createVoice/created.json",
-    "replaceVoiceAudio/replaced.json",
-];
+export const DEFERRED_FIXTURES: readonly string[] = ["createChatCompletion/streamed.json"];
 
 /**
  * Methods from spec/operations.json that the client doesn't have yet. When
  * one appears, a test fails until it leaves this list.
  */
-export const DEFERRED_METHODS: readonly string[] = [
-    "voices.create",
-    "voices.replaceAudio",
-    "stt.transcribe",
-];
+export const DEFERRED_METHODS: readonly string[] = [];
 
 const COMPATIBLE_OPERATIONS = new Set(["createChatCompletion", "listModels", "createEmbedding", "rerank"]);
 const PAGE_OPERATIONS = new Set(["listVoices", "listApiKeys"]);
@@ -125,11 +123,18 @@ function takesParams(operationId: string): boolean {
     return described.requestBody !== undefined || (described.parameters ?? []).some((parameter) => parameter.in === "query");
 }
 
-/** A fixture's call as the SDK's arguments: the path parameters in path order, then params, then options. */
+/**
+ * A fixture's call as the SDK's arguments: the path parameters in path order,
+ * then params, with each upload as its bytes, filename and content type, then
+ * options.
+ */
 export function argumentsFor(fixture: Fixture): unknown[] {
     const {path} = operation(fixture.operationId);
     const pathParams = [...path.matchAll(/\{([^}]+)\}/g)].map(([, name = ""]) => fixture.call.path_params?.[name]);
-    const params = takesParams(fixture.operationId) ? [fixture.call.params ?? {}] : [];
+    const files = Object.fromEntries(
+        Object.entries(fixture.call.files ?? {}).map(([name, file]) => [name, {data: Buffer.from(file.base64, "base64"), filename: file.filename, contentType: file.content_type}]),
+    );
+    const params = takesParams(fixture.operationId) ? [{...fixture.call.params, ...files}] : [];
     const idempotencyKey = fixture.call.options?.idempotency_key;
     return [...pathParams, ...params, idempotencyKey === undefined ? undefined : {idempotencyKey}];
 }
@@ -238,14 +243,53 @@ export async function replay(fixture: Fixture): Promise<{request: SentRequest | 
     return {request: requests[0], result};
 }
 
-/** Asserts the SDK sent the fixture's request: method, path, query, every fixture header with its value, and the body. */
-export function expectRequest(sent: SentRequest | undefined, expected: Fixture["request"]): void {
+/**
+ * A sent form in the fixtures' `{fields, files}` shape: repeated `name[]`
+ * parts become a list under `name`, and each file its filename, content type
+ * and bytes in base64.
+ */
+async function multipartOf(form: FormData | null): Promise<{fields: Record<string, unknown>; files: Record<string, FixtureFile>}> {
+    if (form === null) throw new Error("The call sent no multipart form.");
+    const fields: Record<string, string | string[]> = {};
+    const files: Record<string, FixtureFile> = {};
+    for (const [name, value] of form.entries()) {
+        if (typeof value !== "string") {
+            if (name in files) throw new Error(`The file ${name} was sent twice.`);
+            files[name] = {filename: value.name, content_type: value.type, base64: Buffer.from(await value.arrayBuffer()).toString("base64")};
+        } else if (name.endsWith("[]")) {
+            const list = fields[name.slice(0, -2)];
+            fields[name.slice(0, -2)] = Array.isArray(list) ? [...list, value] : [value];
+        } else {
+            if (name in fields) throw new Error(`The field ${name} was sent twice.`);
+            fields[name] = value;
+        }
+    }
+    return {fields, files};
+}
+
+/**
+ * Asserts the SDK sent the fixture's request: method, path, query, every
+ * fixture header with its value, and the body. A multipart body's
+ * content-type only has to start with the fixture's, since fetch adds the
+ * boundary after it.
+ */
+export async function expectRequest(sent: SentRequest | undefined, expected: Fixture["request"]): Promise<void> {
     if (sent === undefined) throw new Error("The call sent no request.");
+    const multipart = expected.body !== null && "multipart" in expected.body;
     expect(sent.method).toBe(expected.method);
     expect(`${sent.url.origin}${sent.url.pathname}`).toBe(`https://my.neuronai.uz/api/v1${expected.path}`);
     expect(Object.fromEntries(sent.url.searchParams)).toEqual(expected.query ?? {});
-    for (const [name, value] of Object.entries(expected.headers)) expect(sent.headers.get(name), name).toBe(value);
-    if (expected.body === null) expect(sent.body).toBeNull();
-    else if ("json" in expected.body) expect(JSON.parse(sent.body ?? "null")).toStrictEqual(expected.body.json);
-    else throw new Error("The fixture sends a multipart body, which this version's harness doesn't check yet.");
+    for (const [name, value] of Object.entries(expected.headers)) {
+        const actual = sent.headers.get(name);
+        if (multipart && name === "content-type") expect(actual?.startsWith(value), `${name}: ${String(actual)}`).toBe(true);
+        else expect(actual, name).toBe(value);
+    }
+    if (expected.body === null) {
+        expect(sent.body).toBeNull();
+        expect(sent.form).toBeNull();
+    } else if ("json" in expected.body) {
+        expect(JSON.parse(sent.body ?? "null")).toStrictEqual(expected.body.json);
+    } else {
+        expect(await multipartOf(sent.form)).toStrictEqual(expected.body.multipart);
+    }
 }

@@ -1,4 +1,5 @@
 import type {SpeechLanguage} from "./shared";
+import type {Uploadable} from "./uploads";
 
 /** What a voice is for. */
 export type VoiceCategory = "conversational" | "narration" | "characters" | "social_media" | "educational" | (string & {});
@@ -55,4 +56,32 @@ export interface UpdateVoiceRequest {
     ref_text?: string | null;
     /** The new tags, up to 32 characters each. `null` or `[]` clears them, and blank tags are dropped. */
     tags?: string[] | null;
+}
+
+/**
+ * A voice clone to create, sent as multipart/form-data: its name, its
+ * language and a reference clip, and optionally the clip's transcript, tags
+ * and category.
+ */
+export interface CreateVoiceRequest {
+    /** The voice's name, up to 120 characters. */
+    name: string;
+    /** The language the voice speaks. */
+    language: SpeechLanguage;
+    /** A 10–15 second reference clip: WAV, MP3, OGG or FLAC, at most 10 MB. */
+    ref_audio: Uploadable;
+    /** What the clip says, up to 1000 characters. */
+    ref_text?: string | null;
+    /** What the voice is for. */
+    category?: VoiceCategory;
+    /** Tags, up to 32 characters each, each sent as its own `tags[]` field. Blank tags are dropped. */
+    tags?: string[] | null;
+}
+
+/** A voice clone's new reference clip, sent as multipart/form-data, and optionally its transcript. */
+export interface ReplaceVoiceAudioRequest {
+    /** The new reference clip, in the formats and size a new clone takes: WAV, MP3, OGG or FLAC, at most 10 MB. */
+    ref_audio: Uploadable;
+    /** What the new clip says, up to 1000 characters. */
+    ref_text?: string | null;
 }

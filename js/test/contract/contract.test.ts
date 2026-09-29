@@ -13,7 +13,7 @@ describe("every replayable fixture", () => {
     it.each(replayable)("%s sends its request and returns its result", async (file) => {
         const fixture = loadFixture(file);
         const {request, result} = await replay(fixture);
-        expectRequest(request, fixture.request);
+        await expectRequest(request, fixture.request);
         expect(comparable(result)).toEqual(comparable(fixture.result));
     });
 });

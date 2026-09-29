@@ -33,6 +33,8 @@ export type {Voices} from "./resources/voices";
 export type * from "./types/voices";
 export type {Tts, TtsJobs, WaitOptions} from "./resources/tts";
 export type * from "./types/tts";
+export type {Stt} from "./resources/stt";
+export type * from "./types/transcription";
 export type {ApiKeys} from "./resources/api-keys";
 export type * from "./types/api-keys";
 export type {Models} from "./resources/models";

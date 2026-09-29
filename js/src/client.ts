@@ -7,6 +7,7 @@ import {Chat} from "./resources/chat";
 import {Embeddings} from "./resources/embeddings";
 import {Models} from "./resources/models";
 import {Rerank} from "./resources/rerank";
+import {Stt} from "./resources/stt";
 import {Tts} from "./resources/tts";
 import {Voices} from "./resources/voices";
 
@@ -68,6 +69,8 @@ export class NeuronAI {
     readonly voices: Voices;
     /** Text to speech. */
     readonly tts: Tts;
+    /** Speech to text. */
+    readonly stt: Stt;
     /** Your organization's API keys. */
     readonly apiKeys: ApiKeys;
     /** The chat models available to your account. */
@@ -110,6 +113,7 @@ export class NeuronAI {
         this.account = new Account(http);
         this.voices = new Voices(http);
         this.tts = new Tts(http);
+        this.stt = new Stt(http);
         this.apiKeys = new ApiKeys(http);
         this.models = new Models(http);
         this.embeddings = new Embeddings(http);

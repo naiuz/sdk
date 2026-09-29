@@ -1,5 +1,5 @@
 import {describe, expect, it} from "vitest";
-import type {Account, ApiKeys, Chat, Completions, Embeddings, Models, Rerank, Tts, TtsJobs, Voices} from "../src/index";
+import type {Account, ApiKeys, Chat, Completions, Embeddings, Models, Rerank, Stt, Tts, TtsJobs, Voices} from "../src/index";
 import {testClient} from "./helpers/client";
 import {mockFetch} from "./helpers/mock-fetch";
 
@@ -10,6 +10,7 @@ describe("the package's exports", () => {
         const voices: Voices = client.voices;
         const tts: Tts = client.tts;
         const ttsJobs: TtsJobs = client.tts.jobs;
+        const stt: Stt = client.stt;
         const apiKeys: ApiKeys = client.apiKeys;
         const models: Models = client.models;
         const embeddings: Embeddings = client.embeddings;
@@ -20,6 +21,7 @@ describe("the package's exports", () => {
         expect(voices).toBe(client.voices);
         expect(tts).toBe(client.tts);
         expect(ttsJobs).toBe(client.tts.jobs);
+        expect(stt).toBe(client.stt);
         expect(apiKeys).toBe(client.apiKeys);
         expect(models).toBe(client.models);
         expect(embeddings).toBe(client.embeddings);
