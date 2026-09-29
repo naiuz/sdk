@@ -1,0 +1,31 @@
+{
+  "base_path": "/v1",
+  "operations": {
+    "synthesizeSpeech": {"http": "POST /tts/synthesize", "python": "tts.synthesize", "ts": "tts.synthesize", "php": "tts->synthesize"},
+    "synthesizeDialogue": {"http": "POST /tts/dialogue", "python": "tts.dialogue", "ts": "tts.dialogue", "php": "tts->dialogue"},
+    "createTtsJob": {"http": "POST /tts/jobs", "python": "tts.jobs.create", "ts": "tts.jobs.create", "php": "tts->jobs->create"},
+    "retrieveTtsJob": {"http": "GET /tts/jobs/{id}", "python": "tts.jobs.retrieve", "ts": "tts.jobs.retrieve", "php": "tts->jobs->retrieve"},
+    "downloadTtsJobAudio": {"http": "GET /tts/jobs/{id}/audio", "python": "tts.jobs.audio", "ts": "tts.jobs.audio", "php": "tts->jobs->audio"},
+    "listVoices": {"http": "GET /tts/voices", "python": "voices.list", "ts": "voices.list", "php": "voices->list"},
+    "retrieveVoice": {"http": "GET /tts/voices/{id}", "python": "voices.retrieve", "ts": "voices.retrieve", "php": "voices->retrieve"},
+    "createVoice": {"http": "POST /tts/voices", "python": "voices.create", "ts": "voices.create", "php": "voices->create"},
+    "updateVoice": {"http": "PATCH /tts/voices/{id}", "python": "voices.update", "ts": "voices.update", "php": "voices->update"},
+    "deleteVoice": {"http": "DELETE /tts/voices/{id}", "python": "voices.delete", "ts": "voices.delete", "php": "voices->delete"},
+    "replaceVoiceAudio": {"http": "POST /tts/voices/{id}/audio", "python": "voices.replace_audio", "ts": "voices.replaceAudio", "php": "voices->replaceAudio"},
+    "createTranscription": {"http": "POST /stt/transcribe", "python": "stt.transcribe", "ts": "stt.transcribe", "php": "stt->transcribe"},
+    "createChatCompletion": {"http": "POST /chat/completions", "python": "chat.completions.create", "ts": "chat.completions.create", "php": "chat->completions->create"},
+    "listModels": {"http": "GET /models", "python": "models.list", "ts": "models.list", "php": "models->list"},
+    "createEmbedding": {"http": "POST /embeddings", "python": "embeddings.create", "ts": "embeddings.create", "php": "embeddings->create"},
+    "rerank": {"http": "POST /rerank", "python": "rerank.create", "ts": "rerank.create", "php": "rerank->create"},
+    "retrieveBalance": {"http": "GET /balance", "python": "account.balance", "ts": "account.balance", "php": "account->balance"},
+    "retrieveUsage": {"http": "GET /usage", "python": "account.usage", "ts": "account.usage", "php": "account->usage"},
+    "listApiKeys": {"http": "GET /api-keys", "python": "api_keys.list", "ts": "apiKeys.list", "php": "apiKeys->list"},
+    "createApiKey": {"http": "POST /api-keys", "python": "api_keys.create", "ts": "apiKeys.create", "php": "apiKeys->create"},
+    "retrieveApiKey": {"http": "GET /api-keys/{id}", "python": "api_keys.retrieve", "ts": "apiKeys.retrieve", "php": "apiKeys->retrieve"},
+    "updateApiKey": {"http": "PATCH /api-keys/{id}", "python": "api_keys.update", "ts": "apiKeys.update", "php": "apiKeys->update"},
+    "revokeApiKey": {"http": "POST /api-keys/{id}/revoke", "python": "api_keys.revoke", "ts": "apiKeys.revoke", "php": "apiKeys->revoke"}
+  },
+  "helpers": {
+    "createAndWait": {"python": "tts.jobs.create_and_wait", "ts": "tts.jobs.createAndWait", "php": "tts->jobs->createAndWait", "uses": ["createTtsJob", "retrieveTtsJob"]}
+  }
+}
