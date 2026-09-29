@@ -1,0 +1,29 @@
+name: Live smoke tests
+
+on:
+  schedule:
+    - cron: "41 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  typescript:
+    name: TypeScript SDK
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: js
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: js/package-lock.json
+      - run: npm ci
+      # Every test is skipped when the secret isn't set.
+      - run: npm run test:smoke
+        env:
+          NEURONAI_SMOKE_API_KEY: ${{ secrets.NEURONAI_SMOKE_API_KEY }}

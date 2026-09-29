@@ -13,9 +13,10 @@ test("CI checks the contract on every pull request and every push to main", asyn
 });
 
 test("no workflow runs an action major built for Node 20", async () => {
-    for (const name of ["ci.yml", "drift.yml", "js.yml"]) {
+    for (const name of ["ci.yml", "drift.yml", "js.yml", "smoke.yml"]) {
         const text = await read(name);
         assert.doesNotMatch(text, /actions\/(checkout|setup-node)@v[1-4]\b/);
+        assert.doesNotMatch(text, /(oven-sh\/setup-bun|denoland\/setup-deno)@v1\b/);
     }
 });
 
@@ -30,6 +31,24 @@ test("the JavaScript SDK's checks run on Node 20, 22 and 24 when js/ or spec/ ch
     const steps = ["npm ci", "npm run lint", "npm run typecheck", "npm test", "npm run build"].map((command) => js.indexOf(`run: ${command}\n`));
     assert.ok(steps.every((index) => index > 0), "every step is there");
     assert.deepEqual([...steps].sort((a, b) => a - b), steps, "in this order");
+});
+
+test("the JavaScript SDK's built package runs mocked calls on Node, Bun and Deno", async () => {
+    const js = await read("js.yml");
+    assert.match(js, /run: npm run build\n\s+- run: node smoke\/runtimes\.mjs\n/);
+    assert.match(js, /uses: oven-sh\/setup-bun@v2\n/);
+    assert.match(js, /run: bun smoke\/runtimes\.mjs\n/);
+    assert.match(js, /uses: denoland\/setup-deno@v2\n/);
+    assert.match(js, /run: deno run --no-prompt [^\n]*smoke\/runtimes\.mjs\n/);
+});
+
+test("the live smoke tests run nightly and on demand, never on a pull request, with the key from the Actions secret", async () => {
+    const smoke = await read("smoke.yml");
+    assert.match(smoke, /schedule:\n\s+- cron: /);
+    assert.match(smoke, /workflow_dispatch:/);
+    assert.doesNotMatch(smoke, /pull_request/);
+    assert.match(smoke, /working-directory: js\n/);
+    assert.match(smoke, /run: npm run test:smoke\n\s+env:\n\s+NEURONAI_SMOKE_API_KEY: \$\{\{ secrets\.NEURONAI_SMOKE_API_KEY \}\}\n/);
 });
 
 test("the drift job runs daily and on demand, and only reports drift as drift", async () => {

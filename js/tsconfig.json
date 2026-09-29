@@ -14,5 +14,5 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["src", "test", "tsup.config.ts", "vitest.config.ts"]
+  "include": ["src", "test", "smoke", "tsup.config.ts", "vitest.config.ts", "vitest.smoke.config.ts"]
 }

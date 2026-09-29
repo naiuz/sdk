@@ -18,4 +18,12 @@ export default defineConfig(
         files: ["eslint.config.js"],
         extends: [tseslint.configs.disableTypeChecked],
     },
+    {
+        // Plain JavaScript that Bun and Deno run against the built package.
+        files: ["smoke/**/*.mjs"],
+        extends: [tseslint.configs.disableTypeChecked],
+        languageOptions: {
+            globals: {console: "readonly", setTimeout: "readonly", Request: "readonly", Response: "readonly", URL: "readonly"},
+        },
+    },
 );

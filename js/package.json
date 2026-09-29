@@ -32,7 +32,8 @@
     "build": "tsup",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.build.json",
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:smoke": "vitest run --config vitest.smoke.config.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

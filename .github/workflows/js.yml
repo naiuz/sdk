@@ -39,3 +39,45 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      - run: node smoke/runtimes.mjs
+
+  bun:
+    name: Bun
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: js
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: js/package-lock.json
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: npm ci
+      - run: npm run build
+      - run: bun smoke/runtimes.mjs
+
+  deno:
+    name: Deno
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: js
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: js/package-lock.json
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - run: npm ci
+      - run: npm run build
+      # No --allow-env beyond the temp directory's variables: the SDK must cope without reading its own.
+      - run: deno run --no-prompt --allow-read --allow-write --allow-net=127.0.0.1 --allow-env=TMPDIR,TMP,TEMP smoke/runtimes.mjs
