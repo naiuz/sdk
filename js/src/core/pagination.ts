@@ -57,8 +57,8 @@ export class PagePromise<T> extends APIPromise<Page<T>> implements AsyncIterable
 export function requestPage<T>(http: HttpClient, request: APIRequest): PagePromise<T> {
     const fetchPage = (cursor: string): PagePromise<T> => requestPage<T>(http, {...request, query: {...request.query, cursor}});
     return new PagePromise<T>(
-        http.send(request, async (response) => {
-            const body = await readJsonObject(response, (candidate) => Array.isArray(candidate.data));
+        http.send(request, async (response, attempt) => {
+            const body = await readJsonObject(response, attempt, (candidate) => Array.isArray(candidate.data));
             const nextCursor = typeof body.next_cursor === "string" ? body.next_cursor : null;
             return new Page<T>({data: body.data as T[], next_cursor: nextCursor, request_id: requestIdOf(body, response.headers)}, fetchPage);
         }),

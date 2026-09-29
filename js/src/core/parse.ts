@@ -1,5 +1,7 @@
 import {APIConnectionError, makeAPIError} from "../errors";
+import type {Attempt} from "./http";
 import {isRecord} from "./json";
+import {rootMessage} from "./root-message";
 
 /** An object from an `{data, request_id}` answer, with the request's ID attached. */
 export type WithRequestId<T> = T & {
@@ -26,21 +28,27 @@ function attach<T extends object, K extends string, V>(target: T, key: K, value:
     return target as T & Readonly<Record<K, V>>;
 }
 
+/** The error for a connection that failed while an answer's body arrived, saying what failed. */
+export function connectionLost(cause: unknown): APIConnectionError {
+    const reason = rootMessage(cause);
+    return new APIConnectionError(reason === "" ? "The connection failed while the response arrived." : `The connection failed while the response arrived: ${reason}`, {cause});
+}
+
 /** The body as text. A connection that fails while the body arrives raises APIConnectionError. */
 export async function readText(response: Response): Promise<string> {
     try {
         return await response.text();
     } catch (cause) {
-        throw new APIConnectionError("The connection failed while the response arrived.", {cause});
+        throw connectionLost(cause);
     }
 }
 
 /**
  * The JSON object a success answer carries. A body that isn't a JSON object,
  * or fails `valid`, raises APIError with the answer's status and the start
- * of the body.
+ * of the body, with the API key redacted from it.
  */
-export async function readJsonObject(response: Response, valid: (body: Record<string, unknown>) => boolean = () => true): Promise<Record<string, unknown>> {
+export async function readJsonObject(response: Response, attempt: Attempt, valid: (body: Record<string, unknown>) => boolean = () => true): Promise<Record<string, unknown>> {
     const text = await readText(response);
     let body: unknown;
     try {
@@ -48,7 +56,7 @@ export async function readJsonObject(response: Response, valid: (body: Record<st
     } catch {
         // Not JSON: raised below, like any other body the SDK can't use.
     }
-    if (!isRecord(body) || !valid(body)) throw makeAPIError(response.status, response.statusText, response.headers, text);
+    if (!isRecord(body) || !valid(body)) throw makeAPIError(response.status, response.statusText, response.headers, attempt.redact(text));
     return body;
 }
 
@@ -66,14 +74,14 @@ export function numberHeader(headers: Headers, name: string): number | null {
 }
 
 /** An `{data, request_id}` answer: its `data` object, with `request_id` attached. */
-export async function readEnvelope<T extends object>(response: Response): Promise<WithRequestId<T>> {
-    const body = await readJsonObject(response, (candidate) => isRecord(candidate.data));
+export async function readEnvelope<T extends object>(response: Response, attempt: Attempt): Promise<WithRequestId<T>> {
+    const body = await readJsonObject(response, attempt, (candidate) => isRecord(candidate.data));
     return attach(body.data as T, "request_id", requestIdOf(body, response.headers));
 }
 
 /** A compatible endpoint's answer: the body as it is, with `cost` attached from `X-Cost` when sent. */
-export async function readBody<T extends object>(response: Response): Promise<WithCost<T>> {
-    const body = (await readJsonObject(response)) as T;
+export async function readBody<T extends object>(response: Response, attempt: Attempt): Promise<WithCost<T>> {
+    const body = (await readJsonObject(response, attempt)) as T;
     const cost = numberHeader(response.headers, "x-cost");
     return cost === null ? body : attach(body, "cost", cost);
 }

@@ -1,4 +1,4 @@
-import {HttpClient, type Fetch, type HttpClientConfig} from "../../src/core/http";
+import {HttpClient, type Attempt, type Fetch, type HttpClientConfig} from "../../src/core/http";
 
 /** The key every unit test's client sends. */
 export const KEY = "nai_unit_test_key";
@@ -26,4 +26,17 @@ export function httpClient(fetch: Fetch, overrides: Partial<HttpClientConfig> = 
         ...overrides,
     });
     return {http, sleeps};
+}
+
+/** An attempt to hand a reader called on its own: it never aborts, and it redacts KEY. */
+export function testAttempt(overrides: Partial<Attempt> = {}): Attempt {
+    return {
+        signal: new AbortController().signal,
+        timeout: 1000,
+        abort: () => undefined,
+        disarm: () => undefined,
+        adopt: () => () => undefined,
+        redact: (text) => text.split(KEY).join("[redacted]"),
+        ...overrides,
+    };
 }

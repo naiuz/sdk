@@ -31,7 +31,7 @@ export interface ClientOptions {
     timeout?: number;
     /** How many times a failed attempt may be retried: 2 by default. */
     maxRetries?: number;
-    /** Headers sent with every call. */
+    /** Headers sent with every call, over the SDK's own. A call's Idempotency-Key and `extraHeaders` go over them. */
     defaultHeaders?: Record<string, string>;
     /** A fetch implementation, for tests and proxies. Defaults to the global `fetch`. */
     fetch?: Fetch;

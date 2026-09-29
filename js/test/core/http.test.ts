@@ -1,14 +1,21 @@
+import {getEventListeners} from "node:events";
 import {inspect} from "node:util";
-import {describe, expect, it} from "vitest";
-import type {APIRequest} from "../../src/core/http";
+import {afterEach, describe, expect, it, vi} from "vitest";
+import type {APIRequest, Attempt} from "../../src/core/http";
 import {readEnvelope} from "../../src/core/parse";
 import type {RetryClass} from "../../src/core/retry";
 import {APIConnectionError, APIError, APITimeoutError, ConflictError, InternalServerError, NeuronAIError, NotFoundError, RateLimitError} from "../../src/errors";
 import {httpClient, KEY} from "../helpers/http";
-import {apiError, envelope, hang, json, mockFetch, refused, refusedEverywhere, reset, stalledBody, type Reply} from "../helpers/mock-fetch";
+import {apiError, envelope, hang, json, mockFetch, refused, refusedEverywhere, reset, stalledBody, stalledError, type Reply} from "../helpers/mock-fetch";
 
 const balance: APIRequest = {method: "GET", path: "/balance", retry: "safe"};
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+/** A fetch that ignores its signal and never settles. */
+const deaf = (): Promise<Response> => new Promise<Response>(() => undefined);
+
+afterEach(() => {
+    vi.useRealTimers();
+});
 
 describe("a request", () => {
     it("sends the bearer key, a JSON Accept and the User-Agent", async () => {
@@ -51,6 +58,22 @@ describe("a request", () => {
         expect(requests).toHaveLength(0);
     });
 
+    it("keeps the Headers error, which quotes the value, out of that refusal", async () => {
+        const {fetch} = mockFetch();
+        const {http} = httpClient(fetch);
+        const error = await http.request({...balance, options: {extraHeaders: {"x-token": "secret\nvalue"}}}, readEnvelope).catch((caught: unknown) => caught);
+        expect((error as Error).cause).toBeUndefined();
+        expect(inspect(error, {depth: Infinity, showHidden: true})).not.toContain("secret");
+    });
+
+    it("sends the request when the method is called, before anything awaits it", async () => {
+        const {fetch, requests} = mockFetch(envelope({}));
+        const {http} = httpClient(fetch);
+        const call = http.request(balance, readEnvelope);
+        expect(requests).toHaveLength(1);
+        await call;
+    });
+
     it("gives the parsed result with the status and headers through withResponse()", async () => {
         const {fetch} = mockFetch(envelope({id: "job-1"}, "req-7", 202));
         const {http} = httpClient(fetch);
@@ -83,6 +106,12 @@ describe("retries", () => {
         await expect(http.request(balance, readEnvelope)).rejects.toBeInstanceOf(InternalServerError);
         expect(requests).toHaveLength(3);
         expect(sleeps).toEqual([500, 1000]);
+    });
+
+    it("raises the last error when every attempt fails, each differently", async () => {
+        const {fetch} = mockFetch(apiError(503, "service_unavailable"), apiError(502, "upstream_error"), apiError(500, "server_error"));
+        const {http} = httpClient(fetch);
+        await expect(http.request(balance, readEnvelope)).rejects.toMatchObject({status: 500, code: "server_error"});
     });
 
     it("stops as soon as an attempt succeeds", async () => {
@@ -206,6 +235,18 @@ describe("timeouts", () => {
         await expect(http.request(balance, readEnvelope)).rejects.toBeInstanceOf(APITimeoutError);
     });
 
+    it("times out an error answer whose body stalls", async () => {
+        const {fetch} = mockFetch(stalledError);
+        const {http} = httpClient(fetch, {timeout: 20, maxRetries: 0});
+        await expect(http.request(balance, readEnvelope)).rejects.toBeInstanceOf(APITimeoutError);
+    });
+
+    it("stops waiting for a fetch that ignores the abort signal", async () => {
+        const {fetch} = mockFetch(deaf);
+        const {http} = httpClient(fetch, {timeout: 20, maxRetries: 0});
+        await expect(http.request(balance, readEnvelope)).rejects.toBeInstanceOf(APITimeoutError);
+    });
+
     it("uses a call's timeout over the client's", async () => {
         const {fetch} = mockFetch(hang);
         const {http} = httpClient(fetch, {timeout: 60_000, maxRetries: 0});
@@ -219,6 +260,26 @@ describe("timeouts", () => {
         const paid = mockFetch(hang, envelope({ok: true}));
         await expect(httpClient(paid.fetch, {timeout: 20}).http.request({...balance, retry: "paid"}, readEnvelope)).rejects.toBeInstanceOf(APITimeoutError);
         expect(paid.requests).toHaveLength(1);
+    });
+});
+
+describe("cleanup", () => {
+    it("clears the attempt's timer once a call settles, so nothing keeps the process alive", async () => {
+        vi.useFakeTimers();
+        const {fetch} = mockFetch(envelope({}), apiError(404, "not_found"));
+        const {http} = httpClient(fetch, {timeout: 300_000});
+        await http.request(balance, readEnvelope);
+        await http.request(balance, readEnvelope).catch(() => undefined);
+        expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it("leaves no listener on the caller's signal once a call settles", async () => {
+        const controller = new AbortController();
+        const {fetch} = mockFetch(envelope({}), apiError(404, "not_found"));
+        const {http} = httpClient(fetch);
+        await http.request({...balance, options: {signal: controller.signal}}, readEnvelope);
+        await http.request({...balance, options: {signal: controller.signal}}, readEnvelope).catch(() => undefined);
+        expect(getEventListeners(controller.signal, "abort")).toHaveLength(0);
     });
 });
 
@@ -261,6 +322,18 @@ describe("idempotency keys", () => {
         const {http} = httpClient(fetch);
         await http.request({...createJob, options: {idempotencyKey: "order-42"}}, readEnvelope);
         expect(requests.map((request) => request.headers.get("idempotency-key"))).toEqual(["order-42", "order-42", "order-42"]);
+    });
+
+    it("sends the call's key over a client-wide default one, and extraHeaders over both", async () => {
+        const {fetch, requests} = mockFetch(envelope({id: "job-1"}), envelope({id: "job-2"}), envelope({id: "job-3"}));
+        const {http} = httpClient(fetch, {defaultHeaders: {"idempotency-key": "shared"}});
+        await http.request({...createJob, options: {idempotencyKey: "order-42"}}, readEnvelope);
+        await http.request(createJob, readEnvelope);
+        await http.request({...createJob, options: {idempotencyKey: "order-43", extraHeaders: {"idempotency-key": "extra"}}}, readEnvelope);
+        const [own, generated, extra] = requests.map((request) => request.headers.get("idempotency-key"));
+        expect(own).toBe("order-42");
+        expect(generated).toMatch(UUID_V4);
+        expect(extra).toBe("extra");
     });
 
     it("generates a UUIDv4 when the caller gives none, and reuses it on every retry", async () => {
@@ -318,12 +391,72 @@ describe("a caller's AbortSignal", () => {
         expect(Date.now() - started).toBeLessThan(5000);
     });
 
+    it("rejects with its reason when it aborts while the body is read", async () => {
+        const {fetch} = mockFetch(stalledBody);
+        const {http} = httpClient(fetch);
+        const controller = new AbortController();
+        const reason = new Error("The caller gave up.");
+        const call = http.request({...balance, options: {signal: controller.signal}}, readEnvelope);
+        setTimeout(() => {
+            controller.abort(reason);
+        }, 10);
+        await expect(call).rejects.toBe(reason);
+    });
+
+    it("rejects with its reason when it aborts a fetch that ignores the signal", async () => {
+        const {fetch} = mockFetch(deaf);
+        const {http} = httpClient(fetch);
+        const controller = new AbortController();
+        const reason = new Error("The caller gave up.");
+        const call = http.request({...balance, options: {signal: controller.signal}}, readEnvelope);
+        setTimeout(() => {
+            controller.abort(reason);
+        }, 10);
+        await expect(call).rejects.toBe(reason);
+    });
+
     it("sends nothing when the signal has already aborted", async () => {
         const {fetch, requests} = mockFetch();
         const {http} = httpClient(fetch);
         const reason = new Error("Already cancelled.");
         await expect(http.request({...balance, options: {signal: AbortSignal.abort(reason)}}, readEnvelope)).rejects.toBe(reason);
         expect(requests).toHaveLength(0);
+    });
+});
+
+describe("the attempt a reader runs in", () => {
+    it("redacts the API key", async () => {
+        const {fetch} = mockFetch(envelope({}));
+        const {http} = httpClient(fetch);
+        const text = await http.request(balance, (_response, attempt) => Promise.resolve(attempt.redact(`Bearer ${KEY}`)));
+        expect(text).toBe("Bearer [redacted]");
+    });
+
+    it("lets a reader disarm the timer and read on past the timeout", async () => {
+        const {fetch} = mockFetch(envelope({}));
+        const {http} = httpClient(fetch, {timeout: 20, maxRetries: 0});
+        const late = await http.request(balance, async (_response, attempt) => {
+            attempt.disarm();
+            await new Promise((resolve) => setTimeout(resolve, 60));
+            return "read after 60 ms";
+        });
+        expect(late).toBe("read after 60 ms");
+    });
+
+    it("keeps the caller's signal wired to a reader that adopts the attempt, until it cleans up", async () => {
+        const controller = new AbortController();
+        const {fetch} = mockFetch(envelope({}));
+        const {http} = httpClient(fetch);
+        const {attempt, cleanup} = await http.request({...balance, options: {signal: controller.signal}}, (_response, handed: Attempt) => {
+            handed.disarm();
+            return Promise.resolve({attempt: handed, cleanup: handed.adopt()});
+        });
+        expect(getEventListeners(controller.signal, "abort")).toHaveLength(1);
+        const reason = new Error("The caller gave up.");
+        controller.abort(reason);
+        expect(attempt.signal.reason).toBe(reason);
+        cleanup();
+        expect(getEventListeners(controller.signal, "abort")).toHaveLength(0);
     });
 });
 
@@ -341,6 +474,14 @@ describe("the API key", () => {
             expect(JSON.stringify(error)).not.toContain(KEY);
             expect(String(error)).not.toContain(KEY);
         }
+    });
+
+    it("is redacted from a success answer that isn't what the call returns", async () => {
+        const {fetch} = mockFetch(new Response(`<pre>Authorization: Bearer ${KEY}</pre>`, {status: 200, headers: {"content-type": "text/html"}}));
+        const {http} = httpClient(fetch);
+        const error = await http.request(balance, readEnvelope).catch((caught: unknown) => caught);
+        expect(error).toBeInstanceOf(APIError);
+        expect((error as Error).message).not.toContain(KEY);
     });
 
     it("is redacted from an error built from a body that echoes it back", async () => {

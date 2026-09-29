@@ -3,6 +3,7 @@ import {APIPromise, type WithResponse} from "./api-promise";
 import {readText} from "./parse";
 import {failedBeforeSending, isRetryable, retryDelay, type AttemptFailure, type RetryClass} from "./retry";
 import {parseRetryAfter} from "./retry-after";
+import {rootMessage} from "./root-message";
 import {buildURL, type QueryValue} from "./url";
 
 /** Per-call options: every method takes them as its last argument. */
@@ -11,7 +12,7 @@ export interface RequestOptions {
     timeout?: number;
     /** How many times a failed attempt may be retried. Overrides the client's `maxRetries`. */
     maxRetries?: number;
-    /** Headers for this call, sent after the client's `defaultHeaders`, so they win over them. */
+    /** Headers for this call. They go on last, so they win over the SDK's own headers, the client's `defaultHeaders` and the Idempotency-Key. */
     extraHeaders?: Record<string, string>;
     /** Cancels the call: the request is aborted, nothing is retried, and the call rejects with the signal's reason. */
     signal?: AbortSignal;
@@ -43,11 +44,35 @@ export interface APIRequest {
 }
 
 /**
+ * The attempt a reader runs in. A reader that goes on reading after it
+ * returns, as a stream does, takes the attempt over: it disarms the timer,
+ * adopts the cleanup, and aborts the request once it is done.
+ */
+export interface Attempt {
+    /** Aborts when the attempt times out, when the caller's signal aborts (with the caller's reason), or on `abort()`. */
+    readonly signal: AbortSignal;
+    /** The call's timeout, in milliseconds. */
+    readonly timeout: number;
+    /** Aborts the request: its body stops, and the connection is let go. */
+    abort(reason?: unknown): void;
+    /** Stops the attempt's timer, so the answer can be read for longer than the timeout. */
+    disarm(): void;
+    /**
+     * Keeps the caller's signal wired to `signal` after the reader returns,
+     * and hands back the cleanup that unwires it: the reader calls it once it
+     * is done with the answer.
+     */
+    adopt(): () => void;
+    /** The text with every occurrence of the API key replaced by `[redacted]`, for a body that goes into an error. */
+    redact(text: string): string;
+}
+
+/**
  * Reads a successful answer into the call's result. It runs inside the
  * attempt, so the timeout covers it, and it raises what the call should
  * raise for a body it can't use.
  */
-export type ParseResponse<T> = (response: Response) => Promise<T>;
+export type ParseResponse<T> = (response: Response, attempt: Attempt) => Promise<T>;
 
 /** A fetch implementation. The SDK calls it with a URL string and a RequestInit. */
 export type Fetch = (url: string, init: RequestInit) => Promise<Response>;
@@ -87,8 +112,8 @@ export function checkMaxRetries(value: number): number {
     return value;
 }
 
-/** Resolves after `ms`, or as soon as the signal aborts: the next attempt then rejects with the signal's reason. */
-function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+/** Resolves after `ms`, or as soon as the signal aborts: whoever waits checks the signal next. */
+export function sleep(ms: number, signal?: AbortSignal): Promise<void> {
     return new Promise((resolve) => {
         const done = (): void => {
             clearTimeout(timer);
@@ -101,8 +126,8 @@ function sleep(ms: number, signal?: AbortSignal): Promise<void> {
     });
 }
 
-/** The promise, unless the signal aborts first: then a rejection at once, so a stalled body can't outlive its attempt. */
-function untilAborted<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
+/** The promise, unless the signal aborts first: then a rejection at once, so a stalled fetch or body can't outlive its attempt. */
+export function untilAborted<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
     let stop = (): void => undefined;
     const aborted = new Promise<never>((_resolve, reject) => {
         stop = () => {
@@ -116,34 +141,7 @@ function untilAborted<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
     });
 }
 
-/** How deep `rootMessage` follows a cause chain or an AggregateError's `errors`, so a cause that refers back to itself can't loop forever. */
-const MAX_ROOT_MESSAGE_DEPTH = 5;
-
-/**
- * The deepest non-empty message in `error`'s cause chain. Node's fetch, when
- * every address of a host refuses the connection, rejects with a TypeError
- * whose cause is an AggregateError with an empty message; when a link's own
- * message is empty, the first non-empty message among its `errors` is used
- * instead.
- */
-function rootMessage(error: unknown, depth = 0): string {
-    if (!(error instanceof Error)) return String(error);
-    if (depth >= MAX_ROOT_MESSAGE_DEPTH) return error.message;
-    const {errors} = error as Error & {errors?: unknown};
-    if (error.message === "" && Array.isArray(errors)) {
-        for (const inner of errors) {
-            const message = rootMessage(inner, depth + 1);
-            if (message !== "") return message;
-        }
-    }
-    if (error.cause instanceof Error) {
-        const deeper = rootMessage(error.cause, depth + 1);
-        if (deeper !== "") return deeper;
-    }
-    return error.message;
-}
-
-type Attempt<T> = {ok: true; result: WithResponse<T>} | {ok: false; error: NeuronAIError; failure: AttemptFailure; retryAfter: number | null};
+type Outcome<T> = {ok: true; result: WithResponse<T>} | {ok: false; error: NeuronAIError; failure: AttemptFailure; retryAfter: number | null};
 
 /**
  * Sends API calls: it builds each request, runs the attempts with their
@@ -212,12 +210,15 @@ export class HttpClient {
                 throw new NeuronAIError(`The header "${name}" has a name or value that HTTP can't carry.`);
             }
         };
+        // Each group goes over the ones before it: the SDK's own headers, the client's
+        // defaultHeaders, the call's Idempotency-Key, then the call's extraHeaders.
         set("authorization", `Bearer ${this.#apiKey}`);
         set("accept", "application/json");
         set("user-agent", this.#userAgent);
         if (request.body !== undefined) set("content-type", "application/json");
-        if (request.retry === "idempotent") set("idempotency-key", request.options?.idempotencyKey || crypto.randomUUID());
         for (const [name, value] of Object.entries(this.#defaultHeaders)) set(name, value);
+        // After defaultHeaders, so a client-wide Idempotency-Key can't give every call the same key.
+        if (request.retry === "idempotent") set("idempotency-key", request.options?.idempotencyKey || crypto.randomUUID());
         for (const [name, value] of Object.entries(request.options?.extraHeaders ?? {})) set(name, value);
         return headers;
     }
@@ -227,21 +228,45 @@ export class HttpClient {
         return this.#apiKey === "" ? text : text.split(this.#apiKey).join("[redacted]");
     }
 
-    async #attempt<T>(url: string, init: RequestInit, timeout: number, signal: AbortSignal | undefined, parse: ParseResponse<T>): Promise<Attempt<T>> {
+    async #attempt<T>(url: string, init: RequestInit, timeout: number, signal: AbortSignal | undefined, parse: ParseResponse<T>): Promise<Outcome<T>> {
         signal?.throwIfAborted();
-        // Aborted by the timer or by the caller's signal, whichever comes first.
+        // Aborted by the timer, by the caller's signal (with its reason) or by the reader, whichever comes first.
         const controller = new AbortController();
         const timer = setTimeout(() => {
             controller.abort();
         }, timeout);
         const onAbort = (): void => {
-            controller.abort();
+            controller.abort(signal?.reason);
         };
         signal?.addEventListener("abort", onAbort, {once: true});
+        const cleanup = (): void => {
+            clearTimeout(timer);
+            signal?.removeEventListener("abort", onAbort);
+        };
+        // Whether the reader took the attempt over, and so runs the cleanup itself.
+        const reader = {adopted: false};
+        const attempt: Attempt = {
+            signal: controller.signal,
+            timeout,
+            abort: (reason) => {
+                controller.abort(reason);
+            },
+            disarm: () => {
+                clearTimeout(timer);
+            },
+            adopt: () => {
+                reader.adopted = true;
+                return cleanup;
+            },
+            redact: (text) => this.#redact(text),
+        };
+        let handedOver = false;
         try {
-            const response = await this.#fetchOnce(url, {...init, signal: controller.signal});
+            // Raced against the signal too, so a fetch that ignores init.signal can't outlive its attempt.
+            const response = await untilAborted(this.#fetchOnce(url, {...init, signal: controller.signal}), controller.signal);
             if (response.ok) {
-                const data = await untilAborted(parse(response), controller.signal);
+                const data = await untilAborted(parse(response, attempt), controller.signal);
+                handedOver = reader.adopted;
                 return {ok: true, result: {data, status: response.status, headers: response.headers}};
             }
             const text = this.#redact(await untilAborted(readText(response), controller.signal));
@@ -263,8 +288,8 @@ export class HttpClient {
             }
             throw error;
         } finally {
-            clearTimeout(timer);
-            signal?.removeEventListener("abort", onAbort);
+            // A reader that took the attempt over cleans up itself, once it is done with the answer.
+            if (!handedOver) cleanup();
         }
     }
 

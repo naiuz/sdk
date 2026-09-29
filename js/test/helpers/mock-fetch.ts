@@ -17,6 +17,8 @@ export type Reply = Response | Error | ((request: SentRequest) => Response | Pro
 export function mockFetch(...replies: Reply[]): {fetch: Fetch; requests: SentRequest[]} {
     const requests: SentRequest[] = [];
     const fetch: Fetch = (url, init) => {
+        // Like fetch, a request whose signal has already aborted is never sent: it rejects with the signal's reason, whatever that is.
+        if (init.signal?.aborted === true) return Promise.reject(init.signal.reason as Error);
         const request: SentRequest = {
             url: new URL(url),
             method: init.method ?? "GET",
@@ -49,13 +51,13 @@ export function apiError(status: number, code: string, headers: Record<string, s
     return json(status, {error: {type, code, message: `The ${code} message.`, param: null}, request_id: "req-error"}, {"x-request-id": "req-error", ...headers});
 }
 
-/** An answer that never comes: like fetch, it rejects only once the request is aborted. */
+/** An answer that never comes: like fetch, it rejects only once the request is aborted, with the signal's reason. */
 export function hang(request: SentRequest): Promise<Response> {
     return new Promise((_resolve, reject) => {
         request.signal?.addEventListener(
             "abort",
             () => {
-                reject(new DOMException("This operation was aborted", "AbortError"));
+                reject(request.signal?.reason as Error);
             },
             {once: true},
         );
@@ -65,6 +67,11 @@ export function hang(request: SentRequest): Promise<Response> {
 /** Headers at once, then a body that never arrives. */
 export function stalledBody(): Response {
     return new Response(new ReadableStream<Uint8Array>(), {status: 200, headers: {"content-type": "application/json"}});
+}
+
+/** An error status at once, then a body that never arrives. */
+export function stalledError(): Response {
+    return new Response(new ReadableStream<Uint8Array>(), {status: 503, headers: {"content-type": "application/json"}});
 }
 
 /** A fetch failure before anything was sent: the connection was refused. */
