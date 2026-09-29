@@ -4,6 +4,7 @@ import {readText} from "./parse";
 import {failedBeforeSending, isRetryable, retryDelay, type AttemptFailure, type RetryClass} from "./retry";
 import {parseRetryAfter} from "./retry-after";
 import {rootMessage} from "./root-message";
+import {toFormData} from "./uploads";
 import {buildURL, type QueryValue} from "./url";
 
 /** Per-call options: every method takes them as its last argument. */
@@ -38,6 +39,12 @@ export interface APIRequest {
     query?: Record<string, QueryValue>;
     /** Sent as JSON when defined. */
     body?: unknown;
+    /**
+     * Sent as multipart/form-data when defined, in place of `body`: `params`
+     * holds the call's fields, and `files` names the ones that are files.
+     * fetch writes the content type, with its boundary.
+     */
+    multipart?: {params: unknown; files: readonly string[]};
     /** Which failures are retried, and whether an Idempotency-Key is sent (`idempotent`). */
     retry: RetryClass;
     options?: IdempotentRequestOptions | undefined;
@@ -188,9 +195,10 @@ export class HttpClient {
         const timeout = checkTimeout(options.timeout ?? this.#timeout);
         const maxRetries = checkMaxRetries(options.maxRetries ?? this.#maxRetries);
         const url = buildURL(this.#baseURL, request.path, request.pathParams, request.query);
-        // Built once, so every retry sends the same Idempotency-Key.
+        // Built once, so every retry sends the same Idempotency-Key and the same form.
         const init: RequestInit = {method: request.method, headers: this.#headers(request)};
-        if (request.body !== undefined) init.body = JSON.stringify(request.body);
+        if (request.multipart !== undefined) init.body = toFormData(request.multipart.params, request.multipart.files);
+        else if (request.body !== undefined) init.body = JSON.stringify(request.body);
         for (let retry = 0; ; retry++) {
             const attempt = await this.#attempt(url, init, timeout, options.signal, parse);
             if (attempt.ok) return attempt.result;
@@ -215,7 +223,7 @@ export class HttpClient {
         set("authorization", `Bearer ${this.#apiKey}`);
         set("accept", "application/json");
         set("user-agent", this.#userAgent);
-        if (request.body !== undefined) set("content-type", "application/json");
+        if (request.body !== undefined && request.multipart === undefined) set("content-type", "application/json");
         for (const [name, value] of Object.entries(this.#defaultHeaders)) set(name, value);
         // After defaultHeaders, so a client-wide Idempotency-Key can't give every call the same key.
         if (request.retry === "idempotent") set("idempotency-key", request.options?.idempotencyKey || crypto.randomUUID());

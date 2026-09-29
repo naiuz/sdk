@@ -99,6 +99,43 @@ describe("a request", () => {
     });
 });
 
+describe("a multipart request", () => {
+    const transcribe: APIRequest = {
+        method: "POST",
+        path: "/stt/transcribe",
+        multipart: {params: {language: "uz", file: {data: new Uint8Array([1, 2, 3]), filename: "clip.wav"}}, files: ["file"]},
+        retry: "idempotent",
+    };
+
+    it("sends the form as it is, and leaves its content type, boundary included, to fetch", async () => {
+        const {fetch, requests} = mockFetch(envelope({text: "Salom"}));
+        const {http} = httpClient(fetch);
+        await http.request(transcribe, readEnvelope);
+        const [sent] = requests;
+        expect(sent?.headers.get("content-type")).toMatch(/^multipart\/form-data; boundary=/);
+        expect(sent?.form?.get("language")).toBe("uz");
+        expect(sent?.form?.get("file")).toBeInstanceOf(Blob);
+        expect(sent?.body).toBeNull();
+    });
+
+    it("sends the same form and Idempotency-Key on every retry", async () => {
+        const {fetch, requests} = mockFetch(apiError(503, "service_unavailable"), envelope({text: "Salom"}));
+        const {http} = httpClient(fetch);
+        await http.request(transcribe, readEnvelope);
+        expect(requests).toHaveLength(2);
+        expect(requests[0]?.form).toBeInstanceOf(FormData);
+        expect(requests[1]?.form).toBe(requests[0]?.form);
+        expect(requests[1]?.headers.get("idempotency-key")).toBe(requests[0]?.headers.get("idempotency-key"));
+    });
+
+    it("rejects a file it can't send, sending nothing", async () => {
+        const {fetch, requests} = mockFetch();
+        const {http} = httpClient(fetch);
+        await expect(http.request({...transcribe, multipart: {params: {file: "clip.wav"}, files: ["file"]}}, readEnvelope)).rejects.toBeInstanceOf(NeuronAIError);
+        expect(requests).toHaveLength(0);
+    });
+});
+
 describe("retries", () => {
     it("retries a 503 twice, waiting 0.5 s then 1 s, then raises the last error", async () => {
         const {fetch, requests} = mockFetch(apiError(503, "service_unavailable"), apiError(503, "service_unavailable"), apiError(503, "service_unavailable"));

@@ -4,9 +4,12 @@ import type {Fetch} from "../../src/core/http";
 export interface SentRequest {
     url: URL;
     method: string;
+    /** The headers, as fetch sends them: for a form, fetch adds its multipart content type, boundary included, unless one was set. */
     headers: Headers;
-    /** The body as text, or null when there is none. */
+    /** The body as text, or null when there is none or it is a form. */
     body: string | null;
+    /** The multipart form, when the body is one. */
+    form: FormData | null;
     signal: AbortSignal | null;
 }
 
@@ -19,11 +22,15 @@ export function mockFetch(...replies: Reply[]): {fetch: Fetch; requests: SentReq
     const fetch: Fetch = (url, init) => {
         // Like fetch, a request whose signal has already aborted is never sent: it rejects with the signal's reason, whatever that is.
         if (init.signal?.aborted === true) return Promise.reject(init.signal.reason as Error);
+        const headers = new Headers(init.headers);
+        const form = init.body instanceof FormData ? init.body : null;
+        if (form !== null && !headers.has("content-type")) headers.set("content-type", new Request(url, {method: "POST", body: form}).headers.get("content-type") ?? "");
         const request: SentRequest = {
             url: new URL(url),
             method: init.method ?? "GET",
-            headers: new Headers(init.headers),
+            headers,
             body: typeof init.body === "string" ? init.body : null,
+            form,
             signal: init.signal ?? null,
         };
         requests.push(request);

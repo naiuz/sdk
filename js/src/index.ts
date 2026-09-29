@@ -43,3 +43,4 @@ export type {Rerank} from "./resources/rerank";
 export type * from "./types/rerank";
 export type {Chat, Completions} from "./resources/chat";
 export type * from "./types/chat";
+export type * from "./types/uploads";
