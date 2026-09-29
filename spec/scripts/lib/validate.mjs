@@ -46,6 +46,29 @@ function withoutMembers(value, pointers) {
 }
 
 /**
+ * Whether `errors` (ajv's, from validating a whole body with `allErrors`)
+ * proves `pointer` is undeclared: an `unevaluatedProperties` or
+ * `additionalProperties` error naming exactly this member, at its own
+ * parent. A value merely rejected for some other reason (the wrong type, for
+ * instance) is not proof the document fails to declare it.
+ */
+function isUndeclared(errors, pointer) {
+    const parent = pointer.slice(0, pointer.lastIndexOf("/"));
+    const name = segmentsOf(pointer).at(-1);
+    return errors.some((error) => (error.keyword === "unevaluatedProperties" || error.keyword === "additionalProperties") && error.instancePath === parent && (error.params.unevaluatedProperty ?? error.params.additionalProperty) === name);
+}
+
+/**
+ * Where an `unknown_fields` pointer must be absent from `result`: under
+ * `result.body` for a compatible operation's `{body, cost}` shape (the
+ * fixtures README's own convention), or `result` itself for an envelope or a
+ * page, whose `result` already mirrors the body's own paths.
+ */
+function resultMirror(result) {
+    return result !== null && typeof result === "object" && !Array.isArray(result) && Object.hasOwn(result, "body") ? result.body : result;
+}
+
+/**
  * Closes every object schema in place: a schema object that declares
  * `properties` but neither `additionalProperties` nor `unevaluatedProperties`
  * gets `unevaluatedProperties: false`, so ajv rejects fields the document
@@ -96,13 +119,17 @@ export function createValidator({document, operations, fixtureSchema}) {
     const entries = new Map(listOperations(document).map((entry) => [entry.operationId, entry]));
     const compiled = new Map();
 
-    function against(pointer, value, label) {
+    function checkAgainst(pointer, value) {
         // Paths such as /v1/tts/voices/{id} put braces in the pointer. They aren't legal
         // in a URI fragment, so they are percent-encoded; ajv decodes them to look up.
         const ref = `${SPEC_ID}${pointer.replaceAll("{", "%7B").replaceAll("}", "%7D")}`;
         if (!compiled.has(pointer)) compiled.set(pointer, ajv.compile({$ref: ref}));
         const check = compiled.get(pointer);
-        return check(value) ? [] : check.errors.map((error) => `${label}${error.instancePath} ${error.message}`);
+        return check(value) ? [] : check.errors;
+    }
+
+    function against(pointer, value, label) {
+        return checkAgainst(pointer, value).map((error) => `${label}${error.instancePath} ${error.message}`);
     }
 
     function checkRoute(fixture, entry, mapped) {
@@ -214,10 +241,12 @@ export function createValidator({document, operations, fixtureSchema}) {
             if (!content["application/json"]) return [...problems, `status ${key} has no JSON body`];
             if (contentType !== "application/json") problems.push("response.headers.content-type must be application/json");
             const schema = `${response.pointer}/content/application~1json/schema`;
+            const fullErrors = checkAgainst(schema, body.json);
             for (const pointer of unknown) {
                 if (!namesMember(body.json, pointer)) problems.push(`unknown_fields names ${pointer}, which is not a field of response.body.json`);
-                // Truly unknown: with only the other unknown fields left out, the body must still fail against the document.
-                else if (against(schema, withoutMembers(body.json, unknown.filter((other) => other !== pointer)), "").length === 0) problems.push(`unknown_fields names ${pointer}, but the API document declares it: take it off unknown_fields`);
+                // Truly unknown: the closed-world check reports this exact member, at its own location, as unevaluated or additional.
+                else if (!isUndeclared(fullErrors, pointer)) problems.push(`unknown_fields names ${pointer}, but the API document declares it: take it off unknown_fields`);
+                else if (namesMember(resultMirror(fixture.result), pointer)) problems.push(`unknown_fields names ${pointer}, but fixture.result still has it: the result must leave it out`);
             }
             problems.push(...against(schema, withoutMembers(body.json, unknown), "response.body.json"));
             if (typeof body.json?.request_id === "string" && headers["x-request-id"] !== undefined && body.json.request_id !== headers["x-request-id"]) problems.push("response.body.json.request_id must equal the x-request-id header");

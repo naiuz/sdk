@@ -24,7 +24,7 @@ const document = {
             get: {
                 operationId: "listVoices",
                 parameters: [{name: "limit", in: "query", schema: {type: ["integer", "null"], minimum: 1, maximum: 100}}, {name: "days", in: "query", schema: {enum: [7, 30]}}],
-                responses: {"200": {description: "ok", headers: REQUEST_ID, content: {"application/json": {schema: {type: "object", required: ["data", "request_id"], properties: {data: {type: "array"}, request_id: {type: "string", format: "uuid"}}}}}}},
+                responses: {"200": {description: "ok", headers: REQUEST_ID, content: {"application/json": {schema: {type: "object", required: ["data", "request_id"], properties: {data: {type: "array"}, next_cursor: {type: ["string", "null"]}, request_id: {type: "string", format: "uuid"}}}}}}},
             },
             post: {
                 operationId: "createVoice",
@@ -301,4 +301,25 @@ test("30. unknown_fields names only fields the body has and the document doesn't
 
 test("31. unknown_fields on a response without a JSON body fails", () => {
     expectProblem(edit(remove(), (f) => { f.unknown_fields = ["/data"]; }), /unknown_fields applies only to a JSON response body/);
+});
+
+test("32. a declared property's own wrong value doesn't excuse it as unknown", () => {
+    // next_cursor is declared (optional) on listVoices; a wrong-typed value there also fails the document, but not because it's undeclared.
+    expectProblem(edit(list(), (f) => { f.response.body.json.next_cursor = 42; f.unknown_fields = ["/next_cursor"]; }), /unknown_fields names \/next_cursor, but the API document declares it/);
+});
+
+test("33. a declared field beside a truly unknown one still gets refused", () => {
+    expectProblem(edit(list(), (f) => {
+        f.response.body.json.next_cursor = 42;
+        f.response.body.json.meta = {deprecated: false};
+        f.unknown_fields = ["/next_cursor", "/meta"];
+    }), /unknown_fields names \/next_cursor, but the API document declares it/);
+});
+
+test("34. unknown_fields must be left out of the fixture's own result, not just the body", () => {
+    expectProblem(edit(list(), (f) => {
+        f.response.body.json.meta = {deprecated: false};
+        f.unknown_fields = ["/meta"];
+        f.result.meta = {deprecated: false};
+    }), /unknown_fields names \/meta, but fixture\.result still has it/);
 });

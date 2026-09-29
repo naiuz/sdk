@@ -217,17 +217,23 @@ export function projectError(error: unknown): {error: Record<string, unknown>} {
 /**
  * The result without the fields the fixture's `unknown_fields` names: an SDK
  * may keep a field it doesn't know or drop it, so the README leaves them out
- * of the comparison.
+ * of the comparison. `unknown_fields` are pointers into the response body, so
+ * they are stripped from the part of the result that mirrors the body: under
+ * `body` for a compatible operation's `{body, cost}` shape, since `cost` is
+ * its own field (derived from a header, not the body) and must not be
+ * touched; `result` itself otherwise, since an envelope or a page already
+ * mirrors the body's own paths.
  */
 export function withoutUnknownFields(result: unknown, fixture: Fixture): unknown {
     const copy = structuredClone(result);
+    const root = COMPATIBLE_OPERATIONS.has(fixture.operationId) && isRecord(copy) ? copy.body : copy;
     for (const pointer of fixture.unknown_fields ?? []) {
         const segments = pointer
             .slice(1)
             .split("/")
             .map((segment) => segment.replaceAll("~1", "/").replaceAll("~0", "~"));
         const name = segments.pop() ?? "";
-        let parent: unknown = copy;
+        let parent: unknown = root;
         for (const segment of segments) parent = isRecord(parent) ? parent[segment] : undefined;
         if (isRecord(parent)) Reflect.deleteProperty(parent, name);
     }
