@@ -6,7 +6,7 @@ Each file under `fixtures/<operationId>/` is one contract fixture. It holds:
 - a canned response;
 - the result the SDK must return from it.
 
-Every SDK replays every fixture. Its client is built with the API key `nai_test_fixture_key` and a mocked HTTP layer.
+Every SDK replays every fixture, as [Replaying a fixture](#replaying-a-fixture) describes.
 
 `npm run validate` checks every fixture against `spec/openapi.json`.
 
@@ -37,7 +37,7 @@ The schema is `fixture.schema.json`.
 | Chat completion, models, embeddings or rerank (their own bodies) | `{"body": …}`, plus `"cost": <number>` when the response has `x-cost` |
 | Audio (synthesize, dialogue, a job's audio) | `{"audio_base64", "content_type", "cost", "character_count", "balance", "voice_custom", "latency_ms", "replayed", "request_id"}`. A dialogue adds `"turns"` (parsed from `x-turns`) and `"turn_count"`. |
 | 204 | `null` |
-| An error | `{"error": {"class", "status", "type", "code", "message", "param", "fields", "request_id", "retry_after"}}`. `class` is the Python and TypeScript error class; PHP uses the same name ending in `Exception`. `fields` is `null` when absent, and `retry_after` is `null` except on 429. |
+| An error | `{"error": {"class", "status", "type", "code", "message", "param", "fields", "request_id", "retry_after"}}`. `class` is the Python and TypeScript error class; PHP uses the same name ending in `Exception`. `fields` is `null` when absent. `retry_after` is the `retry-after` header's seconds, as a number, on a 429 that sends one, and `null` otherwise. |
 | A stream | `{"chunks": [...]}`: each event before `[DONE]`, parsed |
 
 How audio headers become fields:
@@ -45,3 +45,12 @@ How audio headers become fields:
 - `x-character-count` and `x-turn-count` become integers.
 - `x-voice-custom` becomes `true` only for `"1"`.
 - `idempotency-replayed` becomes `true` only for `"1"`, and is `false` when absent.
+
+## Replaying a fixture
+
+- Build the client with the API key `nai_test_fixture_key`, the default base URL and `max_retries: 0`, so a 429 or 5xx fixture raises at once instead of retrying.
+- Answer the one request the call sends with `response`, after checking that request against `request`.
+- Compare what the SDK returns with `result` as JSON values:
+  - key order doesn't matter;
+  - numbers compare by value, so `1650` equals `1650.0`;
+  - a key that is absent on one side matches `null` on the other.
