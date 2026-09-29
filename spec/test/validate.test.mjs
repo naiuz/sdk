@@ -254,3 +254,12 @@ test("22. call.files on a JSON operation fails, and on an operation without a re
     expectProblem(edit(synthesize(), (f) => { f.call.files = {extra: {filename: "x.txt", content_type: "text/plain", base64: "AA=="}}; }), /synthesizeSpeech takes no files/);
     expectProblem(edit(remove(), (f) => { f.call.files = {extra: {filename: "x.txt", content_type: "text/plain", base64: "AA=="}}; }), /deleteVoice takes no files/);
 });
+
+test("23. a field renamed in both the call and the body fails against the document", () => {
+    // voice_id is declared but not required: today, renaming it the same way on both sides reports nothing.
+    expectProblem(edit(synthesize(), (f) => { f.call.params = {text: "Salom", voiceId: "uz-sardor"}; f.request.body.json = {text: "Salom", voiceId: "uz-sardor"}; }), /request\.body\.json must NOT have unevaluated properties/);
+});
+
+test("24. a response field the document doesn't declare fails", () => {
+    expectProblem(edit(invalid(), (f) => { f.response.body.json.error.owner_email = "owner@example.test"; }), /response\.body\.json\S* must NOT have unevaluated properties/);
+});

@@ -18,6 +18,24 @@ function sameJson(a, b) {
     return JSON.stringify(canonical(a)) === JSON.stringify(canonical(b));
 }
 
+/**
+ * Closes every object schema in place: a schema object that declares
+ * `properties` but neither `additionalProperties` nor `unevaluatedProperties`
+ * gets `unevaluatedProperties: false`, so ajv rejects fields the document
+ * doesn't declare (including ones renamed to another undeclared name).
+ */
+function closeObjectSchemas(node) {
+    if (Array.isArray(node)) {
+        for (const item of node) closeObjectSchemas(item);
+        return;
+    }
+    if (node === null || typeof node !== "object") return;
+    if (node.properties && typeof node.properties === "object" && !Array.isArray(node.properties) && !Object.hasOwn(node, "additionalProperties") && !Object.hasOwn(node, "unevaluatedProperties")) {
+        node.unevaluatedProperties = false;
+    }
+    for (const value of Object.values(node)) closeObjectSchemas(value);
+}
+
 /** A query value as the server reads it: numbers for numeric schemas and enums, booleans for booleans. */
 function coerceQueryValue(text, schema) {
     const types = [schema?.type].flat().filter(Boolean);
@@ -35,7 +53,9 @@ function coerceQueryValue(text, schema) {
 export function createValidator({document, operations, fixtureSchema}) {
     const ajv = new Ajv2020({strict: false, allErrors: true});
     addFormats(ajv);
-    ajv.addSchema(document, SPEC_ID);
+    const closedDocument = structuredClone(document);
+    closeObjectSchemas(closedDocument);
+    ajv.addSchema(closedDocument, SPEC_ID);
     const checkShape = ajv.compile(fixtureSchema);
     const entries = new Map(listOperations(document).map((entry) => [entry.operationId, entry]));
     const compiled = new Map();
