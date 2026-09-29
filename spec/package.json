@@ -1,0 +1,15 @@
+{
+  "name": "@naiuz/sdk-spec-tools",
+  "private": true,
+  "type": "module",
+  "description": "Checks the NeuronAI SDK contract: the pinned OpenAPI document, the operation map and the shared fixtures.",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "validate": "node scripts/validate-fixtures.mjs",
+    "refresh": "node scripts/refresh-spec.mjs",
+    "check": "node scripts/refresh-spec.mjs --check"
+  }
+}
