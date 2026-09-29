@@ -39,7 +39,7 @@ test("the JavaScript SDK's built package runs mocked calls on Node, Bun and Deno
     assert.match(js, /uses: oven-sh\/setup-bun@v2\n/);
     assert.match(js, /run: bun smoke\/runtimes\.mjs\n/);
     assert.match(js, /uses: denoland\/setup-deno@v2\n/);
-    assert.match(js, /run: deno run --no-prompt [^\n]*smoke\/runtimes\.mjs\n/);
+    assert.match(js, /run: deno run --no-prompt --allow-read --allow-write --allow-net=127\.0\.0\.1 --allow-env=TMPDIR,TMP,TEMP smoke\/runtimes\.mjs\n/);
 });
 
 test("the live smoke tests run nightly and on demand, never on a pull request, with the key from the Actions secret", async () => {
