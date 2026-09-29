@@ -30,3 +30,4 @@ export type * from "./types/account";
 export type * from "./types/shared";
 export type * from "./types/voices";
 export type * from "./types/tts";
+export type * from "./types/api-keys";

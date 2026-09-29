@@ -2,6 +2,7 @@ import {checkMaxRetries, checkTimeout, type Fetch, HttpClient} from "./core/http
 import {globalFetch, isBrowser, readEnv, userAgent} from "./core/runtime";
 import {NeuronAIError} from "./errors";
 import {Account} from "./resources/account";
+import {ApiKeys} from "./resources/api-keys";
 import {Tts} from "./resources/tts";
 import {Voices} from "./resources/voices";
 
@@ -63,6 +64,8 @@ export class NeuronAI {
     readonly voices: Voices;
     /** Text to speech. */
     readonly tts: Tts;
+    /** Your organization's API keys. */
+    readonly apiKeys: ApiKeys;
 
     /**
      * Throws NeuronAIError at once when there is no API key, when an option
@@ -95,5 +98,6 @@ export class NeuronAI {
         this.account = new Account(http);
         this.voices = new Voices(http);
         this.tts = new Tts(http);
+        this.apiKeys = new ApiKeys(http);
     }
 }
