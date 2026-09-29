@@ -17,6 +17,7 @@ export {
     UnprocessableEntityError,
     RateLimitError,
     InternalServerError,
+    WaitTimeoutError,
     type APIErrorInit,
 } from "./errors";
 export type * from "./types/errors";
@@ -26,3 +27,6 @@ export type {Fetch, IdempotentRequestOptions, RequestOptions} from "./core/http"
 export {Page, PagePromise} from "./core/pagination";
 export {NeuronAI, DEFAULT_BASE_URL, DEFAULT_MAX_RETRIES, DEFAULT_TIMEOUT, type ClientOptions} from "./client";
 export type * from "./types/account";
+export type * from "./types/shared";
+export type * from "./types/voices";
+export type * from "./types/tts";

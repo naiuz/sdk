@@ -2,6 +2,8 @@ import {checkMaxRetries, checkTimeout, type Fetch, HttpClient} from "./core/http
 import {globalFetch, isBrowser, readEnv, userAgent} from "./core/runtime";
 import {NeuronAIError} from "./errors";
 import {Account} from "./resources/account";
+import {Tts} from "./resources/tts";
+import {Voices} from "./resources/voices";
 
 /** The API's address when neither `baseURL` nor NEURONAI_BASE_URL gives one. */
 export const DEFAULT_BASE_URL = "https://my.neuronai.uz/api/v1";
@@ -57,6 +59,10 @@ export class NeuronAI {
     readonly maxRetries: number;
     /** Your organization's balance and usage. */
     readonly account: Account;
+    /** Stock voices and your voice clones. */
+    readonly voices: Voices;
+    /** Text to speech. */
+    readonly tts: Tts;
 
     /**
      * Throws NeuronAIError at once when there is no API key, when an option
@@ -87,5 +93,7 @@ export class NeuronAI {
             fetch: fetchImpl,
         });
         this.account = new Account(http);
+        this.voices = new Voices(http);
+        this.tts = new Tts(http);
     }
 }

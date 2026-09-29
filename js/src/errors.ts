@@ -1,6 +1,7 @@
 import {isRecord} from "./core/json";
 import {parseRetryAfter} from "./core/retry-after";
 import type {ErrorType} from "./types/errors";
+import type {TtsJob} from "./types/tts";
 
 /** The base of every error this SDK throws. */
 export class NeuronAIError extends Error {
@@ -22,6 +23,22 @@ export class APITimeoutError extends APIConnectionError {
 
     constructor(message = "Request timed out.", options?: ErrorOptions) {
         super(message, options);
+    }
+}
+
+/**
+ * Waiting for a synthesis job ran out of time before the job finished.
+ * `job` is the job as the last poll saw it: fetch its audio once it has
+ * succeeded.
+ */
+export class WaitTimeoutError extends NeuronAIError {
+    override name = "WaitTimeoutError";
+    /** The job as the last poll saw it. */
+    readonly job: TtsJob;
+
+    constructor(job: TtsJob, message = `The job ${job.id} was still ${job.status} when the wait ran out.`) {
+        super(message);
+        this.job = job;
     }
 }
 
