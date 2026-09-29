@@ -11,5 +11,9 @@
     "validate": "node scripts/validate-fixtures.mjs",
     "refresh": "node scripts/refresh-spec.mjs",
     "check": "node scripts/refresh-spec.mjs --check"
+  },
+  "devDependencies": {
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1"
   }
 }

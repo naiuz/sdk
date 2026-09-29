@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/naiuz/sdk/spec/fixture.schema.json",
+  "title": "NeuronAI SDK contract fixture",
+  "description": "One SDK call, the exact HTTP request it must send, a canned response, and the result the SDK must return.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["description", "operationId", "call", "request", "response", "result"],
+  "properties": {
+    "description": {"type": "string", "minLength": 10},
+    "operationId": {"type": "string", "minLength": 1},
+    "call": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "path_params": {"type": "object", "additionalProperties": {"type": "string", "minLength": 1}},
+        "params": {"type": "object"},
+        "files": {"type": "object", "additionalProperties": {"$ref": "#/$defs/file"}},
+        "options": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {"idempotency_key": {"type": "string", "minLength": 1}}
+        }
+      }
+    },
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method", "path", "headers", "body"],
+      "properties": {
+        "method": {"enum": ["GET", "POST", "PATCH", "DELETE"]},
+        "path": {"type": "string", "pattern": "^/[^?#]*$"},
+        "query": {"type": "object", "additionalProperties": {"type": "string"}},
+        "headers": {"$ref": "#/$defs/headers"},
+        "body": {
+          "oneOf": [
+            {"type": "null"},
+            {"type": "object", "additionalProperties": false, "required": ["json"], "properties": {"json": {}}},
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["multipart"],
+              "properties": {
+                "multipart": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["fields", "files"],
+                  "properties": {
+                    "fields": {"type": "object"},
+                    "files": {"type": "object", "additionalProperties": {"$ref": "#/$defs/file"}}
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "response": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "headers", "body"],
+      "properties": {
+        "status": {"type": "integer", "minimum": 100, "maximum": 599},
+        "headers": {"$ref": "#/$defs/headers"},
+        "body": {
+          "oneOf": [
+            {"type": "null"},
+            {"type": "object", "additionalProperties": false, "required": ["json"], "properties": {"json": {}}},
+            {"type": "object", "additionalProperties": false, "required": ["base64"], "properties": {"base64": {"type": "string"}}},
+            {"type": "object", "additionalProperties": false, "required": ["sse"], "properties": {"sse": {"type": "array", "minItems": 1, "items": {"type": "string"}}}}
+          ]
+        }
+      }
+    },
+    "result": {}
+  },
+  "$defs": {
+    "headers": {
+      "type": "object",
+      "propertyNames": {"pattern": "^[a-z0-9-]+$"},
+      "additionalProperties": {"type": "string"}
+    },
+    "file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["filename", "content_type", "base64"],
+      "properties": {
+        "filename": {"type": "string", "minLength": 1},
+        "content_type": {"type": "string", "minLength": 1},
+        "base64": {"type": "string"}
+      }
+    }
+  }
+}
