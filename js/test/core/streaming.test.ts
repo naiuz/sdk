@@ -1,11 +1,17 @@
 import {getEventListeners} from "node:events";
-import {describe, expect, it} from "vitest";
+import {describe, expect, it, vi} from "vitest";
 import {SSEDecoder, readStream, type Stream} from "../../src/core/streaming";
 import {APIConnectionError, APIError, APITimeoutError, NeuronAIError} from "../../src/errors";
 import {httpClient} from "../helpers/http";
 import {json, mockFetch, type SentRequest} from "../helpers/mock-fetch";
 
 type Chunk = Record<string, unknown>;
+
+/** The attempt's own signal, as the mock recorded it on the request: the one `untilAborted` adds its per-read listeners to. */
+function requireSignal(sent: SentRequest | undefined): AbortSignal {
+    if (sent?.signal == null) throw new Error("expected the request to carry a signal");
+    return sent.signal;
+}
 
 const chunk = (n: number): string => JSON.stringify({object: "chat.completion.chunk", n});
 const UPSTREAM_ERROR = JSON.stringify({
@@ -118,6 +124,20 @@ describe("a stream", () => {
         expect(sent?.signal?.aborted).toBe(true);
     });
 
+    it("clears the drain's timer once the body has ended, so nothing keeps the process alive", async () => {
+        vi.useFakeTimers();
+        try {
+            const body = live();
+            const {stream} = await open(body.response);
+            body.send(`data: ${chunk(1)}\n\ndata: [DONE]\n\n`);
+            body.end();
+            await collect(stream);
+            expect(vi.getTimerCount()).toBe(0);
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
     it("raises an error event as APIError with the answer's status 200, after the chunks before it", async () => {
         const {stream} = await open(sse([chunk(1), UPSTREAM_ERROR, "[DONE]"]));
         const {chunks, error} = await collect(stream);
@@ -222,6 +242,23 @@ describe("a stream", () => {
         expect(getEventListeners(controller.signal, "abort")).toHaveLength(1);
         await collect(stream);
         expect(getEventListeners(controller.signal, "abort")).toHaveLength(0);
+    });
+
+    it("doesn't leave a listener on the attempt's signal for each piece read", async () => {
+        const body = live();
+        const {stream, sent} = await open(body.response);
+        const signal = requireSignal(sent);
+        const reading = collect(stream);
+        for (let n = 1; n <= 3; n++) {
+            body.send(`data: ${chunk(n)}\n\n`);
+            await pause(10);
+        }
+        // Waiting on the next piece holds one listener, never one per piece already read.
+        expect(getEventListeners(signal, "abort").length).toBeLessThanOrEqual(1);
+        body.send("data: [DONE]\n\n");
+        body.end();
+        await reading;
+        expect(getEventListeners(signal, "abort")).toHaveLength(0);
     });
 
     it("can be read once", async () => {

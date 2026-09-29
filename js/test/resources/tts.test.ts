@@ -2,9 +2,9 @@ import {getEventListeners} from "node:events";
 import {afterEach, describe, expect, expectTypeOf, it, vi} from "vitest";
 import {DialogueAudio, SpeechAudio} from "../../src/core/audio";
 import {HttpClient} from "../../src/core/http";
-import {AuthenticationError, GoneError, InsufficientQuotaError, NeuronAIError, WaitTimeoutError} from "../../src/errors";
+import {APIError, AuthenticationError, GoneError, InsufficientQuotaError, NeuronAIError, WaitTimeoutError} from "../../src/errors";
 import type {TtsJob, TtsJobStatus} from "../../src/types/tts";
-import {testClient} from "../helpers/client";
+import {CLIENT_KEY, testClient} from "../helpers/client";
 import {apiError, envelope, hang, mockFetch, refused} from "../helpers/mock-fetch";
 
 const job = (status: TtsJob["status"]): TtsJob => ({
@@ -27,6 +27,13 @@ const WAV = new Uint8Array([0x52, 0x49, 0x46, 0x46]);
 /** An audio answer with synthesize's headers, and any others given. */
 const wav = (headers: Record<string, string> = {}): Response =>
     new Response(WAV, {status: 200, headers: {"content-type": "audio/wav", "x-cost": "12.5", "x-character-count": "5", "x-request-id": "req-audio", ...headers}});
+
+/** A 200 that isn't audio, such as a captive portal's or a proxy's page, echoing the client's own key back. */
+const htmlWithKey = (): Response => new Response(`<html>Sign in first: ${CLIENT_KEY}</html>`, {status: 200, statusText: "OK", headers: {"content-type": "text/html"}});
+
+/** Whether an APIError carries the client's key anywhere a caller might read it, not only in `message`. */
+const carriesKey = (error: APIError): boolean =>
+    [error.message, error.type, error.code, error.param, error.request_id, JSON.stringify(error.fields)].some((value) => typeof value === "string" && value.includes(CLIENT_KEY));
 
 describe("tts", () => {
     it("synthesize() posts the text with an Idempotency-Key, asks for audio, and resolves to the WAV and its headers", async () => {
@@ -65,6 +72,26 @@ describe("tts", () => {
         await client.tts.synthesize({text: "Salom"});
         await client.tts.dialogue({turns: [{voice_id: "uz-sardor", text: "Salom!"}]});
         expect(send.mock.calls.map(([request]) => request.retry)).toEqual(["idempotent", "idempotent"]);
+    });
+
+    it("synthesize() raises APIError, key redacted, for a 200 that isn't audio", async () => {
+        const {fetch, requests} = mockFetch(htmlWithKey());
+        const error = await testClient(fetch).tts.synthesize({text: "Salom"}).catch((caught: unknown) => caught);
+        expect(error).toBeInstanceOf(APIError);
+        expect((error as APIError).status).toBe(200);
+        expect(carriesKey(error as APIError)).toBe(false);
+        expect(requests).toHaveLength(1);
+    });
+
+    it("dialogue() raises APIError, key redacted, for a 200 that isn't audio", async () => {
+        const {fetch, requests} = mockFetch(htmlWithKey());
+        const error = await testClient(fetch)
+            .tts.dialogue({turns: [{voice_id: "uz-sardor", text: "Salom!"}]})
+            .catch((caught: unknown) => caught);
+        expect(error).toBeInstanceOf(APIError);
+        expect((error as APIError).status).toBe(200);
+        expect(carriesKey(error as APIError)).toBe(false);
+        expect(requests).toHaveLength(1);
     });
 });
 
@@ -129,6 +156,15 @@ describe("tts.jobs", () => {
         expect(send.mock.calls.map(([request]) => request.retry)).toEqual(["safe"]);
     });
 
+    it("audio() raises APIError, key redacted, for a 200 that isn't audio", async () => {
+        const {fetch, requests} = mockFetch(htmlWithKey());
+        const error = await testClient(fetch).tts.jobs.audio("job-1").catch((caught: unknown) => caught);
+        expect(error).toBeInstanceOf(APIError);
+        expect((error as APIError).status).toBe(200);
+        expect(carriesKey(error as APIError)).toBe(false);
+        expect(requests).toHaveLength(1);
+    });
+
     it("types a job's status as an open union", () => {
         expectTypeOf<TtsJobStatus>().toEqualTypeOf<"queued" | "running" | "succeeded" | "failed" | (string & {})>();
     });
@@ -144,8 +180,9 @@ describe("tts.jobs.createAndWait", () => {
 
     it("creates the job, polls it every 2 s until it succeeds, and resolves to it", async () => {
         vi.useFakeTimers();
+        const controller = new AbortController();
         const {fetch, requests} = mockFetch(queued(), polled("running"), polled("succeeded"));
-        const wait = testClient(fetch).tts.jobs.createAndWait({text: "Salom"});
+        const wait = testClient(fetch).tts.jobs.createAndWait({text: "Salom"}, {signal: controller.signal});
         await vi.advanceTimersByTimeAsync(1999);
         expect(requests).toHaveLength(1);
         await vi.advanceTimersByTimeAsync(1);
@@ -155,6 +192,8 @@ describe("tts.jobs.createAndWait", () => {
         expect(done.status).toBe("succeeded");
         expect(done.request_id).toBe("req-succeeded");
         expect(requests.map((request) => `${request.method} ${request.url.pathname}`)).toEqual(["POST /api/v1/tts/jobs", "GET /api/v1/tts/jobs/job-1", "GET /api/v1/tts/jobs/job-1"]);
+        expect(vi.getTimerCount()).toBe(0);
+        expect(getEventListeners(controller.signal, "abort")).toHaveLength(0);
     });
 
     it("resolves to a job that failed as well", async () => {
