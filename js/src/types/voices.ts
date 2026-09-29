@@ -18,12 +18,12 @@ export interface Voice {
     tags: string[];
     /** `stock` or `custom`. */
     type: VoiceType;
-    /** The voice's category, or `null`. */
-    category: string | null;
-    /** The reference clip's transcript, or `null`. */
-    ref_text: string | null;
-    /** When the voice was created (ISO 8601), or `null`. */
-    created_at: string | null;
+    /** The voice's category, or `null`; the API may leave it out. */
+    category?: string | null;
+    /** The reference clip's transcript, or `null`; the API may leave it out. */
+    ref_text?: string | null;
+    /** When the voice was created (ISO 8601), or `null`; the API may leave it out. */
+    created_at?: string | null;
 }
 
 /** The query of `voices.list`. */

@@ -80,4 +80,9 @@ describe("voices", () => {
         const later: VoiceCategory = "audiobooks";
         expect(later).toBe("audiobooks");
     });
+
+    it("a voice may leave out category, ref_text and created_at, as the API document allows", () => {
+        const voice: Voice = {id: "v", name: "V", language: "uz", tags: [], type: "stock"};
+        expect(voice.id).toBe("v");
+    });
 });
