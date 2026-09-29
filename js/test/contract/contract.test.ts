@@ -1,7 +1,8 @@
 import {describe, expect, it} from "vitest";
 import {NeuronAI} from "../../src/client";
+import {Page} from "../../src/core/pagination";
 import {makeAPIError} from "../../src/errors";
-import {comparable, DEFERRED_FIXTURES, DEFERRED_METHODS, expectRequest, FIXTURE_KEY, listFixtures, loadFixture, OPERATIONS, projectError, replay, resolveMethod} from "./harness";
+import {comparable, DEFERRED_FIXTURES, DEFERRED_METHODS, expectRequest, FIXTURE_KEY, listFixtures, loadFixture, OPERATIONS, projectError, projectResult, replay, resolveMethod} from "./harness";
 
 const fixtures = listFixtures();
 const replayable = fixtures.filter((file) => !DEFERRED_FIXTURES.includes(file));
@@ -58,5 +59,17 @@ describe("coverage", () => {
         for (const [operationId, {ts}] of Object.entries(OPERATIONS.operations)) {
             if (!DEFERRED_METHODS.includes(ts)) expect(replayed, operationId).toContain(operationId);
         }
+    });
+});
+
+describe("projectResult", () => {
+    it("decides the shape from the operation, not from what the SDK returned", () => {
+        const bareArray = Object.assign([], {request_id: "req-1"});
+        expect(() => projectResult("listApiKeys", bareArray)).toThrow(/listApiKeys/);
+
+        const page = new Page<never>({data: [], next_cursor: null, request_id: null}, () => {
+            throw new Error("not called");
+        });
+        expect(() => projectResult("retrieveApiKey", page)).toThrow(/retrieveApiKey/);
     });
 });

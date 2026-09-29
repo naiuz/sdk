@@ -83,6 +83,7 @@ export const DEFERRED_METHODS: readonly string[] = [
 ];
 
 const COMPATIBLE_OPERATIONS = new Set(["createChatCompletion", "listModels", "createEmbedding", "rerank"]);
+const PAGE_OPERATIONS = new Set(["listVoices", "listApiKeys"]);
 
 /** Every fixture file under spec/fixtures, as `<operationId>/<name>.json`, sorted. */
 export function listFixtures(): string[] {
@@ -160,6 +161,9 @@ export function responseFor(fixture: Fixture): Response {
  */
 export function projectResult(operationId: string, value: unknown): unknown {
     if (value === undefined) return null;
+    if (PAGE_OPERATIONS.has(operationId) !== (value instanceof Page)) {
+        throw new Error(PAGE_OPERATIONS.has(operationId) ? `${operationId} should return a page, but didn't.` : `${operationId} should not return a page, but did.`);
+    }
     if (value instanceof Page) return {data: value.data as unknown, next_cursor: value.next_cursor, request_id: value.request_id};
     const attached = value as {request_id?: unknown; cost?: unknown};
     if (COMPATIBLE_OPERATIONS.has(operationId)) return {body: value, cost: attached.cost ?? null};
