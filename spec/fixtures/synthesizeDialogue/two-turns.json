@@ -1,0 +1,91 @@
+{
+  "description": "Renders a two-turn dialogue and reports where each turn sits.",
+  "operationId": "synthesizeDialogue",
+  "call": {
+    "params": {
+      "turns": [
+        {
+          "voice_id": "uz-sardor",
+          "text": "Salom!"
+        },
+        {
+          "voice_id": "uz-malika",
+          "text": "Assalomu alaykum!"
+        }
+      ],
+      "gap_ms": 300
+    },
+    "options": {
+      "idempotency_key": "fx-dialogue-1"
+    }
+  },
+  "request": {
+    "method": "POST",
+    "path": "/tts/dialogue",
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key",
+      "content-type": "application/json",
+      "idempotency-key": "fx-dialogue-1"
+    },
+    "body": {
+      "json": {
+        "turns": [
+          {
+            "voice_id": "uz-sardor",
+            "text": "Salom!"
+          },
+          {
+            "voice_id": "uz-malika",
+            "text": "Assalomu alaykum!"
+          }
+        ],
+        "gap_ms": 300
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "audio/wav",
+      "x-cost": "57.5",
+      "x-balance": "9942.5",
+      "x-character-count": "23",
+      "x-voice-custom": "0",
+      "x-latency-ms": "1650",
+      "x-turns": "[{\"index\":0,\"voice_id\":\"uz-sardor\",\"start_s\":0,\"end_s\":0.8,\"duration_s\":0.8},{\"index\":1,\"voice_id\":\"uz-malika\",\"start_s\":1.1,\"end_s\":2.4,\"duration_s\":1.3}]",
+      "x-turn-count": "2",
+      "x-request-id": "00000000-0000-4000-8000-000000000006"
+    },
+    "body": {
+      "base64": "UklGRiQAAABXQVZFZm10IBAAAAABAAEAgD4AAAB9AAACABAAZGF0YQAAAAA="
+    }
+  },
+  "result": {
+    "audio_base64": "UklGRiQAAABXQVZFZm10IBAAAAABAAEAgD4AAAB9AAACABAAZGF0YQAAAAA=",
+    "content_type": "audio/wav",
+    "cost": 57.5,
+    "character_count": 23,
+    "balance": 9942.5,
+    "voice_custom": false,
+    "latency_ms": 1650,
+    "replayed": false,
+    "request_id": "00000000-0000-4000-8000-000000000006",
+    "turns": [
+      {
+        "index": 0,
+        "voice_id": "uz-sardor",
+        "start_s": 0,
+        "end_s": 0.8,
+        "duration_s": 0.8
+      },
+      {
+        "index": 1,
+        "voice_id": "uz-malika",
+        "start_s": 1.1,
+        "end_s": 2.4,
+        "duration_s": 1.3
+      }
+    ],
+    "turn_count": 2
+  }
+}

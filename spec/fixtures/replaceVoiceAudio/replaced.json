@@ -1,0 +1,80 @@
+{
+  "description": "Replaces a custom voice's reference clip and transcript.",
+  "operationId": "replaceVoiceAudio",
+  "call": {
+    "path_params": {
+      "id": "01j9zq8m4r2k5t7w9y1b3d5f7h"
+    },
+    "params": {
+      "ref_text": "Yangi namuna matni."
+    },
+    "files": {
+      "ref_audio": {
+        "filename": "sample.wav",
+        "content_type": "audio/wav",
+        "base64": "UklGRiQAAABXQVZFZm10IBAAAAABAAEAgD4AAAB9AAACABAAZGF0YQAAAAA="
+      }
+    }
+  },
+  "request": {
+    "method": "POST",
+    "path": "/tts/voices/01j9zq8m4r2k5t7w9y1b3d5f7h/audio",
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key",
+      "content-type": "multipart/form-data"
+    },
+    "body": {
+      "multipart": {
+        "fields": {
+          "ref_text": "Yangi namuna matni."
+        },
+        "files": {
+          "ref_audio": {
+            "filename": "sample.wav",
+            "content_type": "audio/wav",
+            "base64": "UklGRiQAAABXQVZFZm10IBAAAAABAAEAgD4AAAB9AAACABAAZGF0YQAAAAA="
+          }
+        }
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json",
+      "x-request-id": "00000000-0000-4000-8000-000000000017"
+    },
+    "body": {
+      "json": {
+        "data": {
+          "id": "01j9zq8m4r2k5t7w9y1b3d5f7h",
+          "name": "Office voice",
+          "language": "uz",
+          "tags": [
+            "support"
+          ],
+          "type": "custom",
+          "category": "conversational",
+          "ref_text": "Yangi namuna matni.",
+          "created_at": "2026-09-20T08:30:00Z"
+        },
+        "request_id": "00000000-0000-4000-8000-000000000017"
+      }
+    }
+  },
+  "result": {
+    "data": {
+      "id": "01j9zq8m4r2k5t7w9y1b3d5f7h",
+      "name": "Office voice",
+      "language": "uz",
+      "tags": [
+        "support"
+      ],
+      "type": "custom",
+      "category": "conversational",
+      "ref_text": "Yangi namuna matni.",
+      "created_at": "2026-09-20T08:30:00Z"
+    },
+    "request_id": "00000000-0000-4000-8000-000000000017"
+  }
+}

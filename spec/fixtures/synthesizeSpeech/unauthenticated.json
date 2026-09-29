@@ -1,0 +1,59 @@
+{
+  "description": "A key the dashboard doesn't know answers 401 invalid_api_key.",
+  "operationId": "synthesizeSpeech",
+  "call": {
+    "params": {
+      "text": "Salom",
+      "voice_id": "uz-sardor"
+    },
+    "options": {
+      "idempotency_key": "fx-synthesize-2"
+    }
+  },
+  "request": {
+    "method": "POST",
+    "path": "/tts/synthesize",
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key",
+      "content-type": "application/json",
+      "idempotency-key": "fx-synthesize-2"
+    },
+    "body": {
+      "json": {
+        "text": "Salom",
+        "voice_id": "uz-sardor"
+      }
+    }
+  },
+  "response": {
+    "status": 401,
+    "headers": {
+      "content-type": "application/json",
+      "x-request-id": "00000000-0000-4000-8000-000000000002"
+    },
+    "body": {
+      "json": {
+        "error": {
+          "type": "invalid_request_error",
+          "code": "invalid_api_key",
+          "message": "Invalid API key. The provided API key is invalid or has been deactivated.",
+          "param": null
+        },
+        "request_id": "00000000-0000-4000-8000-000000000002"
+      }
+    }
+  },
+  "result": {
+    "error": {
+      "class": "AuthenticationError",
+      "status": 401,
+      "type": "invalid_request_error",
+      "code": "invalid_api_key",
+      "message": "Invalid API key. The provided API key is invalid or has been deactivated.",
+      "param": null,
+      "fields": null,
+      "request_id": "00000000-0000-4000-8000-000000000002",
+      "retry_after": null
+    }
+  }
+}

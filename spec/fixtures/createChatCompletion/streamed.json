@@ -1,0 +1,112 @@
+{
+  "description": "Streams a chat completion: role, content, finish, usage, then [DONE].",
+  "operationId": "createChatCompletion",
+  "call": {
+    "params": {
+      "model": "gemma-4-26b-a4b",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Salom!"
+        }
+      ],
+      "stream": true
+    }
+  },
+  "request": {
+    "method": "POST",
+    "path": "/chat/completions",
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key",
+      "content-type": "application/json"
+    },
+    "body": {
+      "json": {
+        "model": "gemma-4-26b-a4b",
+        "messages": [
+          {
+            "role": "user",
+            "content": "Salom!"
+          }
+        ],
+        "stream": true
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "text/event-stream",
+      "x-accel-buffering": "no",
+      "x-request-id": "00000000-0000-4000-8000-000000000020"
+    },
+    "body": {
+      "sse": [
+        "{\"id\":\"chatcmpl-01m3n5\",\"object\":\"chat.completion.chunk\",\"created\":1790000000,\"model\":\"gemma-4-26b-a4b\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\"},\"finish_reason\":null}]}",
+        "{\"id\":\"chatcmpl-01m3n5\",\"object\":\"chat.completion.chunk\",\"created\":1790000000,\"model\":\"gemma-4-26b-a4b\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"Salom!\"},\"finish_reason\":null}]}",
+        "{\"id\":\"chatcmpl-01m3n5\",\"object\":\"chat.completion.chunk\",\"created\":1790000000,\"model\":\"gemma-4-26b-a4b\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}",
+        "{\"id\":\"chatcmpl-01m3n5\",\"object\":\"chat.completion.chunk\",\"created\":1790000000,\"model\":\"gemma-4-26b-a4b\",\"choices\":[],\"usage\":{\"prompt_tokens\":9,\"completion_tokens\":2,\"total_tokens\":11}}",
+        "[DONE]"
+      ]
+    }
+  },
+  "result": {
+    "chunks": [
+      {
+        "id": "chatcmpl-01m3n5",
+        "object": "chat.completion.chunk",
+        "created": 1790000000,
+        "model": "gemma-4-26b-a4b",
+        "choices": [
+          {
+            "index": 0,
+            "delta": {
+              "role": "assistant"
+            },
+            "finish_reason": null
+          }
+        ]
+      },
+      {
+        "id": "chatcmpl-01m3n5",
+        "object": "chat.completion.chunk",
+        "created": 1790000000,
+        "model": "gemma-4-26b-a4b",
+        "choices": [
+          {
+            "index": 0,
+            "delta": {
+              "content": "Salom!"
+            },
+            "finish_reason": null
+          }
+        ]
+      },
+      {
+        "id": "chatcmpl-01m3n5",
+        "object": "chat.completion.chunk",
+        "created": 1790000000,
+        "model": "gemma-4-26b-a4b",
+        "choices": [
+          {
+            "index": 0,
+            "delta": {},
+            "finish_reason": "stop"
+          }
+        ]
+      },
+      {
+        "id": "chatcmpl-01m3n5",
+        "object": "chat.completion.chunk",
+        "created": 1790000000,
+        "model": "gemma-4-26b-a4b",
+        "choices": [],
+        "usage": {
+          "prompt_tokens": 9,
+          "completion_tokens": 2,
+          "total_tokens": 11
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "description": "Lists custom voices, two per page.",
+  "operationId": "listVoices",
+  "call": {
+    "params": {
+      "type": "custom",
+      "limit": 2
+    }
+  },
+  "request": {
+    "method": "GET",
+    "path": "/tts/voices",
+    "query": {
+      "type": "custom",
+      "limit": "2"
+    },
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json",
+      "x-request-id": "00000000-0000-4000-8000-000000000011"
+    },
+    "body": {
+      "json": {
+        "data": [
+          {
+            "id": "01j9zq8m4r2k5t7w9y1b3d5f7h",
+            "name": "Office voice",
+            "language": "uz",
+            "tags": [
+              "support"
+            ],
+            "type": "custom",
+            "category": "conversational",
+            "ref_text": "Salom, men sizga yordam beraman.",
+            "created_at": "2026-09-20T08:30:00Z"
+          }
+        ],
+        "next_cursor": "eyJpZCI6IjAxajl6cTgifQ",
+        "request_id": "00000000-0000-4000-8000-000000000011"
+      }
+    }
+  },
+  "result": {
+    "data": [
+      {
+        "id": "01j9zq8m4r2k5t7w9y1b3d5f7h",
+        "name": "Office voice",
+        "language": "uz",
+        "tags": [
+          "support"
+        ],
+        "type": "custom",
+        "category": "conversational",
+        "ref_text": "Salom, men sizga yordam beraman.",
+        "created_at": "2026-09-20T08:30:00Z"
+      }
+    ],
+    "next_cursor": "eyJpZCI6IjAxajl6cTgifQ",
+    "request_id": "00000000-0000-4000-8000-000000000011"
+  }
+}

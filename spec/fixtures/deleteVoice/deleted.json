@@ -1,0 +1,25 @@
+{
+  "description": "Deletes a custom voice; the answer has no body.",
+  "operationId": "deleteVoice",
+  "call": {
+    "path_params": {
+      "id": "01j9zq8m4r2k5t7w9y1b3d5f7h"
+    }
+  },
+  "request": {
+    "method": "DELETE",
+    "path": "/tts/voices/01j9zq8m4r2k5t7w9y1b3d5f7h",
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 204,
+    "headers": {
+      "x-request-id": "00000000-0000-4000-8000-000000000016"
+    },
+    "body": null
+  },
+  "result": null
+}

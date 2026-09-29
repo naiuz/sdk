@@ -1,0 +1,109 @@
+{
+  "description": "Reranks two documents against a query, keeping both.",
+  "operationId": "rerank",
+  "call": {
+    "params": {
+      "model": "neuronai-rerank",
+      "query": "Poytaxt qaysi shahar?",
+      "documents": [
+        "Toshkent O'zbekistonning poytaxti.",
+        "Samarqand qadimiy shahar."
+      ],
+      "top_n": 2,
+      "return_documents": true
+    }
+  },
+  "request": {
+    "method": "POST",
+    "path": "/rerank",
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key",
+      "content-type": "application/json"
+    },
+    "body": {
+      "json": {
+        "model": "neuronai-rerank",
+        "query": "Poytaxt qaysi shahar?",
+        "documents": [
+          "Toshkent O'zbekistonning poytaxti.",
+          "Samarqand qadimiy shahar."
+        ],
+        "top_n": 2,
+        "return_documents": true
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json",
+      "x-cost": "0.05",
+      "x-request-id": "00000000-0000-4000-8000-000000000023"
+    },
+    "body": {
+      "json": {
+        "id": "rerank-01m3n6",
+        "model": "neuronai-rerank",
+        "results": [
+          {
+            "index": 0,
+            "relevance_score": 0.97,
+            "document": {
+              "text": "Toshkent O'zbekistonning poytaxti."
+            }
+          },
+          {
+            "index": 1,
+            "relevance_score": 0.12,
+            "document": {
+              "text": "Samarqand qadimiy shahar."
+            }
+          }
+        ],
+        "meta": {
+          "billed_units": {
+            "search_units": 1,
+            "input_tokens": 21
+          }
+        },
+        "usage": {
+          "prompt_tokens": 21,
+          "total_tokens": 21
+        }
+      }
+    }
+  },
+  "result": {
+    "body": {
+      "id": "rerank-01m3n6",
+      "model": "neuronai-rerank",
+      "results": [
+        {
+          "index": 0,
+          "relevance_score": 0.97,
+          "document": {
+            "text": "Toshkent O'zbekistonning poytaxti."
+          }
+        },
+        {
+          "index": 1,
+          "relevance_score": 0.12,
+          "document": {
+            "text": "Samarqand qadimiy shahar."
+          }
+        }
+      ],
+      "meta": {
+        "billed_units": {
+          "search_units": 1,
+          "input_tokens": 21
+        }
+      },
+      "usage": {
+        "prompt_tokens": 21,
+        "total_tokens": 21
+      }
+    },
+    "cost": 0.05
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "description": "The same Idempotency-Key with a different body answers 409 idempotency_conflict.",
+  "operationId": "createTtsJob",
+  "call": {
+    "params": {
+      "text": "Boshqa matn",
+      "voice_id": "uz-sardor"
+    },
+    "options": {
+      "idempotency_key": "fx-job-1"
+    }
+  },
+  "request": {
+    "method": "POST",
+    "path": "/tts/jobs",
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key",
+      "content-type": "application/json",
+      "idempotency-key": "fx-job-1"
+    },
+    "body": {
+      "json": {
+        "text": "Boshqa matn",
+        "voice_id": "uz-sardor"
+      }
+    }
+  },
+  "response": {
+    "status": 409,
+    "headers": {
+      "content-type": "application/json",
+      "x-request-id": "00000000-0000-4000-8000-000000000008"
+    },
+    "body": {
+      "json": {
+        "error": {
+          "type": "invalid_request_error",
+          "code": "idempotency_conflict",
+          "message": "This Idempotency-Key was already used with a different request.",
+          "param": null
+        },
+        "request_id": "00000000-0000-4000-8000-000000000008"
+      }
+    }
+  },
+  "result": {
+    "error": {
+      "class": "ConflictError",
+      "status": 409,
+      "type": "invalid_request_error",
+      "code": "idempotency_conflict",
+      "message": "This Idempotency-Key was already used with a different request.",
+      "param": null,
+      "fields": null,
+      "request_id": "00000000-0000-4000-8000-000000000008",
+      "retry_after": null
+    }
+  }
+}

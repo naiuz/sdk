@@ -1,0 +1,60 @@
+{
+  "description": "Gets a job that has succeeded, with its cost and audio_url.",
+  "operationId": "retrieveTtsJob",
+  "call": {
+    "path_params": {
+      "id": "01m3n2jen8er0q4a6bm4jv4a36"
+    }
+  },
+  "request": {
+    "method": "GET",
+    "path": "/tts/jobs/01m3n2jen8er0q4a6bm4jv4a36",
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json",
+      "x-request-id": "00000000-0000-4000-8000-000000000009"
+    },
+    "body": {
+      "json": {
+        "data": {
+          "id": "01m3n2jen8er0q4a6bm4jv4a36",
+          "status": "succeeded",
+          "created_at": "2026-09-28T10:00:00Z",
+          "started_at": "2026-09-28T10:00:01Z",
+          "finished_at": "2026-09-28T10:00:02Z",
+          "character_count": 5,
+          "cost": 12.5,
+          "balance_after": 9987.5,
+          "voice_custom": false,
+          "latency_ms": 820.5,
+          "error": null,
+          "audio_url": "https://my.neuronai.uz/api/v1/tts/jobs/01m3n2jen8er0q4a6bm4jv4a36/audio"
+        },
+        "request_id": "00000000-0000-4000-8000-000000000009"
+      }
+    }
+  },
+  "result": {
+    "data": {
+      "id": "01m3n2jen8er0q4a6bm4jv4a36",
+      "status": "succeeded",
+      "created_at": "2026-09-28T10:00:00Z",
+      "started_at": "2026-09-28T10:00:01Z",
+      "finished_at": "2026-09-28T10:00:02Z",
+      "character_count": 5,
+      "cost": 12.5,
+      "balance_after": 9987.5,
+      "voice_custom": false,
+      "latency_ms": 820.5,
+      "error": null,
+      "audio_url": "https://my.neuronai.uz/api/v1/tts/jobs/01m3n2jen8er0q4a6bm4jv4a36/audio"
+    },
+    "request_id": "00000000-0000-4000-8000-000000000009"
+  }
+}

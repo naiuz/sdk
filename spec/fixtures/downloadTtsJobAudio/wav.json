@@ -1,0 +1,43 @@
+{
+  "description": "Downloads a succeeded job's audio, with the headers synthesize sends.",
+  "operationId": "downloadTtsJobAudio",
+  "call": {
+    "path_params": {
+      "id": "01m3n2jen8er0q4a6bm4jv4a36"
+    }
+  },
+  "request": {
+    "method": "GET",
+    "path": "/tts/jobs/01m3n2jen8er0q4a6bm4jv4a36/audio",
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "audio/wav",
+      "x-cost": "12.5",
+      "x-balance": "9987.5",
+      "x-character-count": "5",
+      "x-voice-custom": "0",
+      "x-latency-ms": "820.5",
+      "x-request-id": "00000000-0000-4000-8000-000000000010"
+    },
+    "body": {
+      "base64": "UklGRiQAAABXQVZFZm10IBAAAAABAAEAgD4AAAB9AAACABAAZGF0YQAAAAA="
+    }
+  },
+  "result": {
+    "audio_base64": "UklGRiQAAABXQVZFZm10IBAAAAABAAEAgD4AAAB9AAACABAAZGF0YQAAAAA=",
+    "content_type": "audio/wav",
+    "cost": 12.5,
+    "character_count": 5,
+    "balance": 9987.5,
+    "voice_custom": false,
+    "latency_ms": 820.5,
+    "replayed": false,
+    "request_id": "00000000-0000-4000-8000-000000000010"
+  }
+}

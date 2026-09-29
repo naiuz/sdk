@@ -1,0 +1,85 @@
+{
+  "description": "Transcribes an Uzbek clip with one segment.",
+  "operationId": "createTranscription",
+  "call": {
+    "params": {
+      "language": "uz"
+    },
+    "files": {
+      "file": {
+        "filename": "clip.wav",
+        "content_type": "audio/wav",
+        "base64": "UklGRiQAAABXQVZFZm10IBAAAAABAAEAgD4AAAB9AAACABAAZGF0YQAAAAA="
+      }
+    },
+    "options": {
+      "idempotency_key": "fx-transcribe-1"
+    }
+  },
+  "request": {
+    "method": "POST",
+    "path": "/stt/transcribe",
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key",
+      "content-type": "multipart/form-data",
+      "idempotency-key": "fx-transcribe-1"
+    },
+    "body": {
+      "multipart": {
+        "fields": {
+          "language": "uz"
+        },
+        "files": {
+          "file": {
+            "filename": "clip.wav",
+            "content_type": "audio/wav",
+            "base64": "UklGRiQAAABXQVZFZm10IBAAAAABAAEAgD4AAAB9AAACABAAZGF0YQAAAAA="
+          }
+        }
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json",
+      "x-request-id": "00000000-0000-4000-8000-000000000018"
+    },
+    "body": {
+      "json": {
+        "data": {
+          "text": "Salom dunyo",
+          "language": "uz",
+          "duration_seconds": 2,
+          "segments": [
+            {
+              "start": 0,
+              "end": 2,
+              "text": "Salom dunyo"
+            }
+          ],
+          "cost": 16.67,
+          "balance": 9983.33
+        },
+        "request_id": "00000000-0000-4000-8000-000000000018"
+      }
+    }
+  },
+  "result": {
+    "data": {
+      "text": "Salom dunyo",
+      "language": "uz",
+      "duration_seconds": 2,
+      "segments": [
+        {
+          "start": 0,
+          "end": 2,
+          "text": "Salom dunyo"
+        }
+      ],
+      "cost": 16.67,
+      "balance": 9983.33
+    },
+    "request_id": "00000000-0000-4000-8000-000000000018"
+  }
+}

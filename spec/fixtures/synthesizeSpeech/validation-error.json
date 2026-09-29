@@ -1,0 +1,64 @@
+{
+  "description": "A blank text fails validation and answers 422 invalid_request.",
+  "operationId": "synthesizeSpeech",
+  "call": {
+    "params": {
+      "text": " ",
+      "voice_id": "uz-sardor"
+    },
+    "options": {
+      "idempotency_key": "fx-synthesize-3"
+    }
+  },
+  "request": {
+    "method": "POST",
+    "path": "/tts/synthesize",
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key",
+      "content-type": "application/json",
+      "idempotency-key": "fx-synthesize-3"
+    },
+    "body": {
+      "json": {
+        "text": " ",
+        "voice_id": "uz-sardor"
+      }
+    }
+  },
+  "response": {
+    "status": 422,
+    "headers": {
+      "content-type": "application/json",
+      "x-request-id": "00000000-0000-4000-8000-000000000003"
+    },
+    "body": {
+      "json": {
+        "error": {
+          "type": "invalid_request_error",
+          "code": "invalid_request",
+          "message": "The text field is required.",
+          "param": "text",
+          "fields": {
+            "text": "The text field is required."
+          }
+        },
+        "request_id": "00000000-0000-4000-8000-000000000003"
+      }
+    }
+  },
+  "result": {
+    "error": {
+      "class": "UnprocessableEntityError",
+      "status": 422,
+      "type": "invalid_request_error",
+      "code": "invalid_request",
+      "message": "The text field is required.",
+      "param": "text",
+      "fields": {
+        "text": "The text field is required."
+      },
+      "request_id": "00000000-0000-4000-8000-000000000003",
+      "retry_after": null
+    }
+  }
+}

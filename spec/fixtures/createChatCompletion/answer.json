@@ -1,0 +1,89 @@
+{
+  "description": "Answers a one-turn chat completion, non-streamed.",
+  "operationId": "createChatCompletion",
+  "call": {
+    "params": {
+      "model": "gemma-4-26b-a4b",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Salom!"
+        }
+      ]
+    }
+  },
+  "request": {
+    "method": "POST",
+    "path": "/chat/completions",
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key",
+      "content-type": "application/json"
+    },
+    "body": {
+      "json": {
+        "model": "gemma-4-26b-a4b",
+        "messages": [
+          {
+            "role": "user",
+            "content": "Salom!"
+          }
+        ]
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json",
+      "x-cost": "0.34",
+      "x-request-id": "00000000-0000-4000-8000-000000000019"
+    },
+    "body": {
+      "json": {
+        "id": "chatcmpl-01m3n4",
+        "object": "chat.completion",
+        "created": 1790000000,
+        "model": "gemma-4-26b-a4b",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "Salom! Qanday yordam bera olaman?"
+            },
+            "finish_reason": "stop"
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 9,
+          "completion_tokens": 8,
+          "total_tokens": 17
+        }
+      }
+    }
+  },
+  "result": {
+    "body": {
+      "id": "chatcmpl-01m3n4",
+      "object": "chat.completion",
+      "created": 1790000000,
+      "model": "gemma-4-26b-a4b",
+      "choices": [
+        {
+          "index": 0,
+          "message": {
+            "role": "assistant",
+            "content": "Salom! Qanday yordam bera olaman?"
+          },
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 9,
+        "completion_tokens": 8,
+        "total_tokens": 17
+      }
+    },
+    "cost": 0.34
+  }
+}

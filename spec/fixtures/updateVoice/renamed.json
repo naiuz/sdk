@@ -1,0 +1,74 @@
+{
+  "description": "Renames a custom voice and changes its tags.",
+  "operationId": "updateVoice",
+  "call": {
+    "path_params": {
+      "id": "01j9zq8m4r2k5t7w9y1b3d5f7h"
+    },
+    "params": {
+      "name": "Support voice",
+      "tags": [
+        "support",
+        "calm"
+      ]
+    }
+  },
+  "request": {
+    "method": "PATCH",
+    "path": "/tts/voices/01j9zq8m4r2k5t7w9y1b3d5f7h",
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key",
+      "content-type": "application/json"
+    },
+    "body": {
+      "json": {
+        "name": "Support voice",
+        "tags": [
+          "support",
+          "calm"
+        ]
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json",
+      "x-request-id": "00000000-0000-4000-8000-000000000015"
+    },
+    "body": {
+      "json": {
+        "data": {
+          "id": "01j9zq8m4r2k5t7w9y1b3d5f7h",
+          "name": "Support voice",
+          "language": "uz",
+          "tags": [
+            "support",
+            "calm"
+          ],
+          "type": "custom",
+          "category": "conversational",
+          "ref_text": "Salom, men sizga yordam beraman.",
+          "created_at": "2026-09-20T08:30:00Z"
+        },
+        "request_id": "00000000-0000-4000-8000-000000000015"
+      }
+    }
+  },
+  "result": {
+    "data": {
+      "id": "01j9zq8m4r2k5t7w9y1b3d5f7h",
+      "name": "Support voice",
+      "language": "uz",
+      "tags": [
+        "support",
+        "calm"
+      ],
+      "type": "custom",
+      "category": "conversational",
+      "ref_text": "Salom, men sizga yordam beraman.",
+      "created_at": "2026-09-20T08:30:00Z"
+    },
+    "request_id": "00000000-0000-4000-8000-000000000015"
+  }
+}

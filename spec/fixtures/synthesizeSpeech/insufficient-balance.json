@@ -1,0 +1,59 @@
+{
+  "description": "An organization out of balance answers 402 insufficient_balance.",
+  "operationId": "synthesizeSpeech",
+  "call": {
+    "params": {
+      "text": "Salom",
+      "voice_id": "uz-sardor"
+    },
+    "options": {
+      "idempotency_key": "fx-synthesize-5"
+    }
+  },
+  "request": {
+    "method": "POST",
+    "path": "/tts/synthesize",
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key",
+      "content-type": "application/json",
+      "idempotency-key": "fx-synthesize-5"
+    },
+    "body": {
+      "json": {
+        "text": "Salom",
+        "voice_id": "uz-sardor"
+      }
+    }
+  },
+  "response": {
+    "status": 402,
+    "headers": {
+      "content-type": "application/json",
+      "x-request-id": "00000000-0000-4000-8000-000000000005"
+    },
+    "body": {
+      "json": {
+        "error": {
+          "type": "insufficient_quota",
+          "code": "insufficient_balance",
+          "message": "Your balance is too low for this request.",
+          "param": null
+        },
+        "request_id": "00000000-0000-4000-8000-000000000005"
+      }
+    }
+  },
+  "result": {
+    "error": {
+      "class": "InsufficientQuotaError",
+      "status": 402,
+      "type": "insufficient_quota",
+      "code": "insufficient_balance",
+      "message": "Your balance is too low for this request.",
+      "param": null,
+      "fields": null,
+      "request_id": "00000000-0000-4000-8000-000000000005",
+      "retry_after": null
+    }
+  }
+}

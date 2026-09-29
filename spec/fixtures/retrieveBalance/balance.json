@@ -1,0 +1,44 @@
+{
+  "description": "Gets the organization's remaining balance.",
+  "operationId": "retrieveBalance",
+  "call": {},
+  "request": {
+    "method": "GET",
+    "path": "/balance",
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json",
+      "x-request-id": "00000000-0000-4000-8000-000000000024"
+    },
+    "body": {
+      "json": {
+        "data": {
+          "balance": 10000,
+          "formatted": "10 000 UZS",
+          "currency": "UZS",
+          "stt_price_per_minute": 500,
+          "tts_price_per_char": 2.5,
+          "min_topup": 5000
+        },
+        "request_id": "00000000-0000-4000-8000-000000000024"
+      }
+    }
+  },
+  "result": {
+    "data": {
+      "balance": 10000,
+      "formatted": "10 000 UZS",
+      "currency": "UZS",
+      "stt_price_per_minute": 500,
+      "tts_price_per_char": 2.5,
+      "min_topup": 5000
+    },
+    "request_id": "00000000-0000-4000-8000-000000000024"
+  }
+}

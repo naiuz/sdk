@@ -1,0 +1,58 @@
+{
+  "description": "Gets a stock voice by id; stock voices are public.",
+  "operationId": "retrieveVoice",
+  "call": {
+    "path_params": {
+      "id": "uz-sardor"
+    }
+  },
+  "request": {
+    "method": "GET",
+    "path": "/tts/voices/uz-sardor",
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json",
+      "x-request-id": "00000000-0000-4000-8000-000000000012"
+    },
+    "body": {
+      "json": {
+        "data": {
+          "id": "uz-sardor",
+          "name": "Sardor",
+          "language": "uz",
+          "tags": [
+            "calm",
+            "male"
+          ],
+          "type": "stock",
+          "category": "narration",
+          "ref_text": null,
+          "created_at": null
+        },
+        "request_id": "00000000-0000-4000-8000-000000000012"
+      }
+    }
+  },
+  "result": {
+    "data": {
+      "id": "uz-sardor",
+      "name": "Sardor",
+      "language": "uz",
+      "tags": [
+        "calm",
+        "male"
+      ],
+      "type": "stock",
+      "category": "narration",
+      "ref_text": null,
+      "created_at": null
+    },
+    "request_id": "00000000-0000-4000-8000-000000000012"
+  }
+}

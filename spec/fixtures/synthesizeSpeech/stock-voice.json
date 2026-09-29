@@ -1,0 +1,54 @@
+{
+  "description": "Synthesizes a short line with a stock voice.",
+  "operationId": "synthesizeSpeech",
+  "call": {
+    "params": {
+      "text": "Salom",
+      "voice_id": "uz-sardor"
+    },
+    "options": {
+      "idempotency_key": "fx-synthesize-1"
+    }
+  },
+  "request": {
+    "method": "POST",
+    "path": "/tts/synthesize",
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key",
+      "content-type": "application/json",
+      "idempotency-key": "fx-synthesize-1"
+    },
+    "body": {
+      "json": {
+        "text": "Salom",
+        "voice_id": "uz-sardor"
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "audio/wav",
+      "x-cost": "12.5",
+      "x-balance": "9987.5",
+      "x-character-count": "5",
+      "x-voice-custom": "0",
+      "x-latency-ms": "820.5",
+      "x-request-id": "00000000-0000-4000-8000-000000000001"
+    },
+    "body": {
+      "base64": "UklGRiQAAABXQVZFZm10IBAAAAABAAEAgD4AAAB9AAACABAAZGF0YQAAAAA="
+    }
+  },
+  "result": {
+    "audio_base64": "UklGRiQAAABXQVZFZm10IBAAAAABAAEAgD4AAAB9AAACABAAZGF0YQAAAAA=",
+    "content_type": "audio/wav",
+    "cost": 12.5,
+    "character_count": 5,
+    "balance": 9987.5,
+    "voice_custom": false,
+    "latency_ms": 820.5,
+    "replayed": false,
+    "request_id": "00000000-0000-4000-8000-000000000001"
+  }
+}

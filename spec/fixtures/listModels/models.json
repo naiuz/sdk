@@ -1,0 +1,46 @@
+{
+  "description": "Lists the chat models available to the account.",
+  "operationId": "listModels",
+  "call": {},
+  "request": {
+    "method": "GET",
+    "path": "/models",
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json",
+      "x-request-id": "00000000-0000-4000-8000-000000000021"
+    },
+    "body": {
+      "json": {
+        "object": "list",
+        "data": [
+          {
+            "id": "gemma-4-26b-a4b",
+            "object": "model",
+            "created": 1780000000,
+            "owned_by": "neuronai"
+          }
+        ]
+      }
+    }
+  },
+  "result": {
+    "body": {
+      "object": "list",
+      "data": [
+        {
+          "id": "gemma-4-26b-a4b",
+          "object": "model",
+          "created": 1780000000,
+          "owned_by": "neuronai"
+        }
+      ]
+    }
+  }
+}

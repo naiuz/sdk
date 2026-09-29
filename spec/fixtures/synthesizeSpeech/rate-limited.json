@@ -1,0 +1,63 @@
+{
+  "description": "Too many requests in a minute answers 429 rate_limit_exceeded.",
+  "operationId": "synthesizeSpeech",
+  "call": {
+    "params": {
+      "text": "Salom",
+      "voice_id": "uz-sardor"
+    },
+    "options": {
+      "idempotency_key": "fx-synthesize-4"
+    }
+  },
+  "request": {
+    "method": "POST",
+    "path": "/tts/synthesize",
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key",
+      "content-type": "application/json",
+      "idempotency-key": "fx-synthesize-4"
+    },
+    "body": {
+      "json": {
+        "text": "Salom",
+        "voice_id": "uz-sardor"
+      }
+    }
+  },
+  "response": {
+    "status": 429,
+    "headers": {
+      "content-type": "application/json",
+      "retry-after": "12",
+      "x-ratelimit-limit": "60",
+      "x-ratelimit-remaining": "0",
+      "x-ratelimit-reset": "1790000012",
+      "x-request-id": "00000000-0000-4000-8000-000000000004"
+    },
+    "body": {
+      "json": {
+        "error": {
+          "type": "rate_limit_error",
+          "code": "rate_limit_exceeded",
+          "message": "Too many requests. Try again in 12 seconds.",
+          "param": null
+        },
+        "request_id": "00000000-0000-4000-8000-000000000004"
+      }
+    }
+  },
+  "result": {
+    "error": {
+      "class": "RateLimitError",
+      "status": 429,
+      "type": "rate_limit_error",
+      "code": "rate_limit_exceeded",
+      "message": "Too many requests. Try again in 12 seconds.",
+      "param": null,
+      "fields": null,
+      "request_id": "00000000-0000-4000-8000-000000000004",
+      "retry_after": 12
+    }
+  }
+}

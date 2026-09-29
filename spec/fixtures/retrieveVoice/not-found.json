@@ -1,0 +1,48 @@
+{
+  "description": "An unknown voice id answers 404 not_found.",
+  "operationId": "retrieveVoice",
+  "call": {
+    "path_params": {
+      "id": "no-such-voice"
+    }
+  },
+  "request": {
+    "method": "GET",
+    "path": "/tts/voices/no-such-voice",
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 404,
+    "headers": {
+      "content-type": "application/json",
+      "x-request-id": "00000000-0000-4000-8000-000000000013"
+    },
+    "body": {
+      "json": {
+        "error": {
+          "type": "invalid_request_error",
+          "code": "not_found",
+          "message": "Voice not found.",
+          "param": null
+        },
+        "request_id": "00000000-0000-4000-8000-000000000013"
+      }
+    }
+  },
+  "result": {
+    "error": {
+      "class": "NotFoundError",
+      "status": 404,
+      "type": "invalid_request_error",
+      "code": "not_found",
+      "message": "Voice not found.",
+      "param": null,
+      "fields": null,
+      "request_id": "00000000-0000-4000-8000-000000000013",
+      "retry_after": null
+    }
+  }
+}

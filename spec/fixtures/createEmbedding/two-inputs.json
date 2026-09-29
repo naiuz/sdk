@@ -1,0 +1,99 @@
+{
+  "description": "Embeds two short inputs in one batch.",
+  "operationId": "createEmbedding",
+  "call": {
+    "params": {
+      "model": "neuronai-embed",
+      "input": [
+        "Salom",
+        "Rahmat"
+      ]
+    }
+  },
+  "request": {
+    "method": "POST",
+    "path": "/embeddings",
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key",
+      "content-type": "application/json"
+    },
+    "body": {
+      "json": {
+        "model": "neuronai-embed",
+        "input": [
+          "Salom",
+          "Rahmat"
+        ]
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json",
+      "x-cost": "0.02",
+      "x-request-id": "00000000-0000-4000-8000-000000000022"
+    },
+    "body": {
+      "json": {
+        "object": "list",
+        "model": "neuronai-embed",
+        "data": [
+          {
+            "object": "embedding",
+            "index": 0,
+            "embedding": [
+              0.012,
+              -0.034,
+              0.056
+            ]
+          },
+          {
+            "object": "embedding",
+            "index": 1,
+            "embedding": [
+              0.078,
+              -0.09,
+              0.011
+            ]
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 4,
+          "total_tokens": 4
+        }
+      }
+    }
+  },
+  "result": {
+    "body": {
+      "object": "list",
+      "model": "neuronai-embed",
+      "data": [
+        {
+          "object": "embedding",
+          "index": 0,
+          "embedding": [
+            0.012,
+            -0.034,
+            0.056
+          ]
+        },
+        {
+          "object": "embedding",
+          "index": 1,
+          "embedding": [
+            0.078,
+            -0.09,
+            0.011
+          ]
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 4,
+        "total_tokens": 4
+      }
+    },
+    "cost": 0.02
+  }
+}
