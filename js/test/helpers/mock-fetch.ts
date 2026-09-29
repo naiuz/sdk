@@ -72,6 +72,15 @@ export function refused(): TypeError {
     return new TypeError("fetch failed", {cause: Object.assign(new Error("connect ECONNREFUSED 127.0.0.1:443"), {code: "ECONNREFUSED"})});
 }
 
+/** A fetch failure before anything was sent, from a host with more than one address: every address refused, as Node's fetch reports it (an AggregateError with an empty message). */
+export function refusedEverywhere(): TypeError {
+    const perAddress = [
+        Object.assign(new Error("connect ECONNREFUSED ::1:443"), {code: "ECONNREFUSED"}),
+        Object.assign(new Error("connect ECONNREFUSED 127.0.0.1:443"), {code: "ECONNREFUSED"}),
+    ];
+    return new TypeError("fetch failed", {cause: Object.assign(new AggregateError(perAddress, ""), {code: "ECONNREFUSED"})});
+}
+
 /** A fetch failure after the request went out: the connection was reset. */
 export function reset(): TypeError {
     return new TypeError("fetch failed", {cause: Object.assign(new Error("read ECONNRESET"), {code: "ECONNRESET"})});

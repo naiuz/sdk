@@ -5,7 +5,7 @@ import {readEnvelope} from "../../src/core/parse";
 import type {RetryClass} from "../../src/core/retry";
 import {APIConnectionError, APIError, APITimeoutError, ConflictError, InternalServerError, NeuronAIError, NotFoundError, RateLimitError} from "../../src/errors";
 import {httpClient, KEY} from "../helpers/http";
-import {apiError, envelope, hang, json, mockFetch, refused, reset, stalledBody, type Reply} from "../helpers/mock-fetch";
+import {apiError, envelope, hang, json, mockFetch, refused, refusedEverywhere, reset, stalledBody, type Reply} from "../helpers/mock-fetch";
 
 const balance: APIRequest = {method: "GET", path: "/balance", retry: "safe"};
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
@@ -217,6 +217,24 @@ describe("connection errors", () => {
         expect((error as Error).message).toBe("Connection error: connect ECONNREFUSED 127.0.0.1:443");
         expect((error as Error).cause).toBe(failure);
     });
+
+    it("says what failed when every address of a host refuses the connection", async () => {
+        const {fetch} = mockFetch(refusedEverywhere());
+        const {http} = httpClient(fetch, {maxRetries: 0});
+        const error = await http.request(balance, readEnvelope).catch((caught: unknown) => caught);
+        expect(error).toBeInstanceOf(APIConnectionError);
+        expect((error as Error).message).not.toBe("Connection error: ");
+        expect((error as Error).message).toMatch(/ECONNREFUSED/);
+        expect((error as Error).message).toMatch(/::1|127\.0\.0\.1/);
+    });
+
+    it("bounds a cause that refers back to itself, instead of hanging", async () => {
+        const cyclic = new TypeError("fetch failed");
+        cyclic.cause = cyclic;
+        const {fetch} = mockFetch(cyclic);
+        const {http} = httpClient(fetch, {maxRetries: 0});
+        await expect(http.request(balance, readEnvelope)).rejects.toBeInstanceOf(APIConnectionError);
+    }, 1000);
 });
 
 describe("idempotency keys", () => {
