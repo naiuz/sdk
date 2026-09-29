@@ -22,3 +22,4 @@ export {
 export type * from "./types/errors";
 export {APIPromise, type WithResponse} from "./core/api-promise";
 export type {WithCost, WithRequestId} from "./core/parse";
+export type {Fetch, IdempotentRequestOptions, RequestOptions} from "./core/http";
