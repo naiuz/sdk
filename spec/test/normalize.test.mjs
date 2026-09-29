@@ -29,6 +29,24 @@ test("drift names operations and schemas added, removed and changed", () => {
     });
 });
 
+test("a method change is named as that operation's move, not left unreported", () => {
+    const pinned = doc({"/v1/x": {patch: operation("updateApiKey")}});
+    const live = doc({"/v1/x": {put: operation("updateApiKey")}});
+    const drift = describeDrift(pinned, live);
+    assert.deepEqual(drift.changedOperations, ["updateApiKey moved from PATCH /v1/x to PUT /v1/x"]);
+    assert.equal(drift.otherChanges, false);
+    assert.match(formatDrift(drift), /updateApiKey moved from PATCH \/v1\/x to PUT \/v1\/x/);
+});
+
+test("a path rename is named as that operation's move, not reported only as other parts", () => {
+    const pinned = doc({"/v1/a": {get: operation("getA")}});
+    const live = doc({"/v1/z": {get: operation("getA")}});
+    const drift = describeDrift(pinned, live);
+    assert.deepEqual(drift.changedOperations, ["getA moved from GET /v1/a to GET /v1/z"]);
+    assert.equal(drift.otherChanges, false);
+    assert.match(formatDrift(drift), /getA moved from GET \/v1\/a to GET \/v1\/z/);
+});
+
 test("a change outside operations and schemas is reported as other changes", () => {
     const drift = describeDrift(doc({"/v1/a": {get: operation("getA")}}), doc({"/v1/a": {get: operation("getA")}}, {}, "2"));
     assert.equal(drift.otherChanges, true);

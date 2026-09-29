@@ -24,7 +24,7 @@ function operationsOf(document) {
     for (const [path, item] of Object.entries(document.paths ?? {})) {
         for (const method of METHODS) {
             const operation = item?.[method];
-            if (operation) operations.set(operation.operationId ?? `${method.toUpperCase()} ${path}`, operation);
+            if (operation) operations.set(operation.operationId ?? `${method.toUpperCase()} ${path}`, {method: method.toUpperCase(), path, operation});
         }
     }
     return operations;
@@ -38,10 +38,46 @@ function compareKeyed(pinned, live) {
     };
 }
 
-function withoutOperationsAndSchemas(document) {
+/**
+ * Like compareKeyed, but each value is {method, path, operation}: an
+ * operation whose method or path changed is reported as having moved,
+ * naming the operation, rather than folded into "changed" or lost entirely.
+ */
+function compareOperations(pinned, live) {
+    const added = [...live.keys()].filter((key) => !pinned.has(key));
+    const removed = [...pinned.keys()].filter((key) => !live.has(key));
+    const changed = [];
+    const moved = new Map();
+    for (const key of live.keys()) {
+        if (!pinned.has(key)) continue;
+        const before = pinned.get(key);
+        const after = live.get(key);
+        if (before.method !== after.method || before.path !== after.path) {
+            changed.push(`${key} moved from ${before.method} ${before.path} to ${after.method} ${after.path}`);
+            moved.set(key, {from: before, to: after});
+        } else if (!sameDocument(before.operation, after.operation)) {
+            changed.push(key);
+        }
+    }
+    return {added, removed, changed, moved};
+}
+
+/**
+ * The document without per-operation and per-schema content. `moved` names,
+ * for each relocated operationId, the {method, path} it used to and now
+ * lives at; when that's the whole story for a path (nothing but operations
+ * lived there), the now-vacated or newly-occupied path entry is dropped too,
+ * so a plain move isn't also double-reported as an "other parts" change.
+ */
+function withoutOperationsAndSchemas(document, moved = new Map(), side = "from") {
     const copy = JSON.parse(JSON.stringify(document));
     for (const item of Object.values(copy.paths ?? {})) {
         for (const method of METHODS) delete item?.[method];
+    }
+    for (const {from, to} of moved.values()) {
+        const path = (side === "from" ? from : to).path;
+        const item = copy.paths?.[path];
+        if (item && Object.keys(item).length === 0) delete copy.paths[path];
     }
     if (copy.components) delete copy.components.schemas;
     return copy;
@@ -54,7 +90,7 @@ function withoutOperationsAndSchemas(document) {
  * security, or path-level settings).
  */
 export function describeDrift(pinned, live) {
-    const operations = compareKeyed(operationsOf(pinned), operationsOf(live));
+    const operations = compareOperations(operationsOf(pinned), operationsOf(live));
     const schemas = compareKeyed(
         new Map(Object.entries(pinned.components?.schemas ?? {})),
         new Map(Object.entries(live.components?.schemas ?? {})),
@@ -66,7 +102,10 @@ export function describeDrift(pinned, live) {
         addedSchemas: schemas.added,
         removedSchemas: schemas.removed,
         changedSchemas: schemas.changed,
-        otherChanges: !sameDocument(withoutOperationsAndSchemas(pinned), withoutOperationsAndSchemas(live)),
+        otherChanges: !sameDocument(
+            withoutOperationsAndSchemas(pinned, operations.moved, "from"),
+            withoutOperationsAndSchemas(live, operations.moved, "to"),
+        ),
     };
 }
 
