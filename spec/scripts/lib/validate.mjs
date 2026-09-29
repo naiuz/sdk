@@ -156,7 +156,7 @@ export function createValidator({document, operations, fixtureSchema}) {
         const problems = [];
         const {status, headers, body} = fixture.response;
         const responses = entry.operation.responses ?? {};
-        const key = Object.hasOwn(responses, String(status)) ? String(status) : Object.hasOwn(responses, "default") ? "default" : null;
+        const key = Object.hasOwn(responses, String(status)) ? String(status) : status >= 400 && Object.hasOwn(responses, "default") ? "default" : null;
         if (key === null) return [`status ${status} is not declared for ${fixture.operationId}`];
         const response = follow(document, responses[key], `${entry.pointer}/responses/${key}`);
         const content = response.value.content ?? {};

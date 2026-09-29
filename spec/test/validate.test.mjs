@@ -271,3 +271,8 @@ test("25. an error event inside a stream keeps the envelope's shape", () => {
     const badError = '{"error":{"type":"invalid_request_error","code":"invalid_request","message":"Bad request.","param":null,"fields":["The text field is required."]}}';
     expectProblem(edit(stream(), (f) => { f.response.body.sse = [f.response.body.sse[0], badError, "[DONE]"]; }), /response\.body\.sse\[1\]/);
 });
+
+test("26. a success status the operation doesn't declare fails even when it declares default", () => {
+    // createChatCompletion declares "default" (added above); 201 is not one of its declared statuses.
+    expectProblem(edit(stream(), (f) => { f.response.status = 201; }), /status 201 is not declared for createChatCompletion/);
+});
