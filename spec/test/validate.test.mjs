@@ -26,6 +26,12 @@ const document = {
                 parameters: [{name: "limit", in: "query", schema: {type: ["integer", "null"], minimum: 1, maximum: 100}}, {name: "days", in: "query", schema: {enum: [7, 30]}}],
                 responses: {"200": {description: "ok", headers: REQUEST_ID, content: {"application/json": {schema: {type: "object", required: ["data", "request_id"], properties: {data: {type: "array"}, request_id: {type: "string", format: "uuid"}}}}}}},
             },
+            post: {
+                operationId: "createVoice",
+                parameters: [{name: "Idempotency-Key", in: "header", schema: {type: "string"}}],
+                requestBody: {content: {"multipart/form-data": {schema: {$ref: "#/components/schemas/CreateVoiceRequest"}}}},
+                responses: {"201": {description: "created", headers: REQUEST_ID, content: {"application/json": {schema: {type: "object", required: ["data", "request_id"], properties: {data: {type: "object"}, request_id: {type: "string", format: "uuid"}}}}}}},
+            },
         },
         "/v1/tts/voices/{id}": {
             delete: {
@@ -45,6 +51,16 @@ const document = {
     components: {
         schemas: {
             SynthesizeSpeechRequest: {type: "object", required: ["text"], properties: {text: {type: "string"}, voice_id: {type: ["string", "null"], maxLength: 128}}},
+            CreateVoiceRequest: {
+                type: "object",
+                required: ["name", "language", "ref_audio"],
+                properties: {
+                    name: {type: "string", maxLength: 120},
+                    language: {enum: ["uz", "en"]},
+                    ref_audio: {type: "string", format: "binary"},
+                    ref_text: {type: ["string", "null"]},
+                },
+            },
             ErrorEnvelope: {
                 type: "object",
                 required: ["error", "request_id"],
@@ -66,6 +82,7 @@ const operations = {
     operations: {
         synthesizeSpeech: entry("POST /tts/synthesize"),
         listVoices: entry("GET /tts/voices"),
+        createVoice: entry("POST /tts/voices"),
         deleteVoice: entry("DELETE /tts/voices/{id}"),
         createChatCompletion: entry("POST /chat/completions"),
     },
@@ -116,6 +133,23 @@ const invalid = () => ({
         body: {json: {error: {type: "invalid_request_error", code: "invalid_request", message: "The text field is required.", param: "text", fields: {text: "The text field is required."}}, request_id: RID}},
     },
     result: {error: {class: "UnprocessableEntityError"}},
+});
+const clone = () => ({
+    description: "Clones a voice from a reference clip.",
+    operationId: "createVoice",
+    call: {
+        params: {name: "Aziza", language: "uz"},
+        files: {ref_audio: {filename: "sample.wav", content_type: "audio/wav", base64: WAV}},
+        options: {idempotency_key: "k3"},
+    },
+    request: {
+        method: "POST",
+        path: "/tts/voices",
+        headers: {authorization: AUTH, "content-type": "multipart/form-data; boundary=x", "idempotency-key": "k3"},
+        body: {multipart: {fields: {name: "Aziza", language: "uz"}, files: {ref_audio: {filename: "sample.wav", content_type: "audio/wav", base64: WAV}}}},
+    },
+    response: {status: 201, headers: {"content-type": "application/json", "x-request-id": RID}, body: {json: {data: {id: "v1"}, request_id: RID}}},
+    result: {id: "v1"},
 });
 const edit = (fixture, change) => {
     change(fixture);
@@ -191,4 +225,32 @@ test("15. the error envelope keeps its real shape: a request_id, and fields as a
 test("16. a response header the status doesn't declare fails, and x-request-id is required", () => {
     expectProblem(edit(list(), (f) => { f.response.headers["x-cost"] = "1"; }), /response header x-cost is not declared for status 200/);
     expectProblem(edit(list(), (f) => { delete f.response.headers["x-request-id"]; }), /response.headers lacks x-request-id/);
+});
+
+test("17. a well-formed multipart fixture holds", () => {
+    assert.deepEqual(validate(clone()), [], clone().description);
+});
+
+test("18. a multipart body sent with a non-multipart content-type fails, and a JSON body sent to a multipart-only operation fails", () => {
+    expectProblem(edit(clone(), (f) => { f.request.headers["content-type"] = "application/json"; }), /content-type must start with multipart\/form-data/);
+    expectProblem(edit(clone(), (f) => { f.request.body = {json: {name: "Aziza", language: "uz"}}; }), /createVoice takes no JSON body/);
+});
+
+test("19. a multipart field outside the document's enum fails, and a missing required file fails", () => {
+    expectProblem(edit(clone(), (f) => { f.call.params.language = "xx"; f.request.body.multipart.fields.language = "xx"; }), /multipart\/language must be equal to one of the allowed values/);
+    expectProblem(edit(clone(), (f) => { delete f.call.files.ref_audio; f.request.body.multipart.files = {}; }), /request.body.multipart must have required property 'ref_audio'/);
+});
+
+test("20. multipart fields that aren't call.params fail, and files that aren't call.files fail", () => {
+    expectProblem(edit(clone(), (f) => { f.request.body.multipart.fields = {name: "Aziza", language: "uz", nickname: "Az"}; }), /request.body.multipart.fields must equal call.params/);
+    expectProblem(edit(clone(), (f) => { f.request.body.multipart.files.ref_audio.filename = "other.wav"; }), /request.body.multipart.files must equal call.files/);
+});
+
+test("21. a file whose base64 isn't base64 fails", () => {
+    expectProblem(edit(clone(), (f) => { f.call.files.ref_audio.base64 = "not_base64!"; f.request.body.multipart.files.ref_audio.base64 = "not_base64!"; }), /request.body.multipart.files.ref_audio.base64 is not base64/);
+});
+
+test("22. call.files on a JSON operation fails, and on an operation without a request body fails", () => {
+    expectProblem(edit(synthesize(), (f) => { f.call.files = {extra: {filename: "x.txt", content_type: "text/plain", base64: "AA=="}}; }), /synthesizeSpeech takes no files/);
+    expectProblem(edit(remove(), (f) => { f.call.files = {extra: {filename: "x.txt", content_type: "text/plain", base64: "AA=="}}; }), /deleteVoice takes no files/);
 });
