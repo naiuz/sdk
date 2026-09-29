@@ -22,4 +22,5 @@ test("the drift job runs daily and on demand, and only reports drift as drift", 
     assert.match(drift, /if \[ "\$code" -ne 0 \] && \[ "\$code" -ne 1 \]; then exit "\$code"; fi/);
     assert.match(drift, /if: steps\.check\.outputs\.code == '1'/);
     assert.match(drift, /--label spec-drift/);
+    assert.match(drift, /--jq '\.\[0\]\.number \/\/ empty'/);
 });
