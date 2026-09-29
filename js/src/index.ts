@@ -20,3 +20,5 @@ export {
     type APIErrorInit,
 } from "./errors";
 export type * from "./types/errors";
+export {APIPromise, type WithResponse} from "./core/api-promise";
+export type {WithCost, WithRequestId} from "./core/parse";
