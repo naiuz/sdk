@@ -31,7 +31,7 @@ export type * from "./types/account";
 export type * from "./types/shared";
 export type {Voices} from "./resources/voices";
 export type * from "./types/voices";
-export type {Tts, TtsJobs} from "./resources/tts";
+export type {Tts, TtsJobs, WaitOptions} from "./resources/tts";
 export type * from "./types/tts";
 export type {ApiKeys} from "./resources/api-keys";
 export type * from "./types/api-keys";

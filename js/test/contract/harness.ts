@@ -67,7 +67,6 @@ export const DEFERRED_FIXTURES: readonly string[] = [
  * one appears, a test fails until it leaves this list.
  */
 export const DEFERRED_METHODS: readonly string[] = [
-    "tts.jobs.createAndWait",
     "voices.create",
     "voices.replaceAudio",
     "stt.transcribe",

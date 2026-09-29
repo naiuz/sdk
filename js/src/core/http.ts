@@ -107,12 +107,17 @@ export interface HttpClientConfig {
 /** The longest timeout setTimeout can wait for, in milliseconds. */
 const MAX_TIMEOUT = 2_147_483_647;
 
-/** A timeout option, checked: a whole or fractional number of milliseconds from 1 to 2147483647. */
-export function checkTimeout(value: number): number {
+/** A duration option, checked: a whole or fractional number of milliseconds from 1 to 2147483647. */
+export function checkMilliseconds(name: string, value: number): number {
     if (!Number.isFinite(value) || value < 1 || value > MAX_TIMEOUT) {
-        throw new NeuronAIError(`timeout must be a number of milliseconds from 1 to ${String(MAX_TIMEOUT)}.`);
+        throw new NeuronAIError(`${name} must be a number of milliseconds from 1 to ${String(MAX_TIMEOUT)}.`);
     }
     return value;
+}
+
+/** A timeout option, checked: a whole or fractional number of milliseconds from 1 to 2147483647. */
+export function checkTimeout(value: number): number {
+    return checkMilliseconds("timeout", value);
 }
 
 /** A maxRetries option, checked: a whole number, 0 or more. */

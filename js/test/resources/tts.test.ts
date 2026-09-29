@@ -1,10 +1,10 @@
-import {describe, expect, expectTypeOf, it, vi} from "vitest";
+import {afterEach, describe, expect, expectTypeOf, it, vi} from "vitest";
 import {DialogueAudio, SpeechAudio} from "../../src/core/audio";
 import {HttpClient} from "../../src/core/http";
 import {GoneError, InsufficientQuotaError, NeuronAIError, WaitTimeoutError} from "../../src/errors";
 import type {TtsJob, TtsJobStatus} from "../../src/types/tts";
 import {testClient} from "../helpers/client";
-import {apiError, envelope, mockFetch} from "../helpers/mock-fetch";
+import {apiError, envelope, hang, mockFetch} from "../helpers/mock-fetch";
 
 const job = (status: TtsJob["status"]): TtsJob => ({
     id: "job-1",
@@ -130,6 +130,104 @@ describe("tts.jobs", () => {
 
     it("types a job's status as an open union", () => {
         expectTypeOf<TtsJobStatus>().toEqualTypeOf<"queued" | "running" | "succeeded" | "failed" | (string & {})>();
+    });
+});
+
+describe("tts.jobs.createAndWait", () => {
+    const queued = (): Response => envelope(job("queued"), "req-create", 202);
+    const polled = (status: TtsJob["status"]): Response => envelope(job(status), `req-${status}`);
+
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
+    it("creates the job, polls it every 2 s until it succeeds, and resolves to it", async () => {
+        vi.useFakeTimers();
+        const {fetch, requests} = mockFetch(queued(), polled("running"), polled("succeeded"));
+        const wait = testClient(fetch).tts.jobs.createAndWait({text: "Salom"});
+        await vi.advanceTimersByTimeAsync(1999);
+        expect(requests).toHaveLength(1);
+        await vi.advanceTimersByTimeAsync(1);
+        expect(requests).toHaveLength(2);
+        await vi.advanceTimersByTimeAsync(2000);
+        const done = await wait;
+        expect(done.status).toBe("succeeded");
+        expect(done.request_id).toBe("req-succeeded");
+        expect(requests.map((request) => `${request.method} ${request.url.pathname}`)).toEqual(["POST /api/v1/tts/jobs", "GET /api/v1/tts/jobs/job-1", "GET /api/v1/tts/jobs/job-1"]);
+    });
+
+    it("resolves to a job that failed as well", async () => {
+        vi.useFakeTimers();
+        const {fetch} = mockFetch(queued(), polled("failed"));
+        const wait = testClient(fetch).tts.jobs.createAndWait({text: "Salom"});
+        await vi.advanceTimersByTimeAsync(2000);
+        await expect(wait).resolves.toMatchObject({status: "failed"});
+    });
+
+    it("resolves at once to a job that is already final, polling nothing", async () => {
+        const {fetch, requests} = mockFetch(envelope(job("succeeded"), "req-replay"));
+        await expect(testClient(fetch).tts.jobs.createAndWait({text: "Salom"})).resolves.toMatchObject({status: "succeeded"});
+        expect(requests).toHaveLength(1);
+    });
+
+    it("rejects with WaitTimeoutError, carrying the job as last seen, when its time runs out", async () => {
+        vi.useFakeTimers();
+        const {fetch, requests} = mockFetch(queued(), polled("running"), polled("running"));
+        const caught = testClient(fetch).tts.jobs.createAndWait({text: "Salom"}, {timeout: 5000}).catch((error: unknown) => error);
+        await vi.advanceTimersByTimeAsync(5000);
+        const error = await caught;
+        expect(error).toBeInstanceOf(WaitTimeoutError);
+        expect((error as WaitTimeoutError).job.status).toBe("running");
+        expect(requests).toHaveLength(3);
+    });
+
+    it("abandons a poll still in flight when its time runs out", async () => {
+        vi.useFakeTimers();
+        const {fetch, requests} = mockFetch(queued(), hang);
+        const caught = testClient(fetch).tts.jobs.createAndWait({text: "Salom"}, {timeout: 5000}).catch((error: unknown) => error);
+        await vi.advanceTimersByTimeAsync(5000);
+        const error = await caught;
+        expect(error).toBeInstanceOf(WaitTimeoutError);
+        expect((error as WaitTimeoutError).job.status).toBe("queued");
+        expect(requests[1]?.signal?.aborted).toBe(true);
+    });
+
+    it("stops at once when the caller's signal aborts, between polls or during one", async () => {
+        vi.useFakeTimers();
+        const reason = new Error("The caller gave up.");
+        const between = new AbortController();
+        const first = mockFetch(queued());
+        const waiting = testClient(first.fetch).tts.jobs.createAndWait({text: "Salom"}, {signal: between.signal}).catch((error: unknown) => error);
+        await vi.advanceTimersByTimeAsync(1000);
+        between.abort(reason);
+        await expect(waiting).resolves.toBe(reason);
+        expect(first.requests).toHaveLength(1);
+
+        const during = new AbortController();
+        const second = mockFetch(queued(), hang);
+        const polling = testClient(second.fetch).tts.jobs.createAndWait({text: "Salom"}, {signal: during.signal}).catch((error: unknown) => error);
+        await vi.advanceTimersByTimeAsync(3000);
+        during.abort(reason);
+        await expect(polling).resolves.toBe(reason);
+        expect(second.requests).toHaveLength(2);
+    });
+
+    it("sends the caller's Idempotency-Key with the create, and its other options with every request", async () => {
+        vi.useFakeTimers();
+        const {fetch, requests} = mockFetch(queued(), polled("succeeded"));
+        const wait = testClient(fetch).tts.jobs.createAndWait({text: "Salom"}, {idempotencyKey: "order-42", extraHeaders: {"x-trace": "t1"}, pollInterval: 500});
+        await vi.advanceTimersByTimeAsync(500);
+        await wait;
+        expect(requests.map((request) => request.headers.get("idempotency-key"))).toEqual(["order-42", null]);
+        expect(requests.map((request) => request.headers.get("x-trace"))).toEqual(["t1", "t1"]);
+    });
+
+    it("refuses an invalid pollInterval or timeout without sending anything", async () => {
+        const {fetch, requests} = mockFetch();
+        const {jobs} = testClient(fetch).tts;
+        await expect(jobs.createAndWait({text: "Salom"}, {pollInterval: 0})).rejects.toThrow("pollInterval must be a number of milliseconds from 1 to 2147483647.");
+        await expect(jobs.createAndWait({text: "Salom"}, {timeout: Number.NaN})).rejects.toThrow("timeout must be a number of milliseconds from 1 to 2147483647.");
+        expect(requests).toHaveLength(0);
     });
 });
 

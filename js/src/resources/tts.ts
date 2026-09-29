@@ -1,11 +1,28 @@
 import type {APIPromise} from "../core/api-promise";
 import {readDialogueAudio, readSpeechAudio, type DialogueAudio, type SpeechAudio} from "../core/audio";
-import type {HttpClient, IdempotentRequestOptions, RequestOptions} from "../core/http";
+import {checkMilliseconds, sleep, type HttpClient, type IdempotentRequestOptions, type RequestOptions} from "../core/http";
 import {readEnvelope, type WithRequestId} from "../core/parse";
+import {WaitTimeoutError} from "../errors";
 import type {SynthesizeDialogueRequest, SynthesizeSpeechRequest, TtsJob} from "../types/tts";
 
 /** What the audio calls accept: the WAV, or an error in the API's JSON envelope. */
 const AUDIO = "audio/wav, application/json";
+
+/** The statuses a job never leaves. */
+const FINAL = new Set(["succeeded", "failed"]);
+
+/** The options of `tts.jobs.createAndWait`: a call's options, with `timeout` bounding the whole wait. */
+export interface WaitOptions extends Omit<IdempotentRequestOptions, "timeout"> {
+    /** Milliseconds between polls: 2000 by default. */
+    pollInterval?: number;
+    /**
+     * Milliseconds to wait for the job to finish, counted from when it is
+     * created: 600000 (10 minutes) by default. When it runs out, the call
+     * rejects with WaitTimeoutError, which carries the job as last seen. Each
+     * request keeps the client's own timeout.
+     */
+    timeout?: number;
+}
 
 /** Synthesis jobs: queue a long text, then poll until it finishes. */
 export class TtsJobs {
@@ -28,6 +45,50 @@ export class TtsJobs {
     /** The job and where it stands: `queued`, `running`, `succeeded` or `failed`. A final state never changes. */
     retrieve(id: string, options?: RequestOptions): APIPromise<WithRequestId<TtsJob>> {
         return this.#http.request({method: "GET", path: "/tts/jobs/{id}", pathParams: {id}, retry: "safe", options}, readEnvelope<TtsJob>);
+    }
+
+    /**
+     * Creates a job, then polls it every `pollInterval` until it has
+     * `succeeded` or `failed`, and resolves with it in either state: check
+     * `status`, then fetch a succeeded job's WAV with `audio(job.id)`. When
+     * `timeout` runs out first, it rejects with WaitTimeoutError, which
+     * carries the job as last seen, and a poll still in flight is abandoned.
+     * The caller's `signal` stops the wait at any point.
+     */
+    async createAndWait(params: SynthesizeSpeechRequest, options: WaitOptions = {}): Promise<WithRequestId<TtsJob>> {
+        const {pollInterval = 2000, timeout = 600_000, signal, idempotencyKey, ...requestOptions} = options;
+        checkMilliseconds("pollInterval", pollInterval);
+        checkMilliseconds("timeout", timeout);
+        let job = await this.create(params, {...requestOptions, idempotencyKey, signal});
+        const deadline = Date.now() + timeout;
+        while (!FINAL.has(job.status)) {
+            const left = deadline - Date.now();
+            if (left <= 0) throw new WaitTimeoutError(job);
+            await sleep(Math.min(pollInterval, left), signal);
+            signal?.throwIfAborted();
+            if (Date.now() >= deadline) throw new WaitTimeoutError(job);
+            job = await this.#poll(job, deadline, requestOptions, signal);
+        }
+        return job;
+    }
+
+    /** Retrieves the job once. A poll still in flight at the deadline is abandoned, and rejects with WaitTimeoutError carrying the job as it was. */
+    async #poll(job: TtsJob, deadline: number, options: RequestOptions, signal: AbortSignal | undefined): Promise<WithRequestId<TtsJob>> {
+        const controller = new AbortController();
+        // A call rejects with its signal's reason, so the poll then rejects with this error.
+        const timer = setTimeout(() => {
+            controller.abort(new WaitTimeoutError(job));
+        }, deadline - Date.now());
+        const onAbort = (): void => {
+            controller.abort(signal?.reason);
+        };
+        signal?.addEventListener("abort", onAbort, {once: true});
+        try {
+            return await this.retrieve(job.id, {...options, signal: controller.signal});
+        } finally {
+            clearTimeout(timer);
+            signal?.removeEventListener("abort", onAbort);
+        }
     }
 
     /**
