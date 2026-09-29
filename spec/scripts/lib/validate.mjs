@@ -195,7 +195,17 @@ export function createValidator({document, operations, fixtureSchema}) {
                 problems.push(`response.body.sse[${index}] is not JSON`);
                 return;
             }
-            if (parsed?.object !== "chat.completion.chunk" && !parsed?.error) problems.push(`response.body.sse[${index}] is neither a chat.completion.chunk nor an error envelope`);
+            if (parsed?.object === "chat.completion.chunk") return;
+            if (!parsed?.error) {
+                problems.push(`response.body.sse[${index}] is neither a chat.completion.chunk nor an error envelope`);
+                return;
+            }
+            const errorResponse = Object.hasOwn(responses, "default") ? follow(document, responses.default, `${entry.pointer}/responses/default`) : null;
+            if (!errorResponse?.value.content?.["application/json"]) {
+                problems.push(`response.body.sse[${index}] is an error event, but ${fixture.operationId} declares no error envelope`);
+                return;
+            }
+            problems.push(...against(`${errorResponse.pointer}/content/application~1json/schema`, parsed, `response.body.sse[${index}]`));
         });
         return problems;
     }

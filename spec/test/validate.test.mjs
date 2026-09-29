@@ -44,7 +44,10 @@ const document = {
             post: {
                 operationId: "createChatCompletion",
                 requestBody: {content: {"application/json": {schema: {type: "object", required: ["model"], properties: {model: {type: "string"}, stream: {type: ["boolean", "null"]}}}}}},
-                responses: {"200": {description: "ok", headers: REQUEST_ID, content: {"application/json": {schema: {type: "object"}}, "text/event-stream": {schema: {type: "string"}}}}},
+                responses: {
+                    "200": {description: "ok", headers: REQUEST_ID, content: {"application/json": {schema: {type: "object"}}, "text/event-stream": {schema: {type: "string"}}}},
+                    default: {description: "error", headers: REQUEST_ID, content: {"application/json": {schema: {$ref: "#/components/schemas/ErrorEnvelope"}}}},
+                },
             },
         },
     },
@@ -262,4 +265,9 @@ test("23. a field renamed in both the call and the body fails against the docume
 
 test("24. a response field the document doesn't declare fails", () => {
     expectProblem(edit(invalid(), (f) => { f.response.body.json.error.owner_email = "owner@example.test"; }), /response\.body\.json\S* must NOT have unevaluated properties/);
+});
+
+test("25. an error event inside a stream keeps the envelope's shape", () => {
+    const badError = '{"error":{"type":"invalid_request_error","code":"invalid_request","message":"Bad request.","param":null,"fields":["The text field is required."]}}';
+    expectProblem(edit(stream(), (f) => { f.response.body.sse = [f.response.body.sse[0], badError, "[DONE]"]; }), /response\.body\.sse\[1\]/);
 });
