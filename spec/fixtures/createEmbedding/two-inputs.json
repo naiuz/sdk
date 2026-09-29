@@ -3,7 +3,7 @@
   "operationId": "createEmbedding",
   "call": {
     "params": {
-      "model": "neuronai-embed",
+      "model": "bge-m3",
       "input": [
         "Salom",
         "Rahmat"
@@ -19,7 +19,7 @@
     },
     "body": {
       "json": {
-        "model": "neuronai-embed",
+        "model": "bge-m3",
         "input": [
           "Salom",
           "Rahmat"
@@ -37,7 +37,7 @@
     "body": {
       "json": {
         "object": "list",
-        "model": "neuronai-embed",
+        "model": "bge-m3",
         "data": [
           {
             "object": "embedding",
@@ -68,7 +68,7 @@
   "result": {
     "body": {
       "object": "list",
-      "model": "neuronai-embed",
+      "model": "bge-m3",
       "data": [
         {
           "object": "embedding",

@@ -3,7 +3,7 @@
   "operationId": "rerank",
   "call": {
     "params": {
-      "model": "neuronai-rerank",
+      "model": "bge-reranker-v2-m3",
       "query": "Poytaxt qaysi shahar?",
       "documents": [
         "Toshkent O'zbekistonning poytaxti.",
@@ -22,7 +22,7 @@
     },
     "body": {
       "json": {
-        "model": "neuronai-rerank",
+        "model": "bge-reranker-v2-m3",
         "query": "Poytaxt qaysi shahar?",
         "documents": [
           "Toshkent O'zbekistonning poytaxti.",
@@ -43,7 +43,7 @@
     "body": {
       "json": {
         "id": "rerank-01m3n6",
-        "model": "neuronai-rerank",
+        "model": "bge-reranker-v2-m3",
         "results": [
           {
             "index": 0,
@@ -76,7 +76,7 @@
   "result": {
     "body": {
       "id": "rerank-01m3n6",
-      "model": "neuronai-rerank",
+      "model": "bge-reranker-v2-m3",
       "results": [
         {
           "index": 0,
