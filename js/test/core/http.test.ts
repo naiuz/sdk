@@ -326,4 +326,14 @@ describe("the API key", () => {
             expect(String(error)).not.toContain(KEY);
         }
     });
+
+    it("is redacted from an error built from a body that echoes it back", async () => {
+        const {fetch} = mockFetch(new Response(`<pre>Authorization: Bearer ${KEY}</pre>`, {status: 502, headers: {"content-type": "text/html"}}));
+        const {http} = httpClient(fetch, {maxRetries: 0});
+        const error = await http.request(balance, readEnvelope).catch((caught: unknown) => caught);
+        expect(error).toBeInstanceOf(APIError);
+        expect((error as Error).message).not.toContain(KEY);
+        expect(inspect(error, {depth: Infinity, showHidden: true})).not.toContain(KEY);
+        expect(JSON.stringify(error)).not.toContain(KEY);
+    });
 });

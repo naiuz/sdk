@@ -222,6 +222,11 @@ export class HttpClient {
         return headers;
     }
 
+    /** Removes every occurrence of the API key from an error answer's body, so a page that echoes the request back (a proxy's or gateway's own error page) can't put it in `APIError.message`. */
+    #redact(text: string): string {
+        return this.#apiKey === "" ? text : text.split(this.#apiKey).join("[redacted]");
+    }
+
     async #attempt<T>(url: string, init: RequestInit, timeout: number, signal: AbortSignal | undefined, parse: ParseResponse<T>): Promise<Attempt<T>> {
         signal?.throwIfAborted();
         // Aborted by the timer or by the caller's signal, whichever comes first.
@@ -239,7 +244,7 @@ export class HttpClient {
                 const data = await untilAborted(parse(response), controller.signal);
                 return {ok: true, result: {data, status: response.status, headers: response.headers}};
             }
-            const text = await untilAborted(readText(response), controller.signal);
+            const text = this.#redact(await untilAborted(readText(response), controller.signal));
             const now = this.#now();
             return {
                 ok: false,
