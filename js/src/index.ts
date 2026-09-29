@@ -44,3 +44,4 @@ export type * from "./types/rerank";
 export type {Chat, Completions} from "./resources/chat";
 export type * from "./types/chat";
 export type * from "./types/uploads";
+export {SpeechAudio, DialogueAudio} from "./core/audio";

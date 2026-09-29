@@ -43,6 +43,15 @@ export async function readText(response: Response): Promise<string> {
     }
 }
 
+/** The body as bytes. A connection that fails while the body arrives raises APIConnectionError. */
+export async function readBytes(response: Response): Promise<Uint8Array> {
+    try {
+        return new Uint8Array(await response.arrayBuffer());
+    } catch (cause) {
+        throw connectionLost(cause);
+    }
+}
+
 /**
  * The JSON object a success answer carries. A body that isn't a JSON object,
  * or fails `valid`, raises APIError with the answer's status and the start

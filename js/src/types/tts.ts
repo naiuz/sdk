@@ -63,3 +63,17 @@ export interface TtsJob {
     /** Where to download the audio once the job has succeeded; `null` until then. */
     audio_url: string | null;
 }
+
+/** Where one turn of a dialogue is in its audio, from the `X-Turns` header. Times are in seconds. */
+export interface DialogueTurnTiming {
+    /** The turn's position in the script, from 0. */
+    index: number;
+    /** The voice that spoke it. */
+    voice_id: string;
+    /** Where the turn starts. */
+    start_s: number;
+    /** Where it ends. */
+    end_s: number;
+    /** How long it lasts. */
+    duration_s: number;
+}
