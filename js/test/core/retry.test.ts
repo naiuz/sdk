@@ -2,24 +2,26 @@ import {describe, expect, it} from "vitest";
 import {failedBeforeSending, isRetryable, MAX_RETRY_AFTER_SECONDS, retryDelay, type AttemptFailure, type RetryClass} from "../../src/core/retry";
 
 const CLASSES: RetryClass[] = ["safe", "idempotent", "paid", "recreate", "once"];
-const status = (code: number): AttemptFailure => ({kind: "status", status: code});
+const status = (code: number, enveloped: boolean): AttemptFailure => ({kind: "status", status: code, enveloped});
 
 describe("isRetryable follows the spec's retry table", () => {
     it.each<[string, AttemptFailure, RetryClass[]]>([
-        ["a 429", status(429), ["safe", "idempotent", "paid", "recreate", "once"]],
+        ["a 429", status(429, true), ["safe", "idempotent", "paid", "recreate", "once"]],
         ["a connection error before sending", {kind: "connection", beforeSend: true}, ["safe", "idempotent", "paid", "recreate", "once"]],
-        ["a 500", status(500), ["safe", "idempotent", "paid", "recreate"]],
-        ["a 502", status(502), ["safe", "idempotent", "paid", "recreate"]],
-        ["a 503", status(503), ["safe", "idempotent", "paid", "recreate"]],
-        ["a 504", status(504), ["safe", "idempotent", "paid", "recreate"]],
-        ["a 501", status(501), ["idempotent", "paid", "recreate"]],
-        ["a 507", status(507), ["idempotent", "paid", "recreate"]],
+        ["a 500", status(500, true), ["safe", "idempotent", "paid", "recreate"]],
+        ["a 502", status(502, true), ["safe", "idempotent", "paid", "recreate"]],
+        ["a 503", status(503, true), ["safe", "idempotent", "paid", "recreate"]],
+        ["a 504", status(504, true), ["safe", "idempotent", "paid", "recreate"]],
+        ["a 501", status(501, true), ["idempotent", "paid", "recreate"]],
+        ["a 507", status(507, true), ["idempotent", "paid", "recreate"]],
+        ["a bare 502 with no error envelope", status(502, false), ["safe", "idempotent"]],
+        ["a bare 504 with no error envelope", status(504, false), ["safe", "idempotent"]],
         ["a timeout", {kind: "timeout"}, ["safe", "idempotent"]],
         ["a connection error after sending", {kind: "connection", beforeSend: false}, ["safe", "idempotent"]],
-        ["a 400", status(400), []],
-        ["a 404", status(404), []],
-        ["a 409", status(409), []],
-        ["a 422", status(422), []],
+        ["a 400", status(400, true), []],
+        ["a 404", status(404, true), []],
+        ["a 409", status(409, true), []],
+        ["a 422", status(422, true), []],
     ])("retries %s in exactly these classes", (_label, failure, expected) => {
         expect(CLASSES.filter((retryClass) => isRetryable(retryClass, failure))).toEqual(expected);
     });

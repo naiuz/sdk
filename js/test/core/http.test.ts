@@ -173,6 +173,22 @@ describe("retries", () => {
         await http.request({...balance, retry}, readEnvelope).catch(() => undefined);
         expect(requests).toHaveLength(expected);
     });
+
+    it("doesn't retry a paid call's bare 5xx that carries no error envelope", async () => {
+        const {fetch, requests} = mockFetch(new Response("<html>502 Bad Gateway</html>", {status: 502, headers: {"content-type": "text/html"}}));
+        const {http} = httpClient(fetch);
+        const error = await http.request({...balance, retry: "paid"}, readEnvelope).catch((caught: unknown) => caught);
+        expect(error).toBeInstanceOf(InternalServerError);
+        expect((error as InternalServerError).status).toBe(502);
+        expect(requests).toHaveLength(1);
+    });
+
+    it("retries a paid call's 5xx that carries the API's own error envelope", async () => {
+        const {fetch, requests} = mockFetch(apiError(500, "server_error"), envelope({balance: 5}));
+        const {http} = httpClient(fetch);
+        await expect(http.request({...balance, retry: "paid"}, readEnvelope)).resolves.toEqual({balance: 5});
+        expect(requests).toHaveLength(2);
+    });
 });
 
 describe("timeouts", () => {

@@ -246,10 +246,11 @@ export class HttpClient {
             }
             const text = this.#redact(await untilAborted(readText(response), controller.signal));
             const now = this.#now();
+            const error = makeAPIError(response.status, response.statusText, response.headers, text, now);
             return {
                 ok: false,
-                error: makeAPIError(response.status, response.statusText, response.headers, text, now),
-                failure: {kind: "status", status: response.status},
+                error,
+                failure: {kind: "status", status: response.status, enveloped: error.code !== null},
                 retryAfter: parseRetryAfter(response.headers.get("retry-after"), now),
             };
         } catch (error) {

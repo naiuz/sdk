@@ -6,19 +6,25 @@
  *   503 and 504, and a timeout or a connection error after sending.
  * - `idempotent`: the five POSTs that send an Idempotency-Key. Also any 5xx,
  *   and a timeout or a connection error after sending.
- * - `paid`: chat completions, embeddings and rerank. Also any 5xx, but not a
- *   timeout or a connection error once the request was sent: the call may
- *   have completed and been charged.
- * - `recreate`: voices.update and voices.replaceAudio. Also any 5xx, but not
- *   after sending, since either may still be re-creating the voice.
+ * - `paid`: chat completions, embeddings and rerank. Also a 5xx that carries
+ *   the API's own error envelope, but not a bare page from a proxy or
+ *   gateway, and not a timeout or a connection error once the request was
+ *   sent: the call may have completed and been charged.
+ * - `recreate`: voices.update and voices.replaceAudio. Also a 5xx that
+ *   carries the API's own error envelope, but not a bare gateway page, and
+ *   not after sending, since either may still be re-creating the voice.
  * - `once`: apiKeys.create. Nothing more, since a retry could create a
  *   second key.
  */
 export type RetryClass = "safe" | "idempotent" | "paid" | "recreate" | "once";
 
-/** Why an attempt failed. */
+/**
+ * Why an attempt failed. A `"status"` failure's `enveloped` says whether the
+ * body was the API's own error envelope (its `code` was set): a 5xx without
+ * one is a proxy's or gateway's own page, not the API itself.
+ */
 export type AttemptFailure =
-    | {kind: "status"; status: number}
+    | {kind: "status"; status: number; enveloped: boolean}
     | {kind: "timeout"}
     | {kind: "connection"; beforeSend: boolean};
 
@@ -29,7 +35,10 @@ export function isRetryable(retryClass: RetryClass, failure: AttemptFailure): bo
         case "status":
             if (failure.status === 429) return true;
             if (retryClass === "safe") return [500, 502, 503, 504].includes(failure.status);
-            return retryClass !== "once" && failure.status >= 500;
+            if (retryClass === "once" || failure.status < 500) return false;
+            // A bare 5xx from a proxy or gateway may mean the server is still working: paid and
+            // recreate calls retry it only when it carries the API's own error envelope.
+            return retryClass === "idempotent" || failure.enveloped;
         case "timeout":
             return afterSending;
         case "connection":
