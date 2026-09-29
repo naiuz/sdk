@@ -126,11 +126,13 @@ Creates a job, polls it until it has `succeeded` or `failed`, and resolves with 
 
 ## `client.chat.completions`
 
-### `chat.completions.create(params: CreateChatCompletionRequest, options?: RequestOptions): APIPromise<WithCost<ChatCompletion>>`
+### `chat.completions.create(params: CreateChatCompletionRequestNonStreaming, options?: RequestOptions): APIPromise<WithCost<ChatCompletion>>`
 
-### `chat.completions.create(params: CreateChatCompletionRequest & {stream: true}, options?: RequestOptions): APIPromise<Stream<ChatCompletionChunk>>`
+### `chat.completions.create(params: CreateChatCompletionRequestStreaming, options?: RequestOptions): APIPromise<Stream<ChatCompletionChunk>>`
 
-`POST /chat/completions`. A model response, billed per token; with `stream: true`, a `Stream` of chunks as the answer is generated.
+### `chat.completions.create(params: CreateChatCompletionRequest, options?: RequestOptions): APIPromise<WithCost<ChatCompletion> | Stream<ChatCompletionChunk>>`
+
+`POST /chat/completions`. A model response, billed per token; with `stream: true`, a `Stream` of chunks as the answer is generated. Without `stream` (or with `stream: false`), the first overload applies; with `stream: true`, the second; with a `boolean` known only at run time, the third, resolving to the union.
 
 | Parameter | Type | |
 |---|---|---|

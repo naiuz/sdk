@@ -165,6 +165,7 @@ for await (const chunk of stream) {
 
 - The stream ends at the server's `[DONE]`. The last chunk before it carries `usage` when the model reports its token counts.
 - Leaving the loop early (`break`, `return` or an error) or calling `stream.close()` aborts the request, and the server stops generating.
+- Read every stream you open, or close it: until then it holds its connection.
 - The timeout bounds the wait for each piece of the answer, not the whole of it, so a long answer isn't cut off at 5 minutes; a silence longer than that throws `APITimeoutError`.
 - If the model fails once the stream has started, the loop throws an `APIError` with status 200 and code `upstream_error`. A stream that ends without `[DONE]` throws `APIConnectionError`: the answer may be cut short.
 - A stream can be read once. `stream.toReadableStream()` gives it as bytes of newline-delimited JSON, one chunk per line, to pass on as the body of your own `Response`.
