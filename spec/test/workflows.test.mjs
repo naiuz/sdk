@@ -12,6 +12,13 @@ test("CI checks the contract on every pull request and every push to main", asyn
     for (const command of ["npm ci", "npm test", "npm run validate"]) assert.match(ci, new RegExp(`run: ${command}\\n`), command);
 });
 
+test("no workflow runs an action major built for Node 20", async () => {
+    for (const name of ["ci.yml", "drift.yml"]) {
+        const text = await read(name);
+        assert.doesNotMatch(text, /actions\/(checkout|setup-node)@v[1-4]\b/);
+    }
+});
+
 test("the drift job runs daily and on demand, and only reports drift as drift", async () => {
     const drift = await read("drift.yml");
     assert.match(drift, /schedule:\n\s+- cron: /);
