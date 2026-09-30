@@ -132,3 +132,41 @@ def test_comparable_drops_nulls_and_tells_a_boolean_from_a_number() -> None:
     without: dict[str, object] = {"b": [1.0, {}]}
     assert comparable(with_nulls) == comparable(without)
     assert comparable({"enabled": True}) != comparable({"enabled": 1})
+
+
+BODY_EXPECTED: dict[str, Any] = {
+    "method": "PATCH",
+    "path": "/api-keys/key_1",
+    "headers": {"authorization": f"Bearer {FIXTURE_KEY}"},
+    "body": {"json": {"name": "Ops", "limit": 1, "enabled": True}},
+}
+
+
+def patched(body: dict[str, object]) -> httpx.Request:
+    return httpx.Request(
+        "PATCH",
+        "https://my.neuronai.uz/api/v1/api-keys/key_1",
+        headers={"authorization": f"Bearer {FIXTURE_KEY}"},
+        json=body,
+    )
+
+
+def test_expect_request_passes_a_body_that_differs_only_in_key_order_or_how_a_number_is_written() -> None:
+    expect_request([patched({"enabled": True, "limit": 1.0, "name": "Ops"})], BODY_EXPECTED)
+
+
+@pytest.mark.parametrize(
+    ("body", "expected_body"),
+    [
+        ({"name": "Ops", "expires_at": None}, {"name": "Ops"}),
+        ({"name": "Ops"}, {"name": "Ops", "expires_at": None}),
+        ({"name": "Ops", "enabled": 1}, {"name": "Ops", "enabled": True}),
+    ],
+    ids=["a null the fixture doesn't hold", "a null the fixture holds, left out", "a number for a boolean"],
+)
+def test_expect_request_compares_the_body_exactly_null_for_null(
+    body: dict[str, object], expected_body: dict[str, object]
+) -> None:
+    """A null in a request body is an instruction, such as clearing a key's expiry, so it never matches absence."""
+    with pytest.raises(AssertionError):
+        expect_request([patched(body)], {**BODY_EXPECTED, "body": {"json": expected_body}})

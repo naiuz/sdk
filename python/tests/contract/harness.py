@@ -212,9 +212,22 @@ def comparable(value: object) -> object:
     return value
 
 
+def exact(value: object) -> object:
+    """A JSON value ready to compare exactly, as a request body is: key order doesn't matter and numbers compare by
+    value, but a boolean never equals a number, and a key holding null never matches one that is absent, since a null
+    in a request is an instruction, such as clearing a key's expiry."""
+    if isinstance(value, bool):
+        return ("bool", value)
+    if isinstance(value, list):
+        return [exact(item) for item in cast("list[object]", value)]
+    if isinstance(value, dict):
+        return {key: exact(item) for key, item in cast("dict[str, object]", value).items()}
+    return value
+
+
 def expect_request(requests: list[httpx.Request], expected: dict[str, Any]) -> None:
     """Asserts that exactly one request went out, and that it is the fixture's: the method, the raw request target
-    as sent, the query with every key once, every fixture header with its value, and the body."""
+    as sent, the query with every key once, every fixture header with its value, and the body, null for null."""
     assert len(requests) == 1, f"the call sends exactly one request, not {len(requests)}"
     [sent] = requests
     assert sent.method == expected["method"]
@@ -228,4 +241,4 @@ def expect_request(requests: list[httpx.Request], expected: dict[str, Any]) -> N
     if expected["body"] is None:
         assert sent.content == b""
     else:
-        assert comparable(json.loads(sent.content)) == comparable(expected["body"]["json"])
+        assert exact(json.loads(sent.content)) == exact(expected["body"]["json"])
