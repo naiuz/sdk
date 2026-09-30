@@ -7,15 +7,16 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import functools
 import sys
 from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable, Generator
-from typing import TYPE_CHECKING, Any, Generic, TypeVar, final
+from typing import TYPE_CHECKING, Any, Generic, ParamSpec, TypeVar, final
 
 import httpx
 
 from .._models import BaseModel
 from .._request import APIRequest
-from .._response import Attempt
+from .._response import Attempt, RawResponse, capture
 from ._pagination import AsyncPage, fetch_page
 
 if TYPE_CHECKING:
@@ -23,6 +24,7 @@ if TYPE_CHECKING:
 
 T = TypeVar("T")
 M = TypeVar("M", bound=BaseModel)
+P = ParamSpec("P")
 
 Sleep = Callable[[float], Awaitable[None]]
 """Waits the given number of seconds."""
@@ -96,3 +98,15 @@ class AsyncPaginator(Generic[M]):
 def paginate(http: AsyncHttpClient, request: APIRequest, model: type[M]) -> AsyncPaginator[M]:
     """A list call, sent when awaited or looped over."""
     return AsyncPaginator(http, request, model)
+
+
+def to_raw(method: Callable[P, Awaitable[T]]) -> Callable[P, Awaitable[RawResponse[T]]]:
+    """The method, returning a RawResponse: its result with the status and headers of the answer it came from."""
+
+    @functools.wraps(method)
+    async def raw(*args: P.args, **kwargs: P.kwargs) -> RawResponse[T]:
+        with capture() as answer:
+            data = await method(*args, **kwargs)
+        return RawResponse(data, answer.status, answer.headers)
+
+    return raw

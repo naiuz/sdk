@@ -4,10 +4,14 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
+from typing import Any
 
 import httpx
+import pytest
 
+from naiuz import NeuronAI
 from naiuz._sync._http import HttpClient
+from naiuz._request import APIRequest
 from tests.helpers import BASE_URL, KEY, NOW, MockAPI
 
 
@@ -38,3 +42,33 @@ def http_client(
         clock=lambda: NOW,
     )
     return http, waits
+
+
+def client_for(
+    api: MockAPI,
+    *,
+    max_retries: int = 0,
+    timeout: float | None = None,
+    default_headers: Mapping[str, str] | None = None,
+) -> NeuronAI:
+    """A client on `api` that doesn't retry, unless the test says so."""
+    return NeuronAI(
+        api_key=KEY,
+        http_client=httpx.Client(transport=api.transport()),
+        max_retries=max_retries,
+        timeout=timeout,
+        default_headers=default_headers,
+    )
+
+
+def retry_classes(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """Records the retry class of every call the HTTP core sends."""
+    seen: list[str] = []
+    request = HttpClient.request
+
+    def spy(self: HttpClient, api_request: APIRequest, reader: Any) -> Any:
+        seen.append(api_request.retry)
+        return request(self, api_request, reader)
+
+    monkeypatch.setattr(HttpClient, "request", spy)
+    return seen

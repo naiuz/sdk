@@ -16,6 +16,16 @@ import httpx
 KEY = "nai_unit_test_key"
 """The key every unit test's client sends."""
 
+BALANCE = {
+    "balance": 10000,
+    "formatted": "10 000 UZS",
+    "currency": "UZS",
+    "stt_price_per_minute": 500,
+    "tts_price_per_char": 2.5,
+    "min_topup": 5000,
+}
+"""A balance as the API sends it."""
+
 BASE_URL = "https://my.neuronai.uz/api/v1"
 
 NOW = datetime(2026, 9, 29, 10, 0, 0, tzinfo=timezone.utc).timestamp()

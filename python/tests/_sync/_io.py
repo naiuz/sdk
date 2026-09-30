@@ -38,3 +38,8 @@ class Body(httpx.SyncByteStream):
 def answer(body: Body, status: int = 200) -> httpx.Response:
     """A JSON answer whose body is `body`."""
     return httpx.Response(status, headers={"content-type": "application/json"}, stream=body)
+
+
+def other_kind_of_client() -> httpx.AsyncClient:
+    """An httpx client of the kind the other client takes."""
+    return httpx.AsyncClient()

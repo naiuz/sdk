@@ -6,15 +6,16 @@ It is the hand-written twin of `_async/_io.py`. scripts/unasync.py writes everyt
 from __future__ import annotations
 
 import contextlib
+import functools
 import time
 from collections.abc import Callable, Generator
-from typing import TYPE_CHECKING, Generic, TypeVar, final
+from typing import TYPE_CHECKING, Generic, ParamSpec, TypeVar, final
 
 import httpx
 
 from .._models import BaseModel
 from .._request import APIRequest
-from .._response import Attempt
+from .._response import Attempt, RawResponse, capture
 from ._pagination import Page as Page
 from ._pagination import fetch_page
 
@@ -23,6 +24,7 @@ if TYPE_CHECKING:
 
 T = TypeVar("T")
 M = TypeVar("M", bound=BaseModel)
+P = ParamSpec("P")
 
 Sleep = Callable[[float], None]
 """Waits the given number of seconds."""
@@ -73,3 +75,15 @@ class TakeOver(Generic[T]):
 def paginate(http: HttpClient, request: APIRequest, model: type[M]) -> Page[M]:
     """A list call, sent at once: its first page. The async client's twin is sent when awaited or looped over."""
     return fetch_page(http, request, model)
+
+
+def to_raw(method: Callable[P, T]) -> Callable[P, RawResponse[T]]:
+    """The method, returning a RawResponse: its result with the status and headers of the answer it came from."""
+
+    @functools.wraps(method)
+    def raw(*args: P.args, **kwargs: P.kwargs) -> RawResponse[T]:
+        with capture() as answer:
+            data = method(*args, **kwargs)
+        return RawResponse(data, answer.status, answer.headers)
+
+    return raw
