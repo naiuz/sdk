@@ -13,10 +13,11 @@ test("CI checks the contract on every pull request and every push to main", asyn
 });
 
 test("no workflow runs an action major built for Node 20", async () => {
-    for (const name of ["ci.yml", "drift.yml", "js.yml", "smoke.yml"]) {
+    for (const name of ["ci.yml", "drift.yml", "js.yml", "python.yml", "smoke.yml"]) {
         const text = await read(name);
         assert.doesNotMatch(text, /actions\/(checkout|setup-node)@v[1-4]\b/);
         assert.doesNotMatch(text, /(oven-sh\/setup-bun|denoland\/setup-deno)@v1\b/);
+        assert.doesNotMatch(text, /astral-sh\/setup-uv@v[1-6]\b/);
     }
 });
 
@@ -40,6 +41,18 @@ test("the JavaScript SDK's built package runs mocked calls on Node, Bun and Deno
     assert.match(js, /run: bun smoke\/runtimes\.mjs\n/);
     assert.match(js, /uses: denoland\/setup-deno@v2\n/);
     assert.match(js, /run: deno run --no-prompt --allow-read --allow-write --allow-net=127\.0\.0\.1 --allow-env=TMPDIR,TMP,TEMP smoke\/runtimes\.mjs\n/);
+});
+
+test("the Python SDK's checks run on Python 3.10 to 3.14 when python/ or spec/ changes", async () => {
+    const python = await read("python.yml");
+    assert.match(python, /pull_request:\n\s+paths:\n\s+- "python\/\*\*"\n\s+- "spec\/\*\*"\n\s+- "\.github\/workflows\/python\.yml"\n/);
+    assert.match(python, /push:\n\s+branches: \[main\]\n\s+paths:\n\s+- "python\/\*\*"\n\s+- "spec\/\*\*"\n\s+- "\.github\/workflows\/python\.yml"\n/);
+    assert.match(python, /python: \["3\.10", "3\.11", "3\.12", "3\.13", "3\.14"\]/);
+    assert.match(python, /python-version: \$\{\{ matrix\.python \}\}/);
+    assert.match(python, /working-directory: python\n/);
+    const steps = ["uv sync --locked", "uv run ruff check", "uv run ruff format --check", "uv run pyright", "uv run mypy", "uv run pytest", "uv build"].map((command) => python.indexOf(`run: ${command}\n`));
+    assert.ok(steps.every((index) => index > 0), "every step is there");
+    assert.deepEqual([...steps].sort((a, b) => a - b), steps, "in this order");
 });
 
 test("the live smoke tests run nightly and on demand, never on a pull request, with the key from the Actions secret", async () => {
