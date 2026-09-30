@@ -6,7 +6,7 @@ from typing import Any
 import pytest
 
 from naiuz import AsyncNeuronAI, NeuronAI
-from naiuz.types import SynthesizeSpeechRequest, UpdateVoiceRequest
+from naiuz.types import CreateApiKeyRequest, SynthesizeSpeechRequest, UpdateApiKeyRequest, UpdateVoiceRequest
 from tests.helpers import KEY
 
 OPTIONS = {"timeout", "max_retries", "extra_headers", "idempotency_key"}
@@ -14,6 +14,8 @@ OPTIONS = {"timeout", "max_retries", "extra_headers", "idempotency_key"}
 REQUEST_TYPES: list[tuple[Any, str]] = [
     (SynthesizeSpeechRequest, "tts.jobs.create"),
     (UpdateVoiceRequest, "voices.update"),
+    (CreateApiKeyRequest, "api_keys.create"),
+    (UpdateApiKeyRequest, "api_keys.update"),
 ]
 
 

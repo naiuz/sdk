@@ -13,6 +13,7 @@ from .._options import DEFAULT_MAX_RETRIES, DEFAULT_TIMEOUT, resolve_api_key, re
 from .._request import check_max_retries, check_timeout
 from ._http import AsyncHttpClient
 from .resources.account import AsyncAccount
+from .resources.api_keys import AsyncApiKeys
 from .resources.tts import AsyncTts
 from .resources.voices import AsyncVoices
 
@@ -40,6 +41,8 @@ class AsyncNeuronAI:
     """Stock voices and your organization's voice clones."""
     tts: AsyncTts
     """Text to speech."""
+    api_keys: AsyncApiKeys
+    """Your organization's API keys."""
 
     def __init__(
         self,
@@ -85,6 +88,7 @@ class AsyncNeuronAI:
         self.account = AsyncAccount(http)
         self.voices = AsyncVoices(http)
         self.tts = AsyncTts(http)
+        self.api_keys = AsyncApiKeys(http)
 
     async def close(self) -> None:
         """Closes the httpx client the SDK made. One given as `http_client` stays open: it is yours to close."""

@@ -14,6 +14,7 @@ from .._options import DEFAULT_MAX_RETRIES, DEFAULT_TIMEOUT, resolve_api_key, re
 from .._request import check_max_retries, check_timeout
 from ._http import HttpClient
 from .resources.account import Account
+from .resources.api_keys import ApiKeys
 from .resources.tts import Tts
 from .resources.voices import Voices
 
@@ -41,6 +42,8 @@ class NeuronAI:
     """Stock voices and your organization's voice clones."""
     tts: Tts
     """Text to speech."""
+    api_keys: ApiKeys
+    """Your organization's API keys."""
 
     def __init__(
         self,
@@ -86,6 +89,7 @@ class NeuronAI:
         self.account = Account(http)
         self.voices = Voices(http)
         self.tts = Tts(http)
+        self.api_keys = ApiKeys(http)
 
     def close(self) -> None:
         """Closes the httpx client the SDK made. One given as `http_client` stays open: it is yours to close."""
