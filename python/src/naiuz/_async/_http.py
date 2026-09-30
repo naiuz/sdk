@@ -20,6 +20,17 @@ from . import _io
 T = TypeVar("T")
 
 
+def attempt_timeout(timeout: float) -> httpx.Timeout:
+    """httpx's own timeouts for an attempt of `timeout` seconds.
+
+    Waiting for a pooled connection and connecting end a little before the attempt's deadline, so running out of
+    time there raises httpx's PoolTimeout or ConnectTimeout, which say that nothing was sent: every retry class may
+    retry that. Writing the request and reading the answer get the whole timeout.
+    """
+    early = timeout - min(timeout / 10, 1.0)
+    return httpx.Timeout(timeout, connect=early, pool=early)
+
+
 class AsyncHttpClient:
     """Sends API calls.
 
@@ -76,7 +87,7 @@ class AsyncHttpClient:
             params=query_items(request.query),
             headers=headers,
             content=None if isinstance(request.body, NotGiven) else json_body(request.body),
-            timeout=httpx.Timeout(timeout),
+            timeout=attempt_timeout(timeout),
         )
         retry = 0
         while True:

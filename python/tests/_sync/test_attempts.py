@@ -92,3 +92,32 @@ def test_a_server_that_goes_silent_is_dropped_after_the_timeout(first: bytes) ->
             with pytest.raises(APITimeoutError):
                 http.request(balance, read_envelope(Item))
             assert time.monotonic() - started < 2
+
+
+def test_a_call_that_can_t_get_a_connection_in_time_is_retried_as_never_sent() -> None:
+    """Running out of time while waiting for a pooled connection sent nothing, so even a paid call may retry it."""
+    embed = APIRequest("POST", "/embeddings", "paid", body={"model": "m", "input": "x"})
+    waits: list[float] = []
+
+    def record(seconds: float) -> None:
+        waits.append(seconds)
+
+    headers_only = b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 100\r\n\r\n"
+    with silent_server(headers_only) as base_url:
+        with httpx.Client(trust_env=False, limits=httpx.Limits(max_connections=1)) as client:
+            http = HttpClient(
+                api_key=KEY,
+                base_url=base_url,
+                timeout=0.5,
+                max_retries=1,
+                default_headers={},
+                user_agent="naiuz-python/test",
+                client=client,
+                sleep=record,
+                random=lambda: 0.0,
+            )
+            # This answer's body never comes, so it holds the pool's only connection until the block ends.
+            with client.stream("GET", f"{base_url}/balance"):
+                with pytest.raises(APITimeoutError):
+                    http.request(embed, read_envelope(Item))
+    assert waits == [0.5]
