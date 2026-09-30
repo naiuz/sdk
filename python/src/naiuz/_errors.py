@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import json
 import time
-from typing import NamedTuple, cast
+from typing import TYPE_CHECKING, NamedTuple, cast
 
 import httpx
 
 from ._retry_after import parse_retry_after
+
+if TYPE_CHECKING:
+    from .types.tts import TtsJob
 
 
 class NeuronAIError(Exception):
@@ -30,6 +33,22 @@ class APITimeoutError(APIConnectionError):
 
     def __init__(self, message: str = "Request timed out.") -> None:
         super().__init__(message)
+
+
+class WaitTimeoutError(NeuronAIError):
+    """Waiting for a synthesis job ran out of time before the job finished.
+
+    `job` is the job as the last poll saw it: fetch its audio once it has succeeded.
+    """
+
+    job: TtsJob
+    """The job as the last poll saw it."""
+
+    def __init__(self, job: TtsJob, message: str | None = None) -> None:
+        super().__init__(
+            f"The job {job.id} was still {job.status} when the wait ran out." if message is None else message
+        )
+        self.job = job
 
 
 class APIError(NeuronAIError):

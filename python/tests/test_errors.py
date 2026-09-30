@@ -21,8 +21,10 @@ from naiuz import (
     RateLimitError,
     UnprocessableEntityError,
     UnsupportedMediaTypeError,
+    WaitTimeoutError,
 )
 from naiuz._errors import connection_error, make_api_error, root_message
+from naiuz.types import TtsJob
 
 NOW = datetime(2026, 9, 29, 10, 0, 0, tzinfo=timezone.utc).timestamp()
 
@@ -189,3 +191,26 @@ def test_connection_error_says_what_failed_and_keeps_the_cause() -> None:
     assert str(connection_error(httpx.ReadError(""), reading=False)) == "Connection error."
     dropped = connection_error(httpx.RemoteProtocolError("peer closed connection"), reading=True)
     assert str(dropped) == "The connection failed while the response arrived: peer closed connection"
+
+
+def test_a_wait_timeout_error_carries_the_job_as_last_seen() -> None:
+    job = TtsJob.model_validate(
+        {
+            "id": "job-1",
+            "status": "running",
+            "created_at": "2026-09-28T10:00:00Z",
+            "started_at": "2026-09-28T10:00:01Z",
+            "finished_at": None,
+            "character_count": 5,
+            "cost": None,
+            "balance_after": None,
+            "voice_custom": False,
+            "latency_ms": None,
+            "error": None,
+            "audio_url": None,
+        }
+    )
+    error = WaitTimeoutError(job)
+    assert isinstance(error, NeuronAIError)
+    assert error.job is job
+    assert str(error) == "The job job-1 was still running when the wait ran out."

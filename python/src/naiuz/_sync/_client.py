@@ -14,6 +14,8 @@ from .._options import DEFAULT_MAX_RETRIES, DEFAULT_TIMEOUT, resolve_api_key, re
 from .._request import check_max_retries, check_timeout
 from ._http import HttpClient
 from .resources.account import Account
+from .resources.tts import Tts
+from .resources.voices import Voices
 
 _Client = TypeVar("_Client", bound="NeuronAI")
 
@@ -35,6 +37,10 @@ class NeuronAI:
     """How many times a failed attempt is retried, unless a call passes its own `max_retries`."""
     account: Account
     """Your organization's balance and usage."""
+    voices: Voices
+    """Stock voices and your organization's voice clones."""
+    tts: Tts
+    """Text to speech."""
 
     def __init__(
         self,
@@ -78,6 +84,8 @@ class NeuronAI:
             client=self._client,
         )
         self.account = Account(http)
+        self.voices = Voices(http)
+        self.tts = Tts(http)
 
     def close(self) -> None:
         """Closes the httpx client the SDK made. One given as `http_client` stays open: it is yours to close."""

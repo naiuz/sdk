@@ -13,6 +13,8 @@ from .._options import DEFAULT_MAX_RETRIES, DEFAULT_TIMEOUT, resolve_api_key, re
 from .._request import check_max_retries, check_timeout
 from ._http import AsyncHttpClient
 from .resources.account import AsyncAccount
+from .resources.tts import AsyncTts
+from .resources.voices import AsyncVoices
 
 _Client = TypeVar("_Client", bound="AsyncNeuronAI")
 
@@ -34,6 +36,10 @@ class AsyncNeuronAI:
     """How many times a failed attempt is retried, unless a call passes its own `max_retries`."""
     account: AsyncAccount
     """Your organization's balance and usage."""
+    voices: AsyncVoices
+    """Stock voices and your organization's voice clones."""
+    tts: AsyncTts
+    """Text to speech."""
 
     def __init__(
         self,
@@ -77,6 +83,8 @@ class AsyncNeuronAI:
             client=self._client,
         )
         self.account = AsyncAccount(http)
+        self.voices = AsyncVoices(http)
+        self.tts = AsyncTts(http)
 
     async def close(self) -> None:
         """Closes the httpx client the SDK made. One given as `http_client` stays open: it is yours to close."""

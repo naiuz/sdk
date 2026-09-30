@@ -21,6 +21,7 @@ from ._errors import (
     RateLimitError,
     UnprocessableEntityError,
     UnsupportedMediaTypeError,
+    WaitTimeoutError,
 )
 from ._models import BaseModel
 from ._options import DEFAULT_BASE_URL, DEFAULT_MAX_RETRIES, DEFAULT_TIMEOUT
@@ -60,5 +61,6 @@ __all__ = [
     "RawResponse",
     "UnprocessableEntityError",
     "UnsupportedMediaTypeError",
+    "WaitTimeoutError",
     "__version__",
 ]
