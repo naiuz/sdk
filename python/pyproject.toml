@@ -43,7 +43,7 @@ include = ["/src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["."]
+pythonpath = [".", "scripts"]
 addopts = ["--import-mode=importlib", "--strict-markers", "--strict-config"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
@@ -57,12 +57,23 @@ target-version = "py310"
 [tool.ruff.lint]
 select = ["E", "W", "F", "I", "B", "UP", "SIM", "C4", "PT", "RUF", "ASYNC"]
 
+[tool.ruff.lint.per-file-ignores]
+# Dropping async can leave the sync twins with imports out of order, nested `with` blocks, a comprehension `list()`
+# could replace, or a loop of yields `yield from` could replace, none of which the async code can avoid.
+"src/naiuz/_sync/**" = ["I001", "C416", "SIM117", "UP028"]
+"tests/_sync/**" = ["I001", "C416", "SIM117", "UP028"]
+
+[tool.ruff.format]
+# The sync twins are written by scripts/unasync.py from the async code, which is formatted.
+exclude = ["src/naiuz/_sync/**", "tests/_sync/**"]
+
 [tool.pyright]
-include = ["src", "tests"]
+include = ["src", "tests", "scripts"]
+extraPaths = ["scripts"]
 typeCheckingMode = "strict"
 
 [tool.mypy]
 strict = true
-files = ["src", "tests"]
-mypy_path = ["src"]
+files = ["src", "tests", "scripts"]
+mypy_path = ["src", "scripts"]
 explicit_package_bases = true
