@@ -17,7 +17,7 @@ The schema is `fixture.schema.json`.
 - **`call`:** what the caller passes.
   - `path_params`: path parameters.
   - `params`: the request's fields or query parameters, under the API's own snake_case names. A query parameter the caller leaves out is not sent, and fixtures never pass `null` for one.
-  - `files`: uploads, each `{filename, content_type, base64}`. `content_type` is the one the caller gives with the file.
+  - `files`: uploads, each `{filename, content_type, base64}`. `content_type` is the one the caller gives with the file. An upload always has a filename, since a file part's content type otherwise comes from its extension: every SDK refuses one without a filename before anything is sent.
   - `options.idempotency_key`: for the five idempotent operations.
 - **`request`:** what must go over the wire.
   - `method`.
@@ -26,7 +26,7 @@ The schema is `fixture.schema.json`.
   - `headers`: lower-case names. The SDK must send at least these, with these values. For a multipart body, `content-type` must start with the value given.
   - `body`: `null`, `{json}`, or `{multipart: {fields, files}}`. Array fields such as `tags` are sent as repeated `tags[]` parts.
 - **`response`:** `status`, `headers` (lower-case) and `body`. The body is `null`, `{json}`, `{base64}` for audio, or `{sse: [...]}`, where each entry is one event's `data:` payload and the last is `[DONE]`.
-- **`unknown_fields`** (optional): JSON Pointers into `response.body.json`, each naming a field the API document doesn't declare, as a field the API adds later would be. The validator checks that each is in the body and undeclared, then checks the rest of the body against the document. Use it on an operation whose result mirrors its body (`{data, request_id}` or a page), so each pointer names the same field in `result`.
+- **`unknown_fields`** (optional): JSON Pointers into `response.body.json`, each naming a field the API document doesn't declare, as a field the API adds later would be. The validator checks that each is in the body and undeclared, then checks the rest of the body against the document. Each pointer names the same field in the part of `result` that mirrors the body: `result.body` for chat completions, models, embeddings and rerank, and `result` itself for any other operation, since `{data, request_id}` and a page keep the body's own paths.
 - **`result`:** what the SDK returns, written the same way for every language.
 
 ## `result` conventions
@@ -72,4 +72,4 @@ The extension is what follows the filename's last dot, in lower case. The server
   - key order doesn't matter;
   - numbers compare by value, so `1650` equals `1650.0`;
   - a key that is absent on one side matches `null` on the other;
-  - the fields `unknown_fields` names are left out of what the SDK returns first: an SDK must not fail on a field it doesn't know, and may keep it or drop it.
+  - the fields `unknown_fields` names are left out first, from the part of what the SDK returns that mirrors the body (`body` for chat completions, models, embeddings and rerank, the whole result otherwise), so `cost`, which comes from a header, is never touched: an SDK must not fail on a field it doesn't know, and may keep it or drop it.
