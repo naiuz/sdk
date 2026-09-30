@@ -12,7 +12,7 @@ class Body(httpx.SyncByteStream):
     """A body that sends each chunk after `gap` seconds, then fails with `error`, or goes on forever with `forever`."""
 
     def __init__(
-        self, *chunks: bytes, gap: float = 0.0, forever: bool = False, error: Exception | None = None
+        self, *chunks: bytes, gap: float = 0.0, forever: bool = False, error: BaseException | None = None
     ) -> None:
         self.chunks = chunks
         self.gap = gap

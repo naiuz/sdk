@@ -8,6 +8,13 @@ from __future__ import annotations
 import contextlib
 import time
 from collections.abc import Callable, Generator
+from typing import Generic, TypeVar, final
+
+import httpx
+
+from .._response import Attempt
+
+T = TypeVar("T")
 
 Sleep = Callable[[float], None]
 """Waits the given number of seconds."""
@@ -41,3 +48,15 @@ def deadline(seconds: float) -> Generator[Deadline, None, None]:
     drop a connection that goes silent.
     """
     yield Deadline(_nothing)
+
+
+@final
+class TakeOver(Generic[T]):
+    """A reader that takes the open answer over, instead of the core reading its whole body, as a stream does.
+
+    `take` gets the answer with its body unread, and the attempt's deadline no longer runs. Once `take` returns, the
+    answer is the reader's to close; if `take` raises, the core closes it.
+    """
+
+    def __init__(self, take: Callable[[httpx.Response, Attempt], T]) -> None:
+        self.take = take

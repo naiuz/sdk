@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import re
-from collections.abc import Callable
+import socket
+import threading
+import time
+from collections.abc import Callable, Generator
 from datetime import datetime, timezone
 
 import httpx
@@ -19,7 +23,7 @@ NOW = datetime(2026, 9, 29, 10, 0, 0, tzinfo=timezone.utc).timestamp()
 
 UUID_V4 = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}")
 
-Reply = httpx.Response | Exception | Callable[[httpx.Request], httpx.Response]
+Reply = httpx.Response | BaseException | Callable[[httpx.Request], httpx.Response]
 """How the mock answers one request: an answer, an error to raise, or a function of the request."""
 
 
@@ -35,7 +39,7 @@ class MockAPI:
         if len(self.requests) > len(self.replies):
             raise AssertionError(f"Unexpected request {len(self.requests)}: {request.method} {request.url}")
         reply = self.replies[len(self.requests) - 1]
-        if isinstance(reply, Exception):
+        if isinstance(reply, BaseException):
             raise reply
         return reply if isinstance(reply, httpx.Response) else reply(request)
 
@@ -84,3 +88,37 @@ def reset() -> httpx.ReadError:
 def body_of(request: httpx.Request) -> object:
     """A request's JSON body, parsed; None when it has none."""
     return json.loads(request.content) if request.content else None
+
+
+@contextlib.contextmanager
+def silent_server(first: bytes) -> Generator[str, None, None]:
+    """A local HTTP server that sends `first` on each connection, then goes silent. Yields its base URL.
+
+    It hangs up after 5 seconds, so a client that never times out fails its test instead of hanging it.
+    """
+    server = socket.create_server(("127.0.0.1", 0))
+    server.settimeout(0.05)
+    done = threading.Event()
+
+    def serve() -> None:
+        connections: list[socket.socket] = []
+        give_up = time.monotonic() + 5
+        while not done.is_set() and time.monotonic() < give_up:
+            try:
+                connection, _ = server.accept()
+            except TimeoutError:
+                continue
+            connections.append(connection)
+            connection.recv(65536)
+            connection.sendall(first)
+        for connection in connections:
+            connection.close()
+
+    thread = threading.Thread(target=serve, daemon=True)
+    thread.start()
+    try:
+        yield f"http://127.0.0.1:{server.getsockname()[1]}/api/v1"
+    finally:
+        done.set()
+        thread.join()
+        server.close()

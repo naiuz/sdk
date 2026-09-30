@@ -5,13 +5,13 @@ from __future__ import annotations
 import random as random_module
 import time
 from collections.abc import Callable, Mapping
-from typing import TypeVar
+from typing import TypeVar, cast
 
 import httpx
 
 from .._errors import APITimeoutError, connection_error, make_api_error
 from .._request import APIRequest, NotGiven, build_headers, check_max_retries, check_timeout, json_body
-from .._response import Answer, Answered, Failed, Reader, record
+from .._response import Answer, Answered, Attempt, Failed, Reader, record
 from .._retry import ConnectionFailure, StatusFailure, TimeoutFailure, failed_before_sending, is_retryable, retry_delay
 from .._retry_after import parse_retry_after
 from .._url import build_url, query_items
@@ -58,7 +58,7 @@ class AsyncHttpClient:
         self._monotonic = time.monotonic if monotonic is None else monotonic
         """The time for deadlines."""
 
-    async def request(self, request: APIRequest, reader: Reader[T]) -> T:
+    async def request(self, request: APIRequest, reader: Reader[T] | _io.TakeOver[T]) -> T:
         """Sends the call, retrying as its class allows, and returns what `reader` makes of the answer."""
         options = request.options
         timeout = check_timeout(self._timeout if options.timeout is None else options.timeout)
@@ -91,14 +91,19 @@ class AsyncHttpClient:
             await self._sleep(delay)
             retry += 1
 
-    async def _attempt(self, http_request: httpx.Request, reader: Reader[T], timeout: float) -> Answered[T] | Failed:
+    async def _attempt(
+        self, http_request: httpx.Request, reader: Reader[T] | _io.TakeOver[T], timeout: float
+    ) -> Answered[T] | Failed:
         """One attempt: the request, then its whole answer, within `timeout` seconds."""
         stop_at = self._monotonic() + timeout
         reading = False
         try:
-            async with _io.deadline(timeout):
+            async with _io.deadline(timeout) as deadline:
                 response = await self._client.send(http_request, stream=True)
                 reading = True
+                if response.is_success and isinstance(reader, _io.TakeOver):
+                    deadline.disarm()
+                    return await self._hand_over(response, reader, timeout)
                 try:
                     content = await self._read(response, stop_at)
                 finally:
@@ -115,11 +120,21 @@ class AsyncHttpClient:
         status, reason, headers = response.status_code, response.reason_phrase, response.headers
         answer = Answer(status, reason, headers, content, self._redact)
         if response.is_success:
-            return Answered(reader(answer), status, headers)
+            # A reader that takes the answer over was handed it above.
+            return Answered(cast("Reader[T]", reader)(answer), status, headers)
         now = self._clock()
         error = make_api_error(status, reason, headers, self._redact(answer.text()), now)
         retry_after = parse_retry_after(headers.get("retry-after"), now)
         return Failed(error, StatusFailure(status, enveloped=error.code is not None), retry_after)
+
+    async def _hand_over(self, response: httpx.Response, reader: _io.TakeOver[T], timeout: float) -> Answered[T]:
+        """Hands the open answer to a reader that takes it over, and closes it only if the reader fails."""
+        try:
+            value = await reader.take(response, Attempt(timeout, self._redact))
+        except BaseException:
+            await response.aclose()
+            raise
+        return Answered(value, response.status_code, response.headers)
 
     async def _read(self, response: httpx.Response, stop_at: float) -> bytes:
         """The answer's whole body. Past `stop_at` it raises TimeoutError, so a body that drips in can't outlast it."""

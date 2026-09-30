@@ -132,6 +132,16 @@ def read_nothing(answer: Answer) -> None:
 
 
 @dataclass(frozen=True)
+class Attempt:
+    """The attempt a reader that takes an answer over runs in."""
+
+    timeout: float
+    """The call's timeout, in seconds. The attempt's own deadline no longer runs, so the reader bounds its waits."""
+    redact: Callable[[str], str]
+    """Replaces every occurrence of the API key in a text that goes into an error."""
+
+
+@dataclass(frozen=True)
 class Answered(Generic[T]):
     """An attempt that got its result."""
 

@@ -9,13 +9,22 @@ import httpx
 
 
 class Body(httpx.AsyncByteStream):
-    """A body that sends each chunk after `gap` seconds, then fails with `error`, or goes on forever with `forever`."""
+    """A body that sends each chunk after `gap` seconds, then fails with `error`, goes on with `forever`, or stalls."""
 
-    def __init__(self, *chunks: bytes, gap: float = 0.0, forever: bool = False, error: Exception | None = None) -> None:
+    def __init__(
+        self,
+        *chunks: bytes,
+        gap: float = 0.0,
+        forever: bool = False,
+        error: BaseException | None = None,
+        stall: bool = False,
+    ) -> None:
         self.chunks = chunks
         self.gap = gap
         self.forever = forever
         self.error = error
+        self.stall = stall
+        """Whether the body stops arriving after its chunks, without ending. The sync twin has no such body."""
         self.closed = False
         """Whether the client closed the answer."""
 
@@ -28,6 +37,8 @@ class Body(httpx.AsyncByteStream):
             yield b" "
         if self.error is not None:
             raise self.error
+        if self.stall:
+            await asyncio.Event().wait()
 
     async def aclose(self) -> None:
         self.closed = True
