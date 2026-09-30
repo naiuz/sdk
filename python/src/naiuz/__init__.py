@@ -19,6 +19,8 @@ from ._errors import (
     UnprocessableEntityError,
     UnsupportedMediaTypeError,
 )
+from ._models import BaseModel
+from ._response import RawResponse
 from ._version import __version__
 
 __all__ = [
@@ -27,6 +29,7 @@ __all__ = [
     "APITimeoutError",
     "AuthenticationError",
     "BadRequestError",
+    "BaseModel",
     "ConflictError",
     "ErrorCode",
     "GoneError",
@@ -37,6 +40,7 @@ __all__ = [
     "PayloadTooLargeError",
     "PermissionDeniedError",
     "RateLimitError",
+    "RawResponse",
     "UnprocessableEntityError",
     "UnsupportedMediaTypeError",
     "__version__",
