@@ -50,6 +50,8 @@ test("the Python SDK's checks run on Python 3.10 to 3.14 when python/ or spec/ c
     assert.match(python, /python: \["3\.10", "3\.11", "3\.12", "3\.13", "3\.14"\]/);
     assert.match(python, /python-version: \$\{\{ matrix\.python \}\}/);
     assert.match(python, /working-directory: python\n/);
+    // A test that hangs instead of failing must not hold a runner for GitHub's six hours.
+    assert.match(python, /runs-on: ubuntu-latest\n\s+timeout-minutes: 15\n/);
     const steps = ["uv sync --locked", "uv run ruff check", "uv run ruff format --check", "uv run pyright", "uv run mypy", "uv run pytest", "uv build"].map((command) => python.indexOf(`run: ${command}\n`));
     assert.ok(steps.every((index) => index > 0), "every step is there");
     assert.deepEqual([...steps].sort((a, b) => a - b), steps, "in this order");

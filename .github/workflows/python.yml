@@ -20,6 +20,7 @@ jobs:
   test:
     name: Python ${{ matrix.python }}
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
