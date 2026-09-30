@@ -8,13 +8,21 @@ from __future__ import annotations
 import contextlib
 import time
 from collections.abc import Callable, Generator
-from typing import Generic, TypeVar, final
+from typing import TYPE_CHECKING, Generic, TypeVar, final
 
 import httpx
 
+from .._models import BaseModel
+from .._request import APIRequest
 from .._response import Attempt
+from ._pagination import Page as Page
+from ._pagination import fetch_page
+
+if TYPE_CHECKING:
+    from ._http import HttpClient
 
 T = TypeVar("T")
+M = TypeVar("M", bound=BaseModel)
 
 Sleep = Callable[[float], None]
 """Waits the given number of seconds."""
@@ -60,3 +68,8 @@ class TakeOver(Generic[T]):
 
     def __init__(self, take: Callable[[httpx.Response, Attempt], T]) -> None:
         self.take = take
+
+
+def paginate(http: HttpClient, request: APIRequest, model: type[M]) -> Page[M]:
+    """A list call, sent at once: its first page. The async client's twin is sent when awaited or looped over."""
+    return fetch_page(http, request, model)

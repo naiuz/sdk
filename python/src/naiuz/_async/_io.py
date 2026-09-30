@@ -8,14 +8,21 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import sys
-from collections.abc import AsyncGenerator, Awaitable, Callable
-from typing import Generic, TypeVar, final
+from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable, Generator
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, final
 
 import httpx
 
+from .._models import BaseModel
+from .._request import APIRequest
 from .._response import Attempt
+from ._pagination import AsyncPage, fetch_page
+
+if TYPE_CHECKING:
+    from ._http import AsyncHttpClient
 
 T = TypeVar("T")
+M = TypeVar("M", bound=BaseModel)
 
 Sleep = Callable[[float], Awaitable[None]]
 """Waits the given number of seconds."""
@@ -65,3 +72,27 @@ class TakeOver(Generic[T]):
 
     def __init__(self, take: Callable[[httpx.Response, Attempt], Awaitable[T]]) -> None:
         self.take = take
+
+
+class AsyncPaginator(Generic[M]):
+    """What a list method returns: await it for the first page, or loop over it with `async for` for every item.
+
+    The loop walks every page, each fetched when the loop reaches it. The call is sent when awaited or looped over.
+    """
+
+    def __init__(self, http: AsyncHttpClient, request: APIRequest, model: type[M]) -> None:
+        self._http = http
+        self._request = request
+        self._model = model
+
+    def __await__(self) -> Generator[Any, None, AsyncPage[M]]:
+        return fetch_page(self._http, self._request, self._model).__await__()
+
+    async def __aiter__(self) -> AsyncIterator[M]:
+        async for item in await self:
+            yield item
+
+
+def paginate(http: AsyncHttpClient, request: APIRequest, model: type[M]) -> AsyncPaginator[M]:
+    """A list call, sent when awaited or looped over."""
+    return AsyncPaginator(http, request, model)
