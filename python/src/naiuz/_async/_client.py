@@ -14,6 +14,10 @@ from .._request import check_max_retries, check_timeout
 from ._http import AsyncHttpClient
 from .resources.account import AsyncAccount
 from .resources.api_keys import AsyncApiKeys
+from .resources.chat import AsyncChat
+from .resources.embeddings import AsyncEmbeddings
+from .resources.models import AsyncModels
+from .resources.rerank import AsyncRerank
 from .resources.tts import AsyncTts
 from .resources.voices import AsyncVoices
 
@@ -43,6 +47,14 @@ class AsyncNeuronAI:
     """Text to speech."""
     api_keys: AsyncApiKeys
     """Your organization's API keys."""
+    models: AsyncModels
+    """The chat models available to your account."""
+    embeddings: AsyncEmbeddings
+    """Dense vectors for text."""
+    rerank: AsyncRerank
+    """Ranking documents against a query."""
+    chat: AsyncChat
+    """Chat completions."""
 
     def __init__(
         self,
@@ -89,6 +101,10 @@ class AsyncNeuronAI:
         self.voices = AsyncVoices(http)
         self.tts = AsyncTts(http)
         self.api_keys = AsyncApiKeys(http)
+        self.models = AsyncModels(http)
+        self.embeddings = AsyncEmbeddings(http)
+        self.rerank = AsyncRerank(http)
+        self.chat = AsyncChat(http)
 
     async def close(self) -> None:
         """Closes the httpx client the SDK made. One given as `http_client` stays open: it is yours to close."""

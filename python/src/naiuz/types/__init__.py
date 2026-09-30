@@ -9,7 +9,27 @@ from .api_keys import (
     CreateApiKeyRequest,
     UpdateApiKeyRequest,
 )
+from .chat import (
+    ChatCompletion,
+    ChatCompletionChoice,
+    ChatCompletionMessage,
+    ChatCompletionUsage,
+    ChatMessageParam,
+    ChatRole,
+    CreateChatCompletionRequest,
+)
+from .embeddings import CreateEmbeddingRequest, Embedding, EmbeddingResponse, EmbeddingUsage
 from .errors import ErrorDetail, ErrorEnvelope, ErrorType
+from .models import Model, ModelList
+from .rerank import (
+    RerankBilledUnits,
+    RerankDocument,
+    RerankMeta,
+    RerankRequest,
+    RerankResponse,
+    RerankResult,
+    RerankUsage,
+)
 from .shared import SpeechLanguage, SpeechQuality
 from .tts import SynthesizeSpeechRequest, TtsJob, TtsJobError, TtsJobStatus
 from .voices import UpdateVoiceRequest, Voice, VoiceCategory, VoiceType
@@ -20,10 +40,30 @@ __all__ = [
     "ApiKeyPermissions",
     "ApiKeyPermissionsParam",
     "Balance",
+    "ChatCompletion",
+    "ChatCompletionChoice",
+    "ChatCompletionMessage",
+    "ChatCompletionUsage",
+    "ChatMessageParam",
+    "ChatRole",
     "CreateApiKeyRequest",
+    "CreateChatCompletionRequest",
+    "CreateEmbeddingRequest",
+    "Embedding",
+    "EmbeddingResponse",
+    "EmbeddingUsage",
     "ErrorDetail",
     "ErrorEnvelope",
     "ErrorType",
+    "Model",
+    "ModelList",
+    "RerankBilledUnits",
+    "RerankDocument",
+    "RerankMeta",
+    "RerankRequest",
+    "RerankResponse",
+    "RerankResult",
+    "RerankUsage",
     "SpeechLanguage",
     "SpeechQuality",
     "SynthesizeSpeechRequest",

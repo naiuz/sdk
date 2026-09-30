@@ -15,6 +15,10 @@ from .._request import check_max_retries, check_timeout
 from ._http import HttpClient
 from .resources.account import Account
 from .resources.api_keys import ApiKeys
+from .resources.chat import Chat
+from .resources.embeddings import Embeddings
+from .resources.models import Models
+from .resources.rerank import Rerank
 from .resources.tts import Tts
 from .resources.voices import Voices
 
@@ -44,6 +48,14 @@ class NeuronAI:
     """Text to speech."""
     api_keys: ApiKeys
     """Your organization's API keys."""
+    models: Models
+    """The chat models available to your account."""
+    embeddings: Embeddings
+    """Dense vectors for text."""
+    rerank: Rerank
+    """Ranking documents against a query."""
+    chat: Chat
+    """Chat completions."""
 
     def __init__(
         self,
@@ -90,6 +102,10 @@ class NeuronAI:
         self.voices = Voices(http)
         self.tts = Tts(http)
         self.api_keys = ApiKeys(http)
+        self.models = Models(http)
+        self.embeddings = Embeddings(http)
+        self.rerank = Rerank(http)
+        self.chat = Chat(http)
 
     def close(self) -> None:
         """Closes the httpx client the SDK made. One given as `http_client` stays open: it is yours to close."""
