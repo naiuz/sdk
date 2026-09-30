@@ -139,3 +139,25 @@ def test_with_raw_response_gives_a_compatible_result_with_its_status_and_headers
     api = MockAPI(json_response(200, COMPLETION, {"x-cost": "0.34", "x-request-id": "req-chat"}))
     raw = client_for(api).chat.completions.with_raw_response.create(**HELLO)
     assert (raw.data.cost, raw.status, raw.headers["x-request-id"]) == (0.34, 200, "req-chat")
+
+
+def test_chat_completions_create_sends_every_field_it_is_given() -> None:
+    api = MockAPI(json_response(200, COMPLETION))
+    client_for(api).chat.completions.create(
+        model="gemma-4-26b-a4b",
+        messages=[{"role": "user", "content": "Salom!"}],
+        max_tokens=64,
+        temperature=None,
+        top_p=0.9,
+        stop=["\n\n"],
+        stream=False,
+    )
+    assert body_of(api.requests[0]) == {
+        "model": "gemma-4-26b-a4b",
+        "messages": [{"role": "user", "content": "Salom!"}],
+        "max_tokens": 64,
+        "temperature": None,
+        "top_p": 0.9,
+        "stop": ["\n\n"],
+        "stream": False,
+    }

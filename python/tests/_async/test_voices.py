@@ -110,3 +110,17 @@ def test_a_voice_may_leave_out_category_ref_text_and_created_at_and_have_a_type_
     found = Voice.model_validate({"id": "v", "name": "V", "language": "uz", "tags": [], "type": "shared"})
     assert (found.category, found.ref_text, found.created_at, found.type) == (None, None, None, "shared")
     assert found.model_dump() == {"id": "v", "name": "V", "language": "uz", "tags": [], "type": "shared"}
+
+
+async def test_update_sends_every_field_it_is_given() -> None:
+    api = MockAPI(envelope(voice("v1")))
+    await client_for(api).voices.update(
+        "v1", name="Support voice", category="conversational", language="ru", ref_text=None, tags=["support"]
+    )
+    assert body_of(api.requests[0]) == {
+        "name": "Support voice",
+        "category": "conversational",
+        "language": "ru",
+        "ref_text": None,
+        "tags": ["support"],
+    }

@@ -124,3 +124,47 @@ def test_a_key_without_its_secret_dumps_without_it_and_takes_a_level_the_sdk_doe
     assert found.secret is None
     assert "secret" not in found.model_dump()
     assert found.permissions.tts == "admin"
+
+
+async def test_create_and_update_send_every_field_they_are_given() -> None:
+    api = MockAPI(envelope(key(), status=201), envelope(key()))
+    client = client_for(api)
+    await client.api_keys.create(
+        name="CI",
+        access="restricted",
+        description="Deploys",
+        permissions={"tts": "write"},
+        expires_at="2027-01-01T00:00:00Z",
+        monthly_spend_limit=5000,
+        allowed_ips=["10.0.0.0/8"],
+    )
+    await client.api_keys.update(
+        KEY_ID,
+        name="CI",
+        description=None,
+        access="full",
+        permissions={"llm": "write"},
+        expires_at=None,
+        monthly_spend_limit=None,
+        enabled=True,
+        allowed_ips=None,
+    )
+    assert body_of(api.requests[0]) == {
+        "name": "CI",
+        "access": "restricted",
+        "description": "Deploys",
+        "permissions": {"tts": "write"},
+        "expires_at": "2027-01-01T00:00:00Z",
+        "monthly_spend_limit": 5000,
+        "allowed_ips": ["10.0.0.0/8"],
+    }
+    assert body_of(api.requests[1]) == {
+        "name": "CI",
+        "description": None,
+        "access": "full",
+        "permissions": {"llm": "write"},
+        "expires_at": None,
+        "monthly_spend_limit": None,
+        "enabled": True,
+        "allowed_ips": None,
+    }

@@ -219,6 +219,16 @@ async def test_it_raises_at_once_rather_than_wait_a_retry_after_of_more_than_a_m
     assert waits == []
 
 
+async def test_a_429_asking_for_more_than_a_minute_raises_at_once_and_reports_the_whole_wait() -> None:
+    api = MockAPI(api_error(429, "rate_limit_exceeded", {"retry-after": "1800"}))
+    http, waits = http_client(api)
+    with pytest.raises(RateLimitError) as caught:
+        await http.request(balance, read_item)
+    assert len(api.requests) == 1
+    assert waits == []
+    assert caught.value.retry_after == 1800
+
+
 async def test_a_429_without_retry_after_waits_the_backoff_and_reports_retry_after_as_none() -> None:
     api = MockAPI(api_error(429, "concurrency_limit_exceeded"), api_error(429, "concurrency_limit_exceeded"))
     http, waits = http_client(api, max_retries=1)

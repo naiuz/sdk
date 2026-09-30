@@ -34,9 +34,10 @@ def test_it_fails_at_construction_not_on_the_first_call_when_there_is_no_key() -
 
 def test_it_trims_the_whitespace_around_a_key(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("NEURONAI_API_KEY", f"  {KEY}\n")
-    api = MockAPI(envelope(BALANCE))
+    api = MockAPI(envelope(BALANCE), envelope(BALANCE))
     on(api).account.balance()
-    assert api.requests[0].headers["authorization"] == f"Bearer {KEY}"
+    on(api, api_key=f"\t{KEY} \r\n").account.balance()
+    assert [request.headers["authorization"] for request in api.requests] == [f"Bearer {KEY}", f"Bearer {KEY}"]
 
 
 @pytest.mark.parametrize("key", ["nai_abc def", "nai_abc\ndef", "nai_abc\x00def", "nai_ключ"])

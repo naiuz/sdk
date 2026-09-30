@@ -3,9 +3,14 @@
 from __future__ import annotations
 
 import asyncio
+import time
 from collections.abc import AsyncIterator
 
 import httpx
+
+GIVE_UP = 5.0
+"""Seconds after which a body that goes on forever or stalls fails the test, so a client that never cuts it off
+can't hang the suite."""
 
 
 class Body(httpx.AsyncByteStream):
@@ -32,13 +37,17 @@ class Body(httpx.AsyncByteStream):
         for chunk in self.chunks:
             await asyncio.sleep(self.gap)
             yield chunk
+        started = time.monotonic()
         while self.forever:
+            if time.monotonic() - started > GIVE_UP:
+                raise AssertionError(f"The body dripped for {GIVE_UP:g} s: nothing cut it off.")
             await asyncio.sleep(self.gap)
             yield b" "
         if self.error is not None:
             raise self.error
         if self.stall:
-            await asyncio.Event().wait()
+            await asyncio.sleep(GIVE_UP)
+            raise AssertionError(f"The body stalled for {GIVE_UP:g} s: nothing cut it off.")
 
     async def aclose(self) -> None:
         self.closed = True

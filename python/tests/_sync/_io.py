@@ -7,6 +7,10 @@ from collections.abc import Iterator
 
 import httpx
 
+GIVE_UP = 5.0
+"""Seconds after which a body that goes on forever fails the test, so a client that never cuts it off can't hang
+the suite."""
+
 
 class Body(httpx.SyncByteStream):
     """A body that sends each chunk after `gap` seconds, then fails with `error`, or goes on forever with `forever`."""
@@ -25,7 +29,10 @@ class Body(httpx.SyncByteStream):
         for chunk in self.chunks:
             time.sleep(self.gap)
             yield chunk
+        started = time.monotonic()
         while self.forever:
+            if time.monotonic() - started > GIVE_UP:
+                raise AssertionError(f"The body dripped for {GIVE_UP:g} s: nothing cut it off.")
             time.sleep(self.gap)
             yield b" "
         if self.error is not None:
