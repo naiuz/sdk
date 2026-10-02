@@ -472,3 +472,26 @@ async def test_it_refuses_bytes_without_a_filename_in_a_form_sending_nothing() -
     with pytest.raises(NeuronAIError, match=r'^ref_audio needs a filename: pass \("clip\.wav", data\)'):
         await http.request(replace(create_voice, form=Form({"ref_audio": WAV}, ("ref_audio",))), read_item)
     assert api.requests == []
+
+
+@pytest.mark.parametrize("where", ["default_headers", "extra_headers"])
+async def test_no_frame_of_the_sdk_holds_the_key_when_a_header_is_refused(where: str) -> None:
+    """A header that can't be sent is refused before the key joins the headers: its error holds no frame with it."""
+    bad = {"x-trace": "abc\n"}
+    http, _ = http_client(MockAPI(), default_headers=bad if where == "default_headers" else None)
+    request = replace(balance, options=RequestOptions(extra_headers=bad)) if where == "extra_headers" else balance
+    with pytest.raises(NeuronAIError, match="x-trace") as caught:
+        await http.request(request, read_item)
+    frames = sdk_frames(caught.value)
+    assert frames
+    for frame in frames:
+        assert KEY not in repr(dict(frame.f_locals)), frame.f_code.co_name
+
+
+async def test_a_caller_s_own_authorization_header_goes_on_over_the_sdk_s() -> None:
+    api = MockAPI(envelope({"ok": True}), envelope({"ok": True}))
+    http, _ = http_client(api, default_headers={"Authorization": "Bearer from-defaults"})
+    await http.request(balance, read_item)
+    call = replace(balance, options=RequestOptions(extra_headers={"authorization": "Bearer call"}))
+    await http.request(call, read_item)
+    assert [request.headers["authorization"] for request in api.requests] == ["Bearer from-defaults", "Bearer call"]

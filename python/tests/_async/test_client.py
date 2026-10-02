@@ -1,11 +1,12 @@
 import platform
+from collections.abc import Callable
 from typing import Any
 
 import httpx
 import pytest
 
 from naiuz import DEFAULT_BASE_URL, DEFAULT_MAX_RETRIES, DEFAULT_TIMEOUT, AsyncNeuronAI, NeuronAIError, __version__
-from tests.helpers import BALANCE, KEY, MockAPI, envelope
+from tests.helpers import BALANCE, KEY, MockAPI, envelope, sdk_frames
 
 from ._io import other_kind_of_client
 from .clients import client_for
@@ -123,3 +124,33 @@ async def test_it_closes_the_httpx_client_it_made_but_not_one_it_was_given() -> 
     made = AsyncNeuronAI(api_key=KEY)
     await made.close()
     assert made._client.is_closed  # pyright: ignore[reportPrivateUsage]
+
+
+@pytest.mark.parametrize(
+    "build",
+    [
+        lambda: AsyncNeuronAI(timeout=-1),
+        lambda: AsyncNeuronAI(max_retries=-1),
+        lambda: AsyncNeuronAI(base_url="ftp://example"),
+    ],
+    ids=["timeout", "max_retries", "base_url"],
+)
+def test_no_frame_of_the_sdk_holds_the_key_when_an_option_is_refused(
+    build: Callable[[], AsyncNeuronAI], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The key is resolved after every other option is checked, so a refused option's error holds no frame with it."""
+    monkeypatch.setenv("NEURONAI_API_KEY", KEY)
+    with pytest.raises(NeuronAIError) as caught:
+        build()
+    for frame in sdk_frames(caught.value):
+        assert KEY not in repr(dict(frame.f_locals)), frame.f_code.co_name
+
+
+def test_no_frame_of_the_sdk_holds_a_key_it_refuses(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("NEURONAI_API_KEY", f"{KEY} copied")
+    with pytest.raises(NeuronAIError, match="contains a space") as caught:
+        AsyncNeuronAI()
+    frames = sdk_frames(caught.value)
+    assert frames
+    for frame in frames:
+        assert KEY not in repr(dict(frame.f_locals)), frame.f_code.co_name

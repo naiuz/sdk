@@ -37,6 +37,7 @@ def resolve_api_key(api_key: str | None) -> str:
     if key == "":
         raise NeuronAIError("The API key is missing: pass api_key, or set NEURONAI_API_KEY.")
     if not _KEY.fullmatch(key):
+        del key  # So the error's frame doesn't hold it, for an error tracker that records locals.
         raise NeuronAIError(
             "The API key contains a space, a line break or another character a header can't carry. "
             "Check how it was copied."

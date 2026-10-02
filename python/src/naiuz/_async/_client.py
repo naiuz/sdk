@@ -82,13 +82,14 @@ class AsyncNeuronAI:
             http_client: The httpx client to send with, for proxies and tests. Each call still gets the SDK's own
                 timeout. It stays yours to close: `close()` closes only a client the SDK made.
         """
-        key = resolve_api_key(api_key)
         self.base_url = resolve_base_url(base_url)
         self.timeout = check_timeout(DEFAULT_TIMEOUT if timeout is None else timeout)
         self.max_retries = check_max_retries(DEFAULT_MAX_RETRIES if max_retries is None else max_retries)
         # Checked for a caller without a type checker, who may pass the other client's kind.
         if http_client is not None and not isinstance(http_client, httpx.AsyncClient):  # pyright: ignore[reportUnnecessaryIsInstance]
             raise NeuronAIError("http_client must be an httpx." + httpx.AsyncClient.__name__ + ".")
+        # The key last, once every other option is checked, so a refused option's error holds no frame with the key.
+        key = resolve_api_key(api_key)
         self._owns_client = http_client is None
         self._client = httpx.AsyncClient() if http_client is None else http_client
         http = AsyncHttpClient(
@@ -127,4 +128,5 @@ class AsyncNeuronAI:
         await self.close()
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}(base_url={self.base_url!r})"
+        # getattr: an error tracker may print a client whose construction failed before base_url was set.
+        return f"{type(self).__name__}(base_url={getattr(self, 'base_url', None)!r})"

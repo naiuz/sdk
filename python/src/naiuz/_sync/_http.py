@@ -11,7 +11,7 @@ from typing import TypeVar
 import httpx
 
 from .._errors import APITimeoutError, connection_error, make_api_error
-from .._request import APIRequest, build_headers, check_max_retries, check_timeout, encode_body
+from .._request import APIRequest, build_headers, check_max_retries, check_timeout, encode_body, with_key
 from .._response import Answer, Answered, Attempt, Failed, Reader, record, unusable
 from .._retry import ConnectionFailure, StatusFailure, TimeoutFailure, failed_before_sending, is_retryable, retry_delay
 from .._retry_after import parse_retry_after
@@ -95,12 +95,14 @@ class HttpClient:
             request.method,
             build_url(self._base_url, request.path, request.path_params),
             params=query_items(request.query),
-            headers=build_headers(
-                api_key=self._api_key,
-                user_agent=self._user_agent,
-                default_headers=self._default_headers,
-                request=request,
-                content_type=content_type,
+            headers=with_key(
+                build_headers(
+                    user_agent=self._user_agent,
+                    default_headers=self._default_headers,
+                    request=request,
+                    content_type=content_type,
+                ),
+                self._api_key,
             ),
             content=content,
             timeout=attempt_timeout(timeout),

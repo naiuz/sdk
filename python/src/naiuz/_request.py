@@ -98,17 +98,17 @@ _VALUE = re.compile(r"[\t\x20-\x7e]*")
 
 def build_headers(
     *,
-    api_key: str,
     user_agent: str,
     default_headers: Mapping[str, str],
     request: APIRequest,
     content_type: str | None,
 ) -> dict[str, str]:
-    """The headers of one call, whose body has `content_type` (None for no body).
+    """The headers of one call, whose body has `content_type` (None for no body), all but the key's: with_key adds it.
 
     Each group goes on over the ones before it: the SDK's own headers, the client's `default_headers`, the call's
     Idempotency-Key, then the call's `extra_headers`. A name that isn't an HTTP token, or a value with a character
-    outside visible ASCII, space and tab, raises NeuronAIError naming the header but never its value.
+    outside visible ASCII, space and tab, raises NeuronAIError naming the header but never its value. The key isn't
+    here yet, so an error tracker that records the frames of that error can't record it.
     """
     headers: dict[str, str] = {}
 
@@ -119,7 +119,6 @@ def build_headers(
             raise NeuronAIError(f'The header "{name}" has a name or value that HTTP can\'t carry.')
         headers[name.lower()] = text
 
-    put("authorization", f"Bearer {api_key}")
     put("accept", request.accept)
     put("user-agent", user_agent)
     if content_type is not None:
@@ -132,6 +131,13 @@ def build_headers(
     for name, value in (request.options.extra_headers or {}).items():
         put(name, value)
     return headers
+
+
+def with_key(headers: dict[str, str], api_key: str) -> dict[str, str]:
+    """`headers` with the key's Authorization header among the SDK's own, under the caller's: an Authorization in
+    `default_headers` or `extra_headers` still wins. Every header was checked already, so this can't raise, and no
+    error carries a frame that holds the key."""
+    return {"authorization": f"Bearer {api_key}", **headers}
 
 
 def encode_body(request: APIRequest) -> tuple[bytes | None, str | None]:
