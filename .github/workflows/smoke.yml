@@ -27,3 +27,21 @@ jobs:
       - run: npm run test:smoke
         env:
           NEURONAI_SMOKE_API_KEY: ${{ secrets.NEURONAI_SMOKE_API_KEY }}
+
+  python:
+    name: Python SDK
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: python
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          python-version: "3.14"
+      - run: uv sync --locked
+      # Every test is skipped when the secret isn't set.
+      - run: uv run pytest smoke
+        env:
+          NEURONAI_SMOKE_API_KEY: ${{ secrets.NEURONAI_SMOKE_API_KEY }}

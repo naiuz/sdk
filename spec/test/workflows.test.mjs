@@ -66,6 +66,16 @@ test("the live smoke tests run nightly and on demand, never on a pull request, w
     assert.match(smoke, /run: npm run test:smoke\n\s+env:\n\s+NEURONAI_SMOKE_API_KEY: \$\{\{ secrets\.NEURONAI_SMOKE_API_KEY \}\}\n/);
 });
 
+test("the Python SDK's smoke tests run on their own, with the key in their step's env alone", async () => {
+    const smoke = await read("smoke.yml");
+    assert.match(smoke, /name: Python SDK\n\s+runs-on: ubuntu-latest\n\s+timeout-minutes: 15\n/);
+    assert.match(smoke, /working-directory: python\n/);
+    assert.match(smoke, /run: uv sync --locked\n/);
+    assert.match(smoke, /run: uv run pytest smoke\n\s+env:\n\s+NEURONAI_SMOKE_API_KEY: \$\{\{ secrets\.NEURONAI_SMOKE_API_KEY \}\}\n/);
+    // One mention per suite's step: never in a job's or the workflow's env, where every step would see it.
+    assert.equal(smoke.match(/secrets\.NEURONAI_SMOKE_API_KEY/g)?.length, 2);
+});
+
 test("the drift job runs daily and on demand, and only reports drift as drift", async () => {
     const drift = await read("drift.yml");
     assert.match(drift, /schedule:\n\s+- cron: /);
