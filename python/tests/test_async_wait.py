@@ -7,6 +7,7 @@ import httpx
 import pytest
 
 from naiuz import AsyncNeuronAI, WaitTimeoutError
+from tests._async._io import GIVE_UP
 from tests.helpers import KEY, envelope
 
 JOB = {
@@ -26,14 +27,15 @@ JOB = {
 
 
 def client_answering_once(sent: list[httpx.Request]) -> AsyncNeuronAI:
-    """A client whose API queues the job, then never answers another request."""
+    """A client whose API queues the job, then doesn't answer another request: one left waiting fails the test after
+    GIVE_UP seconds, so a wait that stops abandoning its poll fails rather than hangs."""
 
     async def handler(request: httpx.Request) -> httpx.Response:
         sent.append(request)
         if len(sent) == 1:
             return envelope(JOB, "req-create", 202)
-        await asyncio.Event().wait()
-        raise AssertionError("unreachable")
+        await asyncio.sleep(GIVE_UP)
+        raise AssertionError(f"The poll waited {GIVE_UP:g} s: nothing abandoned it.")
 
     return AsyncNeuronAI(api_key=KEY, http_client=httpx.AsyncClient(transport=httpx.MockTransport(handler)))
 
