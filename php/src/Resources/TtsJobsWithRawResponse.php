@@ -8,6 +8,7 @@ use Naiuz\Core\HttpClient;
 use Naiuz\Core\Raw;
 use Naiuz\Core\RequestOptions;
 use Naiuz\RawResponse;
+use Naiuz\Types\SpeechAudio;
 use Naiuz\Types\TtsJob;
 
 /**
@@ -41,5 +42,15 @@ readonly class TtsJobsWithRawResponse
     public function retrieve(string $id, array $options = []): RawResponse
     {
         return Raw::capture($this->http, static fn(HttpClient $http): TtsJob => (new TtsJobs($http))->retrieve($id, $options));
+    }
+
+    /**
+     * @param CallOptions $options
+     *
+     * @return RawResponse<SpeechAudio>
+     */
+    public function audio(string $id, array $options = []): RawResponse
+    {
+        return Raw::capture($this->http, static fn(HttpClient $http): SpeechAudio => (new TtsJobs($http))->audio($id, $options));
     }
 }

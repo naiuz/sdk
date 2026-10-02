@@ -11,6 +11,7 @@ use Naiuz\Resources\ApiKeys;
 use Naiuz\Resources\Completions;
 use Naiuz\Resources\Embeddings;
 use Naiuz\Resources\Rerank;
+use Naiuz\Resources\Tts;
 use Naiuz\Resources\TtsJobs;
 use Naiuz\Resources\Voices;
 use Naiuz\Tests\Support\Clients;
@@ -30,6 +31,7 @@ final class RequestTypesTest extends TestCase
         yield 'ListVoicesParams' => [Voices::class, 'ListVoicesParams'];
         yield 'UpdateVoiceRequest' => [Voices::class, 'UpdateVoiceRequest'];
         yield 'SynthesizeSpeechRequest' => [TtsJobs::class, 'SynthesizeSpeechRequest'];
+        yield 'SynthesizeDialogueRequest' => [Tts::class, 'SynthesizeDialogueRequest'];
         yield 'ListApiKeysParams' => [ApiKeys::class, 'ListApiKeysParams'];
         yield 'CreateApiKeyRequest' => [ApiKeys::class, 'CreateApiKeyRequest'];
         yield 'UpdateApiKeyRequest' => [ApiKeys::class, 'UpdateApiKeyRequest'];
@@ -49,6 +51,24 @@ final class RequestTypesTest extends TestCase
     }
 
     /** @param class-string $class */
+    #[DataProvider('nestedTypes')]
+    public function test_each_nested_type_names_the_fields_the_api_documents_marking_the_required_ones(string $class, string $type, string $parent, string $field): void
+    {
+        $items = Spec::at(Spec::read('openapi.json'), 'components', 'schemas', $parent, 'properties', $field, 'items');
+        $properties = Spec::at($items, 'properties');
+        self::assertIsArray($properties, "{$parent}.{$field} holds objects");
+        $shape = self::shape($class, $type);
+        self::assertEqualsCanonicalizing(array_map(strval(...), array_keys($properties)), array_keys($shape));
+        self::assertEqualsCanonicalizing(Spec::strings(Spec::at($items, 'required')), array_keys(array_filter($shape)));
+    }
+
+    /** @return iterable<string, array{class-string, string, string, string}> */
+    public static function nestedTypes(): iterable
+    {
+        yield 'DialogueTurn' => [Tts::class, 'DialogueTurn', 'SynthesizeDialogueRequest', 'turns'];
+    }
+
+    /** @param class-string $class */
     #[DataProvider('requestTypes')]
     public function test_each_method_takes_exactly_the_keys_its_request_type_names(string $class, string $type): void
     {
@@ -64,6 +84,8 @@ final class RequestTypesTest extends TestCase
         yield 'account->usage' => ['account->usage', 'lastDays', static fn(NeuronAI $client, array $params): mixed => $client->account->usage($params)]; // @phpstan-ignore argument.type
         yield 'voices->list' => ['voices->list', 'voiceType', static fn(NeuronAI $client, array $params): mixed => $client->voices->list($params)]; // @phpstan-ignore argument.type
         yield 'voices->update' => ['voices->update', 'refText', static fn(NeuronAI $client, array $params): mixed => $client->voices->update('v1', $params)]; // @phpstan-ignore argument.type
+        yield 'tts->synthesize' => ['tts->synthesize', 'voiceId', static fn(NeuronAI $client, array $params): mixed => $client->tts->synthesize($params)]; // @phpstan-ignore argument.type
+        yield 'tts->dialogue' => ['tts->dialogue', 'gapMs', static fn(NeuronAI $client, array $params): mixed => $client->tts->dialogue($params)]; // @phpstan-ignore argument.type
         yield 'tts->jobs->create' => ['tts->jobs->create', 'voiceId', static fn(NeuronAI $client, array $params): mixed => $client->tts->jobs->create($params)]; // @phpstan-ignore argument.type
         yield 'apiKeys->list' => ['apiKeys->list', 'pageSize', static fn(NeuronAI $client, array $params): mixed => $client->apiKeys->list($params)]; // @phpstan-ignore argument.type
         yield 'apiKeys->create' => ['apiKeys->create', 'expiresAt', static fn(NeuronAI $client, array $params): mixed => $client->apiKeys->create($params)]; // @phpstan-ignore argument.type

@@ -10,6 +10,7 @@ use Naiuz\Core\Params;
 use Naiuz\Core\Readers;
 use Naiuz\Core\RequestOptions;
 use Naiuz\Core\RetryClass;
+use Naiuz\Types\SpeechAudio;
 use Naiuz\Types\TtsJob;
 
 /**
@@ -23,7 +24,12 @@ use Naiuz\Types\TtsJob;
  */
 readonly class TtsJobs
 {
-    private const SYNTHESIZE_SPEECH_REQUEST = ['text', 'voice_id', 'language', 'quality', 'speed'];
+    /**
+     * The keys SynthesizeSpeechRequest names, which tts->synthesize() takes too.
+     *
+     * @internal
+     */
+    public const SYNTHESIZE_SPEECH_REQUEST = ['text', 'voice_id', 'language', 'quality', 'speed'];
 
     /** @internal */
     public function __construct(private HttpClient $http) {}
@@ -63,5 +69,21 @@ readonly class TtsJobs
         $request = new APIRequest('GET', '/tts/jobs/{id}', RetryClass::Safe, ['id' => $id], options: RequestOptions::from($options));
 
         return $this->http->request($request, Readers::envelope(TtsJob::from(...)));
+    }
+
+    /**
+     * The WAV of a job that has succeeded, with the headers synthesize sends.
+     *
+     * Before then it throws ConflictException: `job_not_finished` while the job is queued or running, and `job_failed`
+     * once it has failed. The audio is kept for 24 hours after the job finishes; after that it throws GoneException
+     * (410 `audio_expired`), so download it promptly.
+     *
+     * @param CallOptions $options
+     */
+    public function audio(string $id, array $options = []): SpeechAudio
+    {
+        $request = new APIRequest('GET', '/tts/jobs/{id}/audio', RetryClass::Safe, ['id' => $id], accept: Readers::AUDIO, options: RequestOptions::from($options));
+
+        return $this->http->request($request, Readers::speech());
     }
 }

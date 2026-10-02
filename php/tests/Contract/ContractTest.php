@@ -12,6 +12,7 @@ use Naiuz\Tests\Support\Replies;
 use Naiuz\Tests\Support\Spec;
 use Naiuz\Tests\Support\TestHttp;
 use Naiuz\Tests\TestCase;
+use Naiuz\Types\SpeechAudio;
 use Naiuz\Types\Voice;
 use PHPUnit\Framework\AssertionFailedError;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -169,6 +170,20 @@ final class ContractTest extends TestCase
                 self::fail("{$operationId} should have refused that shape.");
             } catch (\LogicException $error) {
                 self::assertStringStartsWith($operationId, $error->getMessage());
+            }
+        }
+    }
+
+    public function test_project_result_wants_audio_from_an_audio_operation_and_from_no_other(): void
+    {
+        $speech = new SpeechAudio('RIFF', 'audio/wav', null, null, null, false, null, false, 'r');
+        $voice = Voice::from(['id' => 'v', 'name' => 'V', 'language' => 'uz', 'tags' => [], 'type' => 'stock']);
+        foreach ([['synthesizeSpeech', $voice, 'synthesizeSpeech should return audio.'], ['retrieveVoice', $speech, 'retrieveVoice should not return audio.'], ['synthesizeDialogue', $speech, 'synthesizeDialogue should return a DialogueAudio, but didn\'t.']] as [$operationId, $value, $message]) {
+            try {
+                Harness::projectResult($operationId, $value);
+                self::fail("{$operationId} should have refused that value.");
+            } catch (\LogicException $error) {
+                self::assertSame($message, $error->getMessage());
             }
         }
     }

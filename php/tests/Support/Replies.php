@@ -42,6 +42,16 @@ final class Replies
         return self::json($status, ['error' => $error, 'request_id' => 'req-error'], ['x-request-id' => 'req-error', ...$headers]);
     }
 
+    /**
+     * A WAV answer, with the headers synthesize sends.
+     *
+     * @param array<string, string> $headers Over the usual ones.
+     */
+    public static function audio(string $bytes = "RIFF\x24\x00\x00\x00WAVEfmt ", array $headers = []): ResponseInterface
+    {
+        return new Response(200, ['content-type' => 'audio/wav', 'x-cost' => '12.5', 'x-balance' => '9987.5', 'x-character-count' => '5', 'x-voice-custom' => '0', 'x-latency-ms' => '820.5', 'x-request-id' => 'req-audio', ...$headers], $bytes);
+    }
+
     /** @param array<string, string> $headers */
     public static function noContent(array $headers = []): ResponseInterface
     {

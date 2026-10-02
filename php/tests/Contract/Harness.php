@@ -12,6 +12,9 @@ use Naiuz\Page;
 use Naiuz\Tests\Support\MockClient;
 use Naiuz\Tests\Support\Spec;
 use Naiuz\Types\ApiObject;
+use Naiuz\Types\DialogueAudio;
+use Naiuz\Types\DialogueTurnTiming;
+use Naiuz\Types\SpeechAudio;
 use PHPUnit\Framework\Assert;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -28,9 +31,11 @@ final class Harness
 
     public const PAGE_OPERATIONS = ['listVoices', 'listApiKeys'];
 
+    public const AUDIO_OPERATIONS = ['synthesizeSpeech', 'synthesizeDialogue', 'downloadTtsJobAudio'];
+
     /**
-     * Fixtures this version of the SDK can't replay yet: speech audio, uploads and streamed chat come in a later
-     * version. When one starts to replay, a test fails until it leaves this list.
+     * Fixtures this version of the SDK can't replay yet: uploads and streamed chat come in a later version. When one
+     * starts to replay, a test fails until it leaves this list.
      */
     public const DEFERRED_FIXTURES = [
         'createChatCompletion/stream-error.json',
@@ -38,21 +43,11 @@ final class Harness
         'createTranscription/uzbek.json',
         'createVoice/created.json',
         'createVoice/multiline-ref-text.json',
-        'downloadTtsJobAudio/wav.json',
         'replaceVoiceAudio/replaced.json',
-        'synthesizeDialogue/two-turns.json',
-        'synthesizeSpeech/insufficient-balance.json',
-        'synthesizeSpeech/rate-limited.json',
-        'synthesizeSpeech/stock-voice.json',
-        'synthesizeSpeech/unauthenticated.json',
-        'synthesizeSpeech/validation-error.json',
     ];
 
     /** Methods from spec/operations.json that the client doesn't have yet. When one appears, a test fails until it leaves this list. */
     public const DEFERRED_METHODS = [
-        'tts->synthesize',
-        'tts->dialogue',
-        'tts->jobs->audio',
         'tts->jobs->createAndWait',
         'voices->create',
         'voices->replaceAudio',
@@ -163,7 +158,11 @@ final class Harness
     public static function response(array $fixture): ResponseInterface
     {
         $body = Spec::at($fixture, 'response', 'body');
-        $content = is_array($body) && array_key_exists('json', $body) ? json_encode($body['json'], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE) : '';
+        $content = match (true) {
+            is_array($body) && array_key_exists('json', $body) => json_encode($body['json'], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
+            is_array($body) && array_key_exists('base64', $body) => (string) base64_decode(Spec::text($body['base64']), true),
+            default => '',
+        };
         $headers = array_map(strval(...), array_filter((array) Spec::at($fixture, 'response', 'headers'), is_string(...)));
 
         return new Response((int) Spec::text(Spec::at($fixture, 'response', 'status')), $headers, $content);
@@ -192,7 +191,7 @@ final class Harness
     }
 
     /**
-     * What the SDK returned, in the README's `result` shape as the operation decides it: a page, a compatible
+     * What the SDK returned, in the README's `result` shape as the operation decides it: audio, a page, a compatible
      * endpoint's `{body, cost}`, any other object's `{data, request_id}`, or null for nothing. A value of another
      * shape throws.
      */
@@ -200,6 +199,12 @@ final class Harness
     {
         if ($value === null) {
             return null;
+        }
+        if (in_array($operationId, self::AUDIO_OPERATIONS, true) !== $value instanceof SpeechAudio) {
+            throw new \LogicException(sprintf('%s should %sreturn audio.', $operationId, $value instanceof SpeechAudio ? 'not ' : ''));
+        }
+        if ($value instanceof SpeechAudio) {
+            return self::projectAudio($operationId, $value);
         }
         if (in_array($operationId, self::PAGE_OPERATIONS, true)) {
             return $value instanceof Page ? $value->toArray() : throw new \LogicException("{$operationId} should return a page, but returned " . get_debug_type($value) . '.');
@@ -213,6 +218,34 @@ final class Harness
         }
 
         return array_key_exists('request_id', $attached) ? ['data' => $value->toArray(), 'request_id' => $attached['request_id']] : throw new \LogicException("{$operationId} should return an object with its request ID.");
+    }
+
+    /**
+     * Audio in the README's shape: its bytes in base64 and each header's field, and a dialogue's turns and their count.
+     *
+     * @return array<string, mixed>
+     */
+    public static function projectAudio(string $operationId, SpeechAudio $audio): array
+    {
+        $fields = [
+            'audio_base64' => base64_encode($audio->audio),
+            'content_type' => $audio->content_type,
+            'cost' => $audio->cost,
+            'character_count' => $audio->character_count,
+            'balance' => $audio->balance,
+            'voice_custom' => $audio->voice_custom,
+            'latency_ms' => $audio->latency_ms,
+            'replayed' => $audio->replayed,
+            'request_id' => $audio->request_id,
+        ];
+        if ($operationId !== 'synthesizeDialogue') {
+            return $fields;
+        }
+        if (!$audio instanceof DialogueAudio) {
+            throw new \LogicException('synthesizeDialogue should return a DialogueAudio, but didn\'t.');
+        }
+
+        return [...$fields, 'turns' => array_map(static fn(DialogueTurnTiming $turn): array => $turn->toArray(), $audio->turns), 'turn_count' => $audio->turn_count];
     }
 
     /**
