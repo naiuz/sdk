@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 /*
  * A local HTTP server for the tests. It prints its port, then serves each connection in turn by the next plan: it
- * reads the request, sends the plan's first piece, then each further piece a gap apart, then goes silent. The last
+ * reads the request, sends the plan's first piece, then each further piece a gap apart, then goes silent. A plan that
+ * repeats sends its last piece again every gap instead, until the client hangs up, and then prints "closed". The last
  * plan serves every connection after it. It hangs up after 5 seconds, so a client that never times out fails its test
  * instead of hanging it.
  *
  * Usage: php server.php <plan>...
- * A plan is base64 of JSON: {"pieces": [<piece, base64>...], "gap": <seconds>}.
+ * A plan is base64 of JSON: {"pieces": [<piece, base64>...], "gap": <seconds>, "repeat": <bool>}.
  */
 
 $plans = [];
@@ -19,6 +20,7 @@ foreach (array_slice(is_array($_SERVER['argv'] ?? null) ? $_SERVER['argv'] : [],
     $plans[] = [
         'pieces' => array_map(static fn(mixed $piece): string => (string) base64_decode(is_string($piece) ? $piece : '', true), $pieces),
         'gap' => is_array($plan) && is_numeric($plan['gap'] ?? null) ? (float) $plan['gap'] : 0.0,
+        'repeat' => is_array($plan) && ($plan['repeat'] ?? false) === true,
     ];
 }
 $server = stream_socket_server('tcp://127.0.0.1:0', $code, $message);
@@ -44,6 +46,16 @@ while (microtime(true) < $giveUp) {
             usleep((int) ($plan['gap'] * 1_000_000));
         }
         fwrite($connection, $piece);
+    }
+    while ($plan['repeat'] && microtime(true) < $giveUp) {
+        // The client sends nothing more, so the connection turns readable only when the client hangs up.
+        $ready = [$connection];
+        $none = null;
+        if (stream_select($ready, $none, $none, 0, (int) ($plan['gap'] * 1_000_000)) === 1 && in_array(fread($connection, 8192), ['', false], true)) {
+            echo "closed\n";
+            break;
+        }
+        fwrite($connection, (string) end($plan['pieces']));
     }
 }
 foreach ($connections as $connection) {

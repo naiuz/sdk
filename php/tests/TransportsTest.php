@@ -92,6 +92,35 @@ final class TransportsTest extends TestCase
         self::assertTrue(self::failure(new Psr18Transport(new MockClient($late)), 0.2)->timedOut);
     }
 
+    public function test_a_failure_a_hair_before_the_deadline_counts_as_the_timeout_it_is(): void
+    {
+        // curl rounds the time it has waited up to whole milliseconds, so it may give up just before the SDK's deadline.
+        $early = static function (RequestInterface $request): never {
+            usleep(197_000);
+
+            throw new NetworkError('Operation timed out after 200 milliseconds with 0 bytes received');
+        };
+        self::assertTrue(self::failure(new Psr18Transport(new MockClient($early)), 0.2)->timedOut);
+        try {
+            Body::piece(new DripStream([], gap: 0.197, error: new \RuntimeException('Unable to read from stream')), 8192, Clock::monotonic() + 0.2);
+            self::fail('The read should have failed.');
+        } catch (TransportFailure $failure) {
+            self::assertTrue($failure->timedOut);
+        }
+        // Long before the deadline, a failure is only a failure.
+        self::assertFalse(self::failure(new Psr18Transport(new MockClient(NetworkError::reset())), 0.2)->timedOut);
+    }
+
+    public function test_symfony_counts_each_attempt_that_runs_out_as_a_timeout_on_a_client_it_keeps(): void
+    {
+        // A client kept for many calls sets each one up fast, so curl's rounding shows: alone, it would end some early.
+        $server = $this->server = LocalServer::start('');
+        $transport = new SymfonyTransport(SymfonyHttpClient::create());
+        foreach (range(1, 8) as $attempt) {
+            self::assertTrue(self::failure($transport, 0.1, $server->baseUrl)->timedOut, "attempt {$attempt}");
+        }
+    }
+
     public function test_open_hands_the_answer_over_with_its_body_unread(): void
     {
         $body = new DripStream(['a', 'b']);
@@ -121,6 +150,22 @@ final class TransportsTest extends TestCase
         // Guzzle 7's stream handler scales read_timeout's fraction ten times too short, so there timeout alone bounds each read.
         $readTimeout = \constant('GuzzleHttp\\ClientInterface::MAJOR_VERSION') === 7 ? null : 0.3;
         self::assertSame([true, 0.3, $readTimeout], [$options['stream'] ?? null, $options['timeout'] ?? null, $options['read_timeout'] ?? null]);
+    }
+
+    public function test_guzzle_refuses_to_open_a_stream_while_allow_url_fopen_is_off_sending_nothing(): void
+    {
+        $mock = new MockHandler([new Response(200), new Response(200)]);
+        $off = new GuzzleTransport(new GuzzleClient(['handler' => $mock]), static fn(): bool => false);
+        try {
+            $off->open(self::request(), 1.0);
+            self::fail('The stream should have been refused.');
+        } catch (NeuronAIException $error) {
+            self::assertStringStartsWith("A stream through Guzzle needs PHP's allow_url_fopen setting, which is off", $error->getMessage());
+        }
+        self::assertCount(2, $mock);
+        // Any other call goes through as usual, and the setting PHP has, on here, lets a stream open.
+        self::assertSame(200, $off->fetch(self::request(), 1.0)->status);
+        self::assertSame(200, (new GuzzleTransport(new GuzzleClient(['handler' => $mock])))->open(self::request(), 1.0)->getStatusCode());
     }
 
     /** @param list<string> $then */

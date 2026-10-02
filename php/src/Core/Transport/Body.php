@@ -94,7 +94,7 @@ final class Body
             return $body->read($length);
         } catch (\RuntimeException|ClientExceptionInterface $error) {
             // A stream that says its read timed out did, whatever the clock: Guzzle 7's ends a read on its own timer.
-            $timedOut = ($deadline !== null && Clock::monotonic() >= $deadline) || $body->getMetadata('timed_out') === true;
+            $timedOut = ($deadline !== null && Clock::reached($deadline)) || $body->getMetadata('timed_out') === true;
 
             throw new TransportFailure($warning ?? ErrorFactory::rootMessage($error), $timedOut, reading: true);
         } finally {

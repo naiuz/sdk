@@ -42,7 +42,7 @@ final readonly class Psr18Transport implements Transport
         try {
             $response = $this->client->sendRequest($request);
         } catch (ClientExceptionInterface $error) {
-            throw new TransportFailure(ErrorFactory::rootMessage($error), timedOut: Clock::monotonic() >= $deadline);
+            throw new TransportFailure(ErrorFactory::rootMessage($error), timedOut: Clock::reached($deadline));
         }
         if (Clock::monotonic() >= $deadline) {
             $response->getBody()->close();

@@ -13,12 +13,17 @@ use GuzzleHttp\Exception\ResponseTimeoutException;
 use Naiuz\Core\Answer;
 use Naiuz\Core\Clock;
 use Naiuz\Core\ErrorFactory;
+use Naiuz\Exceptions\NeuronAIException;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 
 /**
  * Guzzle 7 or 8, given or made by the SDK. Each attempt sends Guzzle's own `timeout` option, which wins over the
  * client's: with the curl extension it bounds the whole transfer, so the answer's body is read within it too.
+ *
+ * Guzzle streams an answer only through PHP's own stream handler, which needs `allow_url_fopen`: without it, a stream
+ * goes through curl, which reads the whole answer before handing it over, and its timeout cuts a long one short. So
+ * open() refuses a stream then, before anything is sent.
  *
  * @internal
  */
@@ -27,7 +32,10 @@ final readonly class GuzzleTransport implements Transport
     /** curl's CURLE_OPERATION_TIMEDOUT, which Guzzle 7 reports in an exception's handler context. */
     private const CURL_TIMED_OUT = 28;
 
-    public function __construct(private ClientInterface $client) {}
+    /**
+     * @param (\Closure(): bool)|null $urlFopen Says whether PHP's `allow_url_fopen` is on; ini_get() by default.
+     */
+    public function __construct(private ClientInterface $client, private ?\Closure $urlFopen = null) {}
 
     public function fetch(#[\SensitiveParameter] RequestInterface $request, float $timeout): Answer
     {
@@ -36,9 +44,20 @@ final readonly class GuzzleTransport implements Transport
         return Body::answer($this->send($request, $timeout, false, $deadline), $deadline);
     }
 
+    /** @throws NeuronAIException when allow_url_fopen is off, so Guzzle can't stream */
     public function open(#[\SensitiveParameter] RequestInterface $request, float $timeout): ResponseInterface
     {
+        if (!($this->urlFopen ?? self::urlFopen(...))()) {
+            throw new NeuronAIException("A stream through Guzzle needs PHP's allow_url_fopen setting, which is off: without it, Guzzle reads the whole answer before handing it over, and the timeout cuts a long one short. Turn allow_url_fopen on, or pass Symfony HttpClient's Psr18Client as http_client.");
+        }
+
         return $this->send($request, $timeout, true, Clock::monotonic() + $timeout);
+    }
+
+    /** Whether PHP's allow_url_fopen is on: Guzzle's stream handler opens the connection with it. */
+    private static function urlFopen(): bool
+    {
+        return filter_var(ini_get('allow_url_fopen'), FILTER_VALIDATE_BOOL);
     }
 
     private function send(#[\SensitiveParameter] RequestInterface $request, float $timeout, bool $stream, float $deadline): ResponseInterface
@@ -52,7 +71,7 @@ final readonly class GuzzleTransport implements Transport
         try {
             return $this->client->send($request, $options);
         } catch (GuzzleException $error) {
-            $timedOut = self::timedOut($error) || Clock::monotonic() >= $deadline;
+            $timedOut = self::timedOut($error) || Clock::reached($deadline);
 
             throw new TransportFailure(ErrorFactory::rootMessage($error), $timedOut, self::beforeSend($error));
         }

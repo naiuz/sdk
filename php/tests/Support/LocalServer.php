@@ -11,8 +11,11 @@ namespace Naiuz\Tests\Support;
  */
 final class LocalServer
 {
-    /** @param resource $process */
-    private function __construct(private $process, public readonly string $baseUrl) {}
+    /**
+     * @param resource $process
+     * @param resource|null $output What the server prints after its port.
+     */
+    private function __construct(private $process, private $output, public readonly string $baseUrl) {}
 
     /** A server that sends $first on each connection, then each of $then a gap apart, then goes silent. */
     public static function start(string $first, float $gap = 0.0, string ...$then): self
@@ -27,6 +30,15 @@ final class LocalServer
     public static function answering(string ...$answers): self
     {
         return self::serving(...array_map(static fn(string $answer): array => ['pieces' => [$answer], 'gap' => 0.0], array_values($answers)));
+    }
+
+    /**
+     * A server that sends $first on each connection, then $piece every gap, until the client hangs up: hungUp() says
+     * when it does.
+     */
+    public static function repeating(string $first, string $piece, float $gap): self
+    {
+        return self::serving(['pieces' => [$first, $piece], 'gap' => $gap, 'repeat' => true]);
     }
 
     /** The address of a port nothing listens on: connecting to it is refused. */
@@ -48,12 +60,24 @@ final class LocalServer
             if ($socket !== false) {
                 fclose($socket);
 
-                return new self($process, "http://{$address}/api/v1");
+                return new self($process, null, "http://{$address}/api/v1");
             }
         }
         proc_terminate($process);
 
         throw new \RuntimeException("PHP's web server didn't start listening.");
+    }
+
+    /** Whether a repeating server saw its client hang up, within $seconds from now. */
+    public function hungUp(float $seconds): bool
+    {
+        if ($this->output === null) {
+            return false;
+        }
+        $ready = [$this->output];
+        $none = null;
+
+        return stream_select($ready, $none, $none, (int) $seconds, (int) (fmod($seconds, 1) * 1_000_000)) === 1 && fgets($this->output) === "closed\n";
     }
 
     public function stop(): void
@@ -69,10 +93,10 @@ final class LocalServer
         $this->stop();
     }
 
-    /** @param array{pieces: list<string>, gap: float} ...$plans */
+    /** @param array{pieces: list<string>, gap: float, repeat?: bool} ...$plans */
     private static function serving(array ...$plans): self
     {
-        $arguments = array_map(static fn(array $plan): string => base64_encode(json_encode(['pieces' => array_map(base64_encode(...), $plan['pieces']), 'gap' => $plan['gap']], JSON_THROW_ON_ERROR)), array_values($plans));
+        $arguments = array_map(static fn(array $plan): string => base64_encode(json_encode(['pieces' => array_map(base64_encode(...), $plan['pieces']), 'gap' => $plan['gap'], 'repeat' => $plan['repeat'] ?? false], JSON_THROW_ON_ERROR)), array_values($plans));
         $process = proc_open([PHP_BINARY, __DIR__ . '/server.php', ...$arguments], [1 => ['pipe', 'w']], $pipes);
         if (!is_resource($process)) {
             throw new \RuntimeException("The local server couldn't start.");
@@ -82,7 +106,7 @@ final class LocalServer
             throw new \RuntimeException("The local server didn't say its port.");
         }
 
-        return new self($process, "http://127.0.0.1:{$port}/api/v1");
+        return new self($process, $pipes[1], "http://127.0.0.1:{$port}/api/v1");
     }
 
     /** An address on 127.0.0.1 whose port nothing listens on. */

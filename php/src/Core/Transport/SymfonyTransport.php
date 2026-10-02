@@ -62,7 +62,7 @@ final readonly class SymfonyTransport implements Transport
         try {
             return $client->sendRequest($request);
         } catch (ClientExceptionInterface $error) {
-            throw new TransportFailure(ErrorFactory::rootMessage($error), self::timedOut($error) || Clock::monotonic() >= $deadline);
+            throw new TransportFailure(ErrorFactory::rootMessage($error), self::timedOut($error) || Clock::reached($deadline));
         }
     }
 
