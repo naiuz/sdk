@@ -13,6 +13,7 @@ use Naiuz\Exceptions\NeuronAIException;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestFactoryInterface;
 use Psr\Http\Message\StreamFactoryInterface;
+use Symfony\Component\HttpClient\HttpClient as SymfonyHttpClient;
 use Symfony\Component\HttpClient\Psr18Client as SymfonyClient;
 
 /**
@@ -32,15 +33,23 @@ final class Transports
      */
     public static function for(?ClientInterface $client, ?\Closure $classExists = null): Transport
     {
-        $client ??= self::defaultClient($classExists ?? class_exists(...));
+        if ($client === null) {
+            return self::made($classExists ?? class_exists(...));
+        }
         if ($client instanceof GuzzleClientInterface) {
             return new GuzzleTransport($client);
         }
-        if ($client instanceof SymfonyClient) {
+        if ($client instanceof SymfonyClient && self::takesOptions($client)) {
             return new SymfonyTransport($client);
         }
 
         return new Psr18Transport($client);
+    }
+
+    /** Whether Symfony's PSR-18 client takes options per request, as it does from Symfony 6.2 on. */
+    public static function takesOptions(object $client): bool
+    {
+        return method_exists($client, 'withOptions');
     }
 
     /**
@@ -59,21 +68,23 @@ final class Transports
         }
     }
 
-    /** @param \Closure(string): bool $classExists */
-    private static function defaultClient(\Closure $classExists): ClientInterface
+    /**
+     * The transport for a client the SDK makes. Symfony's is its own client, not its PSR-18 one, which takes options
+     * per request only from 6.2 on. Each attempt wraps it in a PSR-18 client, which finds the PSR-17 factories as
+     * factories() does, so a client without them is never made: factories() throws first.
+     *
+     * @param \Closure(string): bool $classExists
+     */
+    private static function made(\Closure $classExists): Transport
     {
         if ($classExists(GuzzleClient::class)) {
-            return new GuzzleClient();
+            return new GuzzleTransport(new GuzzleClient());
         }
         if ($classExists(SymfonyClient::class)) {
-            try {
-                return new SymfonyClient();
-            } catch (\LogicException) {
-                // Symfony's client needs a PSR-17 implementation, and there is none: let discovery look on.
-            }
+            return new SymfonyTransport(SymfonyHttpClient::create());
         }
         try {
-            return Psr18ClientDiscovery::find();
+            return self::for(Psr18ClientDiscovery::find());
         } catch (NotFoundException) {
             throw new NeuronAIException('No HTTP client was found: run composer require guzzlehttp/guzzle, or pass a PSR-18 client as http_client.');
         }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Naiuz\Tests;
 
+use Composer\InstalledVersions;
 use GuzzleHttp\Client as GuzzleClient;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
@@ -28,6 +29,7 @@ use Naiuz\Tests\Support\NetworkError;
 use Naiuz\Tests\Support\Replies;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Psr\Http\Message\RequestInterface;
+use Symfony\Component\HttpClient\HttpClient as SymfonyHttpClient;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Psr18Client as SymfonyClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -139,7 +141,7 @@ final class TransportsTest extends TestCase
     {
         $this->server = LocalServer::start($first, $gap, ...$then);
         $started = microtime(true);
-        $failure = self::failure(new SymfonyTransport(new SymfonyClient()), 0.3, $this->server->baseUrl);
+        $failure = self::failure(new SymfonyTransport(SymfonyHttpClient::create()), 0.3, $this->server->baseUrl);
         self::assertTrue($failure->timedOut);
         self::assertLessThan(2.0, microtime(true) - $started);
     }
@@ -161,7 +163,7 @@ final class TransportsTest extends TestCase
 
     public function test_symfony_can_t_tell_a_refused_connection_was_never_sent(): void
     {
-        $failure = self::failure(new SymfonyTransport(new SymfonyClient()), 1.0, LocalServer::refusing());
+        $failure = self::failure(new SymfonyTransport(SymfonyHttpClient::create()), 1.0, LocalServer::refusing());
         self::assertSame([false, false], [$failure->beforeSend, $failure->timedOut]);
     }
 
@@ -188,11 +190,29 @@ final class TransportsTest extends TestCase
 
             return new MockResponse('{}', ['http_code' => 200]);
         });
-        $transport = new SymfonyTransport(new SymfonyClient($mock));
+        $transport = new SymfonyTransport($mock);
         $transport->fetch(self::request(), 0.25);
         $transport->open(self::request(), 0.3);
         // As Guzzle's sendRequest() has it: a redirect comes back as the answer, which the core throws as APIException.
         self::assertSame([[0.25, 0.25, 0], [0.3, 0.0, 0]], $seen);
+    }
+
+    public function test_a_symfony_psr_18_client_given_gets_each_attempt_s_options_from_6_2_on_and_keeps_its_own_before(): void
+    {
+        $seen = [];
+        $mock = new MockHttpClient(static function (string $method, string $url, array $options) use (&$seen): MockResponse {
+            $seen[] = [$options['max_duration'] ?? null, $options['max_redirects'] ?? null];
+
+            return new MockResponse('{}', ['http_code' => 200]);
+        });
+        $transport = Transports::for(new SymfonyClient($mock));
+        self::assertSame(200, $transport->fetch(self::request(), 0.25)->status);
+        if (self::symfonyTakesOptions()) {
+            self::assertSame([SymfonyTransport::class, [[0.25, 0]]], [$transport::class, $seen]);
+        } else {
+            // Before 6.2 Symfony's PSR-18 client has no withOptions(): its calls go as any PSR-18 client's, on its own options.
+            self::assertSame([Psr18Transport::class, 1], [$transport::class, count($seen)]);
+        }
     }
 
     public function test_guzzle_reads_a_stream_that_outlasts_the_timeout_while_pieces_keep_coming(): void
@@ -204,14 +224,14 @@ final class TransportsTest extends TestCase
     public function test_symfony_reads_a_stream_that_outlasts_the_timeout_while_pieces_keep_coming(): void
     {
         $this->server = LocalServer::start(self::STREAM, 0.1, 'a', 'b', 'c', 'd', 'e', 'f');
-        self::assertSame('abcdef', self::readStream(new SymfonyTransport(new SymfonyClient()), $this->server->baseUrl, 0.3, 6));
+        self::assertSame('abcdef', self::readStream(new SymfonyTransport(SymfonyHttpClient::create()), $this->server->baseUrl, 0.3, 6));
     }
 
     /** @return iterable<string, array{\Closure(): Transport}> */
     public static function streamingTransports(): iterable
     {
         yield 'guzzle' => [static fn(): Transport => new GuzzleTransport(new GuzzleClient())];
-        yield 'symfony' => [static fn(): Transport => new SymfonyTransport(new SymfonyClient())];
+        yield 'symfony' => [static fn(): Transport => new SymfonyTransport(SymfonyHttpClient::create())];
     }
 
     /** @param \Closure(): Transport $transport */
@@ -232,7 +252,7 @@ final class TransportsTest extends TestCase
     public function test_it_picks_the_transport_for_the_client_given(): void
     {
         self::assertSame(GuzzleTransport::class, Transports::for(new GuzzleClient())::class);
-        self::assertSame(SymfonyTransport::class, Transports::for(new SymfonyClient())::class);
+        self::assertSame(self::symfonyTakesOptions() ? SymfonyTransport::class : Psr18Transport::class, Transports::for(new SymfonyClient())::class);
         self::assertSame(Psr18Transport::class, Transports::for(new MockClient())::class);
     }
 
@@ -262,6 +282,12 @@ final class TransportsTest extends TestCase
         }
         [$requests, $streams] = Transports::factories();
         self::assertSame(['GET', '{}'], [$requests->createRequest('GET', 'https://my.neuronai.uz')->getMethod(), (string) $streams->createStream('{}')]);
+    }
+
+    /** Whether the Symfony HttpClient installed is 6.2 or later, whose PSR-18 client takes options per request. */
+    private static function symfonyTakesOptions(): bool
+    {
+        return version_compare((string) InstalledVersions::getVersion('symfony/http-client'), '6.2', '>=');
     }
 
     private static function request(string $baseUrl = 'https://my.neuronai.uz/api/v1'): RequestInterface
