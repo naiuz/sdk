@@ -114,11 +114,20 @@ def test_a_form_sends_text_list_items_and_files_as_parts_in_order() -> None:
     )
 
 
-def test_a_form_escapes_quotes_and_line_breaks_in_names_and_filenames_and_sends_text_as_given() -> None:
+def test_a_form_escapes_quotes_and_line_breaks_in_names_and_filenames_and_sends_text_with_crlf() -> None:
     form = Form({'say "hi"': "line one\nline two", "file": ('a "b"\r\n.wav', WAV)}, ("file",))
     body, _ = encode_form(form, boundary="b")
-    assert b'name="say %22hi%22"\r\n\r\nline one\nline two\r\n' in body
+    assert b'name="say %22hi%22"\r\n\r\nline one\r\nline two\r\n' in body
     assert b'name="file"; filename="a %22b%22%0D%0A.wav"\r\nContent-Type: audio/wav\r\n' in body
+
+
+def test_a_form_sends_each_line_break_in_text_as_crlf_however_the_caller_wrote_it() -> None:
+    body, _ = encode_form(Form({"ref_text": "one\ntwo\rthree\r\nfour", "tags": ["a\nb"]}, ()), boundary="b")
+    assert body == (
+        b'--b\r\nContent-Disposition: form-data; name="ref_text"\r\n\r\none\r\ntwo\r\nthree\r\nfour\r\n'
+        b'--b\r\nContent-Disposition: form-data; name="tags[]"\r\n\r\na\r\nb\r\n'
+        b"--b--\r\n"
+    )
 
 
 def test_each_form_gets_its_own_random_boundary() -> None:

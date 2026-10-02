@@ -108,11 +108,16 @@ def read_upload(field: str, value: object) -> FilePart:
     raise NeuronAIError(f"{field} must be {_FORMS}.")
 
 
+_LINE_BREAK = re.compile(r"\r\n|\r|\n")
+"""A line break in a text field, however it is written: each goes as CRLF."""
+
+
 def encode_form(form: Form, boundary: str | None = None) -> tuple[bytes, str]:
     """The multipart body of a call's form, and its content type, which names the boundary.
 
     Each field named in `form.files` goes as a file part, read here, once (read_upload). A list goes as one `name[]`
-    part per item, and any other field as text: a string as it is, and any other value as JSON, such as `2` or `true`.
+    part per item, and any other field as text: a string with each line break as CRLF, as an HTML form sends it, and
+    any other value as JSON, such as `2` or `true`.
     A None field is left out, and an empty list sends no part. In names and filenames, `"`, CR and LF go as `%22`,
     `%0D` and `%0A`, as browsers send them. The boundary is random, unless a test gives one.
     """
@@ -192,5 +197,5 @@ def _head(boundary: str, disposition: str, headers: str = "") -> bytes:
 
 
 def _text(boundary: str, name: str, value: object) -> bytes:
-    text = value if isinstance(value, str) else json.dumps(value)
+    text = _LINE_BREAK.sub("\r\n", value) if isinstance(value, str) else json.dumps(value)
     return _head(boundary, f'name="{_escape(name)}"') + text.encode() + b"\r\n"
