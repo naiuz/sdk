@@ -20,6 +20,7 @@ final readonly class APIRequest
      * @param array<string, mixed> $query Nulls are left out.
      * @param array<string, mixed>|null $body Sent as a JSON object, unless null.
      * @param string $accept What the call takes back: JSON, unless it answers with something else, such as audio.
+     * @param Form|null $form Sent as multipart/form-data in place of $body, unless null.
      */
     public function __construct(
         public string $method,
@@ -30,6 +31,7 @@ final readonly class APIRequest
         public ?array $body = null,
         public string $accept = 'application/json',
         public RequestOptions $options = new RequestOptions(),
+        public ?Form $form = null,
     ) {}
 
     /**
@@ -39,6 +41,6 @@ final readonly class APIRequest
      */
     public function withQuery(array $query): self
     {
-        return new self($this->method, $this->path, $this->retry, $this->pathParams, [...$this->query, ...$query], $this->body, $this->accept, $this->options);
+        return new self($this->method, $this->path, $this->retry, $this->pathParams, [...$this->query, ...$query], $this->body, $this->accept, $this->options, $this->form);
     }
 }

@@ -7,7 +7,7 @@ namespace Naiuz\Tests\Support;
 /**
  * A local HTTP server on 127.0.0.1, run by server.php in a process of its own: it sends its first piece on each
  * connection, then each further piece a gap apart, then goes silent. It hangs up after 5 seconds, so a client that
- * never times out fails its test instead of hanging it.
+ * never times out fails its test instead of hanging it. php() runs PHP's own web server on a script instead.
  */
 final class LocalServer
 {
@@ -32,6 +32,33 @@ final class LocalServer
     /** The address of a port nothing listens on: connecting to it is refused. */
     public static function refusing(): string
     {
+        return 'http://' . self::freeAddress() . '/api/v1';
+    }
+
+    /** PHP's own web server, running $script for every request, as the API's server runs PHP. */
+    public static function php(string $script): self
+    {
+        $address = self::freeAddress();
+        $process = proc_open([PHP_BINARY, '-S', $address, $script], [1 => ['file', '/dev/null', 'w'], 2 => ['file', '/dev/null', 'w']], $pipes);
+        if (!is_resource($process)) {
+            throw new \RuntimeException("PHP's web server couldn't start.");
+        }
+        for ($giveUp = microtime(true) + 5; microtime(true) < $giveUp; usleep(20_000)) {
+            $socket = @stream_socket_client("tcp://{$address}", $code, $message, 0.1);
+            if ($socket !== false) {
+                fclose($socket);
+
+                return new self($process, "http://{$address}/api/v1");
+            }
+        }
+        proc_terminate($process);
+
+        throw new \RuntimeException("PHP's web server didn't start listening.");
+    }
+
+    /** An address on 127.0.0.1 whose port nothing listens on. */
+    private static function freeAddress(): string
+    {
         $socket = stream_socket_server('tcp://127.0.0.1:0');
         if ($socket === false) {
             throw new \RuntimeException("A free port couldn't be found.");
@@ -39,7 +66,7 @@ final class LocalServer
         $name = (string) stream_socket_get_name($socket, false);
         fclose($socket);
 
-        return 'http://' . $name . '/api/v1';
+        return $name;
     }
 
     public function stop(): void

@@ -7,6 +7,7 @@ namespace Naiuz\Tests;
 use GuzzleHttp\Psr7\Response;
 use Naiuz\Core\APIRequest;
 use Naiuz\Core\Captured;
+use Naiuz\Core\Form;
 use Naiuz\Core\Readers;
 use Naiuz\Core\RequestOptions;
 use Naiuz\Core\RetryClass;
@@ -20,6 +21,7 @@ use Naiuz\Exceptions\NotFoundException;
 use Naiuz\Exceptions\RateLimitException;
 use Naiuz\Tests\Support\DripStream;
 use Naiuz\Tests\Support\FakeTransport;
+use Naiuz\Tests\Support\FormParser;
 use Naiuz\Tests\Support\Frames;
 use Naiuz\Tests\Support\Item;
 use Naiuz\Tests\Support\MockClient;
@@ -376,6 +378,39 @@ final class HttpClientTest extends TestCase
         self::item((new TestHttp($api))->http, self::createJob(new RequestOptions(idempotencyKey: 'order-42')));
         self::assertSame(['order-42', 'order-42', 'order-42'], array_map(static fn(RequestInterface $request): string => $request->getHeaderLine('idempotency-key'), $api->requests));
         self::assertSame(array_fill(0, 3, '{"text":"Salom"}'), array_map(static fn(RequestInterface $request): string => (string) $request->getBody(), $api->requests));
+    }
+
+    public function test_it_sends_a_form_as_multipart_with_the_same_bytes_and_key_on_every_retry(): void
+    {
+        $api = new MockClient(Replies::apiError(500, 'server_error'), NetworkError::reset(), Replies::envelope(['id' => 'v1']));
+        $stream = fopen('php://temp', 'w+b');
+        self::assertIsResource($stream);
+        fwrite($stream, 'RIFF');
+        $form = new Form(['name' => 'Office voice', 'ref_audio' => ['stream' => $stream, 'filename' => 'sample.wav'], 'tags' => ['support']], ['ref_audio']);
+        self::item((new TestHttp($api))->http, new APIRequest('POST', '/tts/voices', RetryClass::Idempotent, options: new RequestOptions(idempotencyKey: 'voice-1'), form: $form));
+        self::assertCount(3, $api->requests);
+        [$first] = $api->requests;
+        self::assertMatchesRegularExpression('/^multipart\/form-data; boundary=[0-9a-f]{32}$/', $first->getHeaderLine('content-type'));
+        self::assertSame(
+            ['fields' => ['name' => 'Office voice', 'tags' => ['support']], 'files' => ['ref_audio' => ['filename' => 'sample.wav', 'content_type' => 'audio/wav', 'base64' => base64_encode('RIFF')]]],
+            FormParser::parse($first),
+        );
+        foreach ($api->requests as $sent) {
+            self::assertSame([$first->getHeaderLine('content-type'), 'voice-1', (string) $first->getBody()], [$sent->getHeaderLine('content-type'), $sent->getHeaderLine('idempotency-key'), (string) $sent->getBody()]);
+        }
+    }
+
+    public function test_an_upload_it_can_t_send_is_refused_before_anything_is_sent_with_no_frame_holding_the_key(): void
+    {
+        $api = new MockClient();
+        $stream = fopen('php://temp', 'w+b');
+        self::assertIsResource($stream);
+        $form = new Form(['file' => $stream, 'language' => 'uz'], ['file']);
+        $error = self::failure((new TestHttp($api))->http, new APIRequest('POST', '/stt/transcribe', RetryClass::Idempotent, form: $form));
+        self::assertSame("file needs a filename: pass ['stream' => \$stream, 'filename' => 'clip.wav'] rather than the stream alone.", $error->getMessage());
+        self::assertSame([], $api->requests);
+        self::assertNotSame([], Frames::sdk($error));
+        self::assertStringNotContainsString(TestHttp::KEY, Frames::printed($error));
     }
 
     public function test_the_call_s_key_goes_over_a_client_wide_default_and_extra_headers_over_both(): void

@@ -87,10 +87,10 @@ final class HttpClient
         $options = $request->options;
         $attempt = new Attempt(Options::checkTimeout($options->timeout ?? $this->timeout), $this->apiKey);
         $maxRetries = Options::checkMaxRetries($options->maxRetries ?? $this->maxRetries);
-        $body = $request->body === null ? null : Json::encode((object) $request->body);
-        // Built once, so every retry sends the same Idempotency-Key. The headers are checked before the key joins them,
-        // and no argument of a frame below holds it.
-        $headers = Headers::build($this->userAgent, $this->defaultHeaders, $request, $body === null ? null : 'application/json');
+        // Built once, so every retry sends the same bytes and the same Idempotency-Key. The headers are checked before
+        // the key joins them, and no argument of a frame below holds it.
+        [$body, $contentType] = self::body($request);
+        $headers = Headers::build($this->userAgent, $this->defaultHeaders, $request, $contentType);
         $psr = $this->requests->createRequest($request->method, Url::build($this->baseUrl, $request->path, $request->pathParams, $request->query));
         foreach (Headers::withKey($headers, $this->apiKey) as $name => $value) {
             $psr = $psr->withHeader($name, $value);
@@ -194,6 +194,20 @@ final class HttpClient
         $error = ErrorFactory::make($answer->status, $answer->reason, $answer->headers, $attempt->redact($answer->body), $now);
 
         return new Failed($error, new StatusFailure($answer->status, $error->error_code !== null), RetryAfter::parse($answer->headers['retry-after'] ?? null, $now));
+    }
+
+    /**
+     * The call's body and its content type: its form as multipart/form-data, its fields as a JSON object, or neither.
+     *
+     * @return array{string|null, string|null}
+     */
+    private static function body(APIRequest $request): array
+    {
+        if ($request->form !== null) {
+            return Multipart::encode($request->form);
+        }
+
+        return $request->body === null ? [null, null] : [Json::encode((object) $request->body), 'application/json'];
     }
 
     /** Seconds as the shortest text that says them: 0.2, 300 or 2147483.647. */
