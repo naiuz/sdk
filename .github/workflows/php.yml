@@ -59,3 +59,22 @@ jobs:
       # The lock holds Guzzle 8; many apps still run Guzzle 7, whose stream handler works differently.
       - run: composer update "guzzlehttp/guzzle:^7.9" --with-all-dependencies --no-interaction --no-progress
       - run: vendor/bin/phpunit
+
+  symfony54:
+    name: PHP 8.2 on Symfony HttpClient 5.4
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: php
+    steps:
+      - uses: actions/checkout@v7
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          coverage: none
+          tools: composer:v2
+      - run: composer install --no-interaction --no-progress
+      # The lock holds Symfony 7; apps still on Symfony 5.4 LTS have a PSR-18 client without withOptions().
+      - run: composer require --dev "symfony/http-client:^5.4" --update-with-all-dependencies --no-interaction --no-progress
+      - run: vendor/bin/phpunit
