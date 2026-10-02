@@ -85,16 +85,16 @@ final class CompatibleTest extends TestCase
         self::assertSame('{"model":"gemma-4-26b-a4b","messages":[{"role":"user","content":"Salom!"}]}', (string) $api->requests[0]->getBody());
     }
 
-    public function test_chat_completions_create_refuses_stream_true_before_sending_anything(): void
+    public function test_chat_completions_create_refuses_a_stream_that_isn_t_true_false_or_null_before_sending_anything(): void
     {
         $api = new MockClient();
-        foreach ([true, 1, 'yes'] as $stream) {
+        foreach ([1, 'yes', 'true'] as $stream) {
             try {
-                // @phpstan-ignore argument.type (a stream, which this version can't read, and untyped callers' truthy values)
+                // @phpstan-ignore argument.type (an untyped caller's truthy values, such as a form's)
                 Clients::on($api)->chat->completions->create([...self::HELLO, 'stream' => $stream]);
-                self::fail('A stream should have been refused.');
+                self::fail('The value should have been refused.');
             } catch (NeuronAIException $error) {
-                self::assertSame('Streamed chat completions arrive in a later version of this SDK: leave stream out.', $error->getMessage());
+                self::assertSame('stream must be true, false or null: it decides whether the answer comes as a stream.', $error->getMessage());
             }
         }
         self::assertCount(0, $api);

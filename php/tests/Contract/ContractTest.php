@@ -6,7 +6,6 @@ namespace Naiuz\Tests\Contract;
 
 use GuzzleHttp\Psr7\Request;
 use Naiuz\Core\ErrorFactory;
-use Naiuz\Exceptions\NeuronAIException;
 use Naiuz\Tests\Support\MockClient;
 use Naiuz\Tests\Support\Replies;
 use Naiuz\Tests\Support\Spec;
@@ -54,17 +53,9 @@ final class ContractTest extends TestCase
     private const FILE = "Content-Disposition: form-data; name=\"file\"; filename=\"clip.wav\"\r\nContent-Type: audio/wav\r\n\r\nRIFF";
 
     /** @return iterable<string, array{string}> */
-    public static function replayable(): iterable
+    public static function fixtures(): iterable
     {
-        foreach (array_diff(Harness::fixtures(), Harness::DEFERRED_FIXTURES) as $file) {
-            yield $file => [$file];
-        }
-    }
-
-    /** @return iterable<string, array{string}> */
-    public static function deferred(): iterable
-    {
-        foreach (Harness::DEFERRED_FIXTURES as $file) {
+        foreach (Harness::fixtures() as $file) {
             yield $file => [$file];
         }
     }
@@ -87,7 +78,7 @@ final class ContractTest extends TestCase
         }
     }
 
-    #[DataProvider('replayable')]
+    #[DataProvider('fixtures')]
     public function test_a_fixture_sends_its_request_and_returns_its_result(string $file): void
     {
         $fixture = Harness::load($file);
@@ -97,7 +88,7 @@ final class ContractTest extends TestCase
     }
 
     #[DataProvider('errors')]
-    public function test_an_error_fixture_s_answer_maps_to_its_exception_deferred_or_not(string $file): void
+    public function test_an_error_fixture_s_answer_maps_to_its_exception(string $file): void
     {
         $fixture = Harness::load($file);
         $body = Spec::at($fixture, 'response', 'body', 'json');
@@ -109,22 +100,6 @@ final class ContractTest extends TestCase
         self::assertSame(Harness::comparable(Harness::phpResult(Spec::at($fixture, 'result'))), Harness::comparable(Harness::projectError($error)));
     }
 
-    public function test_the_deferred_list_names_only_real_fixtures(): void
-    {
-        self::assertSame([], array_diff(Harness::DEFERRED_FIXTURES, Harness::fixtures()));
-    }
-
-    #[DataProvider('deferred')]
-    public function test_a_deferred_fixture_can_t_replay_yet(string $file): void
-    {
-        try {
-            Harness::replay(Harness::load($file));
-            self::fail("{$file} replays now: take it off DEFERRED_FIXTURES.");
-        } catch (\LogicException|NeuronAIException $error) {
-            self::assertMatchesRegularExpression('/is not on the client|later version/', $error->getMessage());
-        }
-    }
-
     #[DataProvider('phpPaths')]
     public function test_every_method_exists(string $path): void
     {
@@ -133,7 +108,7 @@ final class ContractTest extends TestCase
 
     public function test_a_fixture_replays_for_every_operation(): void
     {
-        $replayed = array_unique(array_map(static fn(string $file): string => explode('/', $file)[0], array_diff(Harness::fixtures(), Harness::DEFERRED_FIXTURES)));
+        $replayed = array_unique(array_map(static fn(string $file): string => explode('/', $file)[0], Harness::fixtures()));
         foreach (array_keys((array) Spec::at(Spec::read('operations.json'), 'operations')) as $operationId) {
             self::assertContains((string) $operationId, $replayed);
         }
@@ -196,6 +171,13 @@ final class ContractTest extends TestCase
                 self::assertSame($message, $error->getMessage());
             }
         }
+    }
+
+    public function test_project_stream_wants_a_stream(): void
+    {
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage("A call with 'stream' => true should return a stream, not Naiuz\\Types\\Voice.");
+        Harness::projectStream(Voice::from(['id' => 'v', 'name' => 'V', 'language' => 'uz', 'tags' => [], 'type' => 'stock']));
     }
 
     public function test_comparable_drops_nulls_and_tells_a_boolean_from_a_number(): void

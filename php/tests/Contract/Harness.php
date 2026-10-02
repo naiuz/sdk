@@ -9,6 +9,7 @@ use Naiuz\Exceptions\APIException;
 use Naiuz\Exceptions\RateLimitException;
 use Naiuz\NeuronAI;
 use Naiuz\Page;
+use Naiuz\Stream;
 use Naiuz\Tests\Support\FormParser;
 use Naiuz\Tests\Support\MockClient;
 use Naiuz\Tests\Support\Spec;
@@ -33,15 +34,6 @@ final class Harness
     public const PAGE_OPERATIONS = ['listVoices', 'listApiKeys'];
 
     public const AUDIO_OPERATIONS = ['synthesizeSpeech', 'synthesizeDialogue', 'downloadTtsJobAudio'];
-
-    /**
-     * Fixtures this version of the SDK can't replay yet: streamed chat comes in a later version. When one starts to
-     * replay, a test fails until it leaves this list.
-     */
-    public const DEFERRED_FIXTURES = [
-        'createChatCompletion/stream-error.json',
-        'createChatCompletion/streamed.json',
-    ];
 
     /**
      * Every fixture file under spec/fixtures, as `<operationId>/<name>.json`, sorted.
@@ -161,6 +153,7 @@ final class Harness
         $content = match (true) {
             is_array($body) && array_key_exists('json', $body) => json_encode($body['json'], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
             is_array($body) && array_key_exists('base64', $body) => (string) base64_decode(Spec::text($body['base64']), true),
+            is_array($body) && array_key_exists('sse', $body) => implode('', array_map(static fn(string $data): string => "data: {$data}\n\n", Spec::strings($body['sse']))),
             default => '',
         };
         $headers = array_map(strval(...), array_filter((array) Spec::at($fixture, 'response', 'headers'), is_string(...)));
@@ -169,8 +162,9 @@ final class Harness
     }
 
     /**
-     * Replays a fixture through a client whose HTTP client answers each request with the fixture's response. Throws
-     * \LogicException when the client has no method for the operation.
+     * Replays a fixture through a client whose HTTP client answers each request with the fixture's response; a call
+     * with `'stream' => true` is read to its end. Throws \LogicException when the client has no method for the
+     * operation.
      *
      * @param array<mixed> $fixture
      */
@@ -182,12 +176,36 @@ final class Harness
         $path = self::phpPath($operationId);
         $method = self::method(self::client($api), $path) ?? throw new \LogicException("client->{$path} is not on the client");
         try {
-            $result = self::projectResult($operationId, $method(...self::arguments($fixture)));
+            $value = $method(...self::arguments($fixture));
+            $result = Spec::at($fixture, 'call', 'params', 'stream') === true ? self::projectStream($value) : self::projectResult($operationId, $value);
         } catch (APIException $error) {
             $result = self::projectError($error);
         }
 
         return new Replayed($api->requests, $result);
+    }
+
+    /**
+     * A stream in the README's shape: `{chunks}`, each chunk before `[DONE]` as the stream gives it, and `error` beside
+     * the chunks before it when the stream fails part-way. A value that isn't a stream throws.
+     *
+     * @return array<string, mixed>
+     */
+    public static function projectStream(mixed $value): array
+    {
+        if (!$value instanceof Stream) {
+            throw new \LogicException("A call with 'stream' => true should return a stream, not " . get_debug_type($value) . '.');
+        }
+        $chunks = [];
+        try {
+            foreach ($value as $chunk) {
+                $chunks[] = $chunk instanceof ApiObject ? $chunk->toArray() : throw new \LogicException('A chunk should be an object the API sent.');
+            }
+        } catch (APIException $error) {
+            return ['chunks' => $chunks, ...self::projectError($error)];
+        }
+
+        return ['chunks' => $chunks];
     }
 
     /**
