@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Naiuz\Tests;
 
 use Naiuz\Resources\Account;
+use Naiuz\Resources\ApiKeys;
 use Naiuz\Resources\TtsJobs;
 use Naiuz\Resources\Voices;
 use Naiuz\Tests\Support\Spec;
@@ -22,6 +23,9 @@ final class RequestTypesTest extends TestCase
         yield 'ListVoicesParams' => [Voices::class, 'ListVoicesParams'];
         yield 'UpdateVoiceRequest' => [Voices::class, 'UpdateVoiceRequest'];
         yield 'SynthesizeSpeechRequest' => [TtsJobs::class, 'SynthesizeSpeechRequest'];
+        yield 'ListApiKeysParams' => [ApiKeys::class, 'ListApiKeysParams'];
+        yield 'CreateApiKeyRequest' => [ApiKeys::class, 'CreateApiKeyRequest'];
+        yield 'UpdateApiKeyRequest' => [ApiKeys::class, 'UpdateApiKeyRequest'];
     }
 
     /** @param class-string $class */

@@ -6,6 +6,7 @@ namespace Naiuz;
 
 use Naiuz\Core\HttpClient;
 use Naiuz\Resources\AccountWithRawResponse;
+use Naiuz\Resources\ApiKeysWithRawResponse;
 use Naiuz\Resources\TtsWithRawResponse;
 use Naiuz\Resources\VoicesWithRawResponse;
 
@@ -24,11 +25,15 @@ final readonly class NeuronAIWithRawResponse
     /** Text to speech. */
     public TtsWithRawResponse $tts;
 
+    /** Your organization's API keys. */
+    public ApiKeysWithRawResponse $apiKeys;
+
     /** @internal */
     public function __construct(HttpClient $http)
     {
         $this->account = new AccountWithRawResponse($http);
         $this->voices = new VoicesWithRawResponse($http);
         $this->tts = new TtsWithRawResponse($http);
+        $this->apiKeys = new ApiKeysWithRawResponse($http);
     }
 }
