@@ -14,6 +14,18 @@ function canonical(value) {
     return value;
 }
 
+/**
+ * A call's form fields as every SDK sends them: in each string, and each
+ * string of a list, a lone CR, a lone LF and a CRLF all go as CRLF, the way an
+ * HTML form encodes text.
+ */
+function asFormText(value) {
+    if (typeof value === "string") return value.replace(/\r\n|\r|\n/g, "\r\n");
+    if (Array.isArray(value)) return value.map(asFormText);
+    if (value !== null && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([name, item]) => [name, asFormText(item)]));
+    return value;
+}
+
 function sameJson(a, b) {
     return JSON.stringify(canonical(a)) === JSON.stringify(canonical(b));
 }
@@ -211,7 +223,7 @@ export function createValidator({document, operations, fixtureSchema}) {
         const {fields, files} = body.multipart;
         const asForm = {...fields, ...Object.fromEntries(Object.keys(files).map((name) => [name, "(file)"]))};
         problems.push(...against(`${requestBody.pointer}/content/multipart~1form-data/schema`, asForm, "request.body.multipart"));
-        if (!sameJson(fields, params)) problems.push("request.body.multipart.fields must equal call.params");
+        if (!sameJson(fields, asFormText(params))) problems.push("request.body.multipart.fields must equal call.params, each line break as CRLF");
         if (!sameJson(files, fixture.call.files ?? {})) problems.push("request.body.multipart.files must equal call.files");
         for (const [name, file] of Object.entries(files)) if (!BASE64.test(file.base64)) problems.push(`request.body.multipart.files.${name}.base64 is not base64`);
         return problems;

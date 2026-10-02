@@ -1,0 +1,81 @@
+{
+  "description": "A transcript written with LF, CR and CRLF line breaks: the form sends each one as CRLF, as an HTML form does.",
+  "operationId": "createVoice",
+  "call": {
+    "params": {
+      "name": "Office voice",
+      "language": "uz",
+      "ref_text": "Salom.\nMen sizga yordam beraman.\rRahmat.\r\nXayr."
+    },
+    "files": {
+      "ref_audio": {
+        "filename": "sample.wav",
+        "content_type": "audio/wav",
+        "base64": "UklGRiQAAABXQVZFZm10IBAAAAABAAEAgD4AAAB9AAACABAAZGF0YQAAAAA="
+      }
+    },
+    "options": {
+      "idempotency_key": "fx-voice-2"
+    }
+  },
+  "request": {
+    "method": "POST",
+    "path": "/tts/voices",
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key",
+      "content-type": "multipart/form-data",
+      "idempotency-key": "fx-voice-2"
+    },
+    "body": {
+      "multipart": {
+        "fields": {
+          "name": "Office voice",
+          "language": "uz",
+          "ref_text": "Salom.\r\nMen sizga yordam beraman.\r\nRahmat.\r\nXayr."
+        },
+        "files": {
+          "ref_audio": {
+            "filename": "sample.wav",
+            "content_type": "audio/wav",
+            "base64": "UklGRiQAAABXQVZFZm10IBAAAAABAAEAgD4AAAB9AAACABAAZGF0YQAAAAA="
+          }
+        }
+      }
+    }
+  },
+  "response": {
+    "status": 201,
+    "headers": {
+      "content-type": "application/json",
+      "x-request-id": "00000000-0000-4000-8000-000000000034"
+    },
+    "body": {
+      "json": {
+        "data": {
+          "id": "01j9zq8m4r2k5t7w9y1b3d5f8j",
+          "name": "Office voice",
+          "language": "uz",
+          "tags": [],
+          "type": "custom",
+          "category": null,
+          "ref_text": "Salom.\r\nMen sizga yordam beraman.\r\nRahmat.\r\nXayr.",
+          "created_at": "2026-09-20T08:30:00Z"
+        },
+        "request_id": "00000000-0000-4000-8000-000000000034"
+      }
+    }
+  },
+  "result": {
+    "data": {
+      "id": "01j9zq8m4r2k5t7w9y1b3d5f8j",
+      "name": "Office voice",
+      "language": "uz",
+      "tags": [],
+      "type": "custom",
+      "category": null,
+      "ref_text": "Salom.\r\nMen sizga yordam beraman.\r\nRahmat.\r\nXayr.",
+      "created_at": "2026-09-20T08:30:00Z"
+    },
+    "request_id": "00000000-0000-4000-8000-000000000034"
+  }
+}

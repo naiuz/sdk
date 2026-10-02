@@ -323,3 +323,12 @@ test("34. unknown_fields must be left out of the fixture's own result, not just 
         f.result.meta = {deprecated: false};
     }), /unknown_fields names \/meta, but fixture\.result still has it/);
 });
+
+test("35. a multipart text field goes with each line break as CRLF, however the caller wrote it", () => {
+    const multiline = (sent) => edit(clone(), (f) => {
+        f.call.params.ref_text = "one\ntwo\rthree\r\nfour";
+        f.request.body.multipart.fields.ref_text = sent;
+    });
+    assert.deepEqual(validate(multiline("one\r\ntwo\r\nthree\r\nfour")), []);
+    expectProblem(multiline("one\ntwo\rthree\r\nfour"), /request\.body\.multipart\.fields must equal call\.params, each line break as CRLF/);
+});
