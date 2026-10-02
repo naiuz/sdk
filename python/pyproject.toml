@@ -68,12 +68,12 @@ select = ["E", "W", "F", "I", "B", "UP", "SIM", "C4", "PT", "RUF", "ASYNC"]
 exclude = ["src/naiuz/_sync/**", "tests/_sync/**"]
 
 [tool.pyright]
-include = ["src", "tests", "scripts", "smoke"]
+include = ["src", "tests", "scripts", "smoke", "examples"]
 extraPaths = ["scripts"]
 typeCheckingMode = "strict"
 
 [tool.mypy]
 strict = true
-files = ["src", "tests", "scripts", "smoke"]
+files = ["src", "tests", "scripts", "smoke", "examples"]
 mypy_path = ["src", "scripts"]
 explicit_package_bases = true
