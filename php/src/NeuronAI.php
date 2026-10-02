@@ -11,6 +11,8 @@ use Naiuz\Core\Params;
 use Naiuz\Core\Transport\Transports;
 use Naiuz\Exceptions\NeuronAIException;
 use Naiuz\Resources\Account;
+use Naiuz\Resources\Tts;
+use Naiuz\Resources\Voices;
 use Psr\Http\Client\ClientInterface;
 
 /**
@@ -48,6 +50,12 @@ final readonly class NeuronAI
 
     /** Your organization's balance and usage. */
     public Account $account;
+
+    /** Stock voices and your organization's voice clones. */
+    public Voices $voices;
+
+    /** Text to speech. */
+    public Tts $tts;
 
     private HttpClient $http;
 
@@ -88,6 +96,8 @@ final readonly class NeuronAI
         $key = Options::apiKey($options['api_key'] ?? null);
         $this->http = new HttpClient($key, $this->base_url, $this->timeout, $this->max_retries, $defaultHeaders, Options::userAgent(), $transport, $requests, $streams);
         $this->account = new Account($this->http);
+        $this->voices = new Voices($this->http);
+        $this->tts = new Tts($this->http);
     }
 
     /** The client's resources, each method returning a RawResponse: its result with the answer's status and headers. */
