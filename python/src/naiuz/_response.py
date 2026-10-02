@@ -17,9 +17,11 @@ import pydantic
 from ._errors import APIError, NeuronAIError, make_api_error
 from ._models import COST, REQUEST_ID, BaseModel
 from ._retry import AttemptFailure
+from .types.audio import DialogueAudio, DialogueTurnTiming, SpeechAudio
 
 T = TypeVar("T")
 M = TypeVar("M", bound=BaseModel)
+A = TypeVar("A", bound=SpeechAudio)
 
 
 @dataclass(frozen=True)
@@ -129,6 +131,64 @@ def read_page(model: type[M]) -> Reader[PageData[M]]:
 
 def read_nothing(answer: Answer) -> None:
     """Reads a 204 answer: nothing."""
+
+
+_INTEGER = re.compile(r"[+-]?\d{1,15}")
+
+
+def int_header(headers: httpx.Headers, name: str) -> int | None:
+    """A header as a whole number, or None when it is absent or isn't one."""
+    text = (headers.get(name) or "").strip()
+    return int(text) if _INTEGER.fullmatch(text) else None
+
+
+def flag_header(headers: httpx.Headers, name: str) -> bool:
+    """A header as a flag: true only for `1`."""
+    return (headers.get(name) or "").strip() == "1"
+
+
+def _turns(header: str | None) -> list[DialogueTurnTiming]:
+    """The turns an `X-Turns` header lists; none when it is absent, or isn't a JSON list of turn timings."""
+    try:
+        turns: object = json.loads(header or "")
+    except ValueError:
+        return []
+    if not isinstance(turns, list):
+        return []
+    with contextlib.suppress(pydantic.ValidationError):
+        return [DialogueTurnTiming.model_validate(turn) for turn in cast("list[object]", turns)]
+    return []
+
+
+def _read_audio(answer: Answer, kind: type[A], **dialogue: Any) -> A:
+    """An audio answer as `kind`: the WAV, and the fields its headers give. A success that isn't audio, such as a
+    proxy's or a captive portal's page, raises APIError with its status and the start of its body, the key redacted."""
+    headers = answer.headers
+    if not headers.get("content-type", "").strip().lower().startswith("audio/"):
+        raise _unusable(answer)
+    return kind(
+        audio=answer.content,
+        content_type=headers.get("content-type", "audio/wav"),
+        cost=number_header(headers, "x-cost"),
+        character_count=int_header(headers, "x-character-count"),
+        balance=number_header(headers, "x-balance"),
+        voice_custom=flag_header(headers, "x-voice-custom"),
+        latency_ms=number_header(headers, "x-latency-ms"),
+        replayed=flag_header(headers, "idempotency-replayed"),
+        request_id=headers.get("x-request-id"),
+        **dialogue,
+    )
+
+
+def read_speech_audio(answer: Answer) -> SpeechAudio:
+    """Reads a speech answer: the WAV and what its headers say about it."""
+    return _read_audio(answer, SpeechAudio)
+
+
+def read_dialogue_audio(answer: Answer) -> DialogueAudio:
+    """Reads a dialogue answer: the WAV, its headers, and where each turn sits in it."""
+    turns = _turns(answer.headers.get("x-turns"))
+    return _read_audio(answer, DialogueAudio, turns=turns, turn_count=int_header(answer.headers, "x-turn-count"))
 
 
 @dataclass(frozen=True)

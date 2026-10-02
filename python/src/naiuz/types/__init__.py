@@ -9,6 +9,7 @@ from .api_keys import (
     CreateApiKeyRequest,
     UpdateApiKeyRequest,
 )
+from .audio import DialogueAudio, DialogueTurnTiming, SpeechAudio
 from .chat import (
     ChatCompletion,
     ChatCompletionChoice,
@@ -49,6 +50,8 @@ __all__ = [
     "CreateApiKeyRequest",
     "CreateChatCompletionRequest",
     "CreateEmbeddingRequest",
+    "DialogueAudio",
+    "DialogueTurnTiming",
     "Embedding",
     "EmbeddingResponse",
     "EmbeddingUsage",
@@ -64,6 +67,7 @@ __all__ = [
     "RerankResponse",
     "RerankResult",
     "RerankUsage",
+    "SpeechAudio",
     "SpeechLanguage",
     "SpeechQuality",
     "SynthesizeSpeechRequest",
