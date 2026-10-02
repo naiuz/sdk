@@ -15,6 +15,7 @@ use Naiuz\Tests\Support\FormParser;
 use Naiuz\Tests\Support\LocalServer;
 use Naiuz\Types\VoiceCategory;
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 
 final class UploadsTest extends TestCase
 {
@@ -155,6 +156,22 @@ final class UploadsTest extends TestCase
         try {
             $this->expectException(NeuronAIException::class);
             $this->expectExceptionMessage("file couldn't be read from /nonexistent/clip.wav: Failed to open stream: No such file or directory");
+            Upload::read('file', '/nonexistent/clip.wav');
+        } finally {
+            restore_error_handler();
+        }
+    }
+
+    #[RunInSeparateProcess]
+    public function test_an_error_handler_that_throws_on_warnings_never_sees_a_path_open_basedir_refuses(): void
+    {
+        // Shared hosts often set open_basedir, and PHP warns for each file call on a path outside it. It can only be
+        // tightened, so this test runs in a process of its own.
+        ini_set('open_basedir', implode(PATH_SEPARATOR, [dirname(__DIR__), sys_get_temp_dir()]));
+        set_error_handler(static fn(int $level, string $message): never => throw new \ErrorException($message, 0, $level));
+        try {
+            $this->expectException(NeuronAIException::class);
+            $this->expectExceptionMessage("file couldn't be read from /nonexistent/clip.wav: open_basedir restriction in effect");
             Upload::read('file', '/nonexistent/clip.wav');
         } finally {
             restore_error_handler();

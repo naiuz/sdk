@@ -21,11 +21,14 @@ final class Files
      */
     public static function read(string $path): string
     {
-        if (is_dir($path)) {
-            throw new \RuntimeException('Is a directory');
-        }
+        // The directory check is a file call too: open_basedir, for one, makes it warn.
+        return self::quietly(static function () use ($path): string|false {
+            if (is_dir($path)) {
+                throw new \RuntimeException('Is a directory');
+            }
 
-        return self::quietly(static fn(): string|false => file_get_contents($path));
+            return file_get_contents($path);
+        });
     }
 
     /**
