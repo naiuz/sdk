@@ -45,3 +45,23 @@ jobs:
       - run: uv run pytest smoke
         env:
           NEURONAI_SMOKE_API_KEY: ${{ secrets.NEURONAI_SMOKE_API_KEY }}
+
+  php:
+    name: PHP SDK
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: php
+    steps:
+      - uses: actions/checkout@v7
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.5"
+          coverage: none
+          tools: composer:v2
+      - run: composer install --no-interaction --no-progress
+      # Every test is skipped when the secret isn't set.
+      - run: vendor/bin/phpunit --testsuite smoke
+        env:
+          NEURONAI_SMOKE_API_KEY: ${{ secrets.NEURONAI_SMOKE_API_KEY }}

@@ -39,7 +39,7 @@ final class ScaffoldTest extends TestCase
 
     public function test_a_packagist_download_holds_the_library_and_leaves_out_the_tests_and_tools(): void
     {
-        $ignored = ['.gitattributes', '.gitignore', '.php-cs-fixer.dist.php', 'composer.lock', 'phpstan.neon.dist', 'phpunit.xml.dist', 'tests'];
+        $ignored = ['.gitattributes', '.gitignore', '.php-cs-fixer.dist.php', 'composer.lock', 'phpstan.neon.dist', 'phpunit.xml.dist', 'smoke', 'tests'];
         $kept = ['LICENSE', 'composer.json', 'src'];
         $process = proc_open(['git', '-C', self::PHP_DIR, 'check-attr', 'export-ignore', '--', ...$ignored, ...$kept], [1 => ['pipe', 'w']], $pipes);
         self::assertIsResource($process);

@@ -13,10 +13,15 @@
          failOnNotice="true"
          failOnPhpunitDeprecation="true"
          failOnRisky="true"
-         failOnWarning="true">
+         failOnWarning="true"
+         defaultTestSuite="default">
     <testsuites>
         <testsuite name="default">
             <directory>tests</directory>
+        </testsuite>
+        <!-- The live API, run only when named: every test is skipped without NEURONAI_SMOKE_API_KEY. -->
+        <testsuite name="smoke">
+            <directory>smoke</directory>
         </testsuite>
     </testsuites>
     <source>

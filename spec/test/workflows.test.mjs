@@ -99,8 +99,21 @@ test("the Python SDK's smoke tests run on their own, with the key in their step'
     assert.match(smoke, /working-directory: python\n/);
     assert.match(smoke, /run: uv sync --locked\n/);
     assert.match(smoke, /run: uv run pytest smoke\n\s+env:\n\s+NEURONAI_SMOKE_API_KEY: \$\{\{ secrets\.NEURONAI_SMOKE_API_KEY \}\}\n/);
+});
+
+test("the PHP SDK's smoke tests run on their own, apart from its unit tests, with the key in their step's env alone", async () => {
+    const smoke = await read("smoke.yml");
+    assert.match(smoke, /name: PHP SDK\n\s+runs-on: ubuntu-latest\n\s+timeout-minutes: 15\n/);
+    assert.match(smoke, /working-directory: php\n/);
+    assert.match(smoke, /php-version: "8\.5"\n\s+coverage: none\n/);
+    assert.match(smoke, /run: composer install --no-interaction --no-progress\n/);
+    assert.match(smoke, /run: vendor\/bin\/phpunit --testsuite smoke\n\s+env:\n\s+NEURONAI_SMOKE_API_KEY: \$\{\{ secrets\.NEURONAI_SMOKE_API_KEY \}\}\n/);
+});
+
+test("each SDK's smoke suite gets the key in its own step's env, and nothing else sees it", async () => {
+    const smoke = await read("smoke.yml");
     // One mention per suite's step: never in a job's or the workflow's env, where every step would see it.
-    assert.equal(smoke.match(/secrets\.NEURONAI_SMOKE_API_KEY/g)?.length, 2);
+    assert.equal(smoke.match(/secrets\.NEURONAI_SMOKE_API_KEY/g)?.length, 3);
 });
 
 test("the drift job runs daily and on demand, and only reports drift as drift", async () => {
