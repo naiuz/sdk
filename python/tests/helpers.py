@@ -8,10 +8,15 @@ import re
 import socket
 import threading
 import time
+import traceback
 from collections.abc import Callable, Generator
 from datetime import datetime, timezone
+from pathlib import Path
+from types import FrameType
 
 import httpx
+
+import naiuz
 
 KEY = "nai_unit_test_key"
 """The key every unit test's client sends."""
@@ -98,6 +103,20 @@ def reset() -> httpx.ReadError:
 def body_of(request: httpx.Request) -> object:
     """A request's JSON body, parsed; None when it has none."""
     return json.loads(request.content) if request.content else None
+
+
+def sdk_frames(error: BaseException) -> list[FrameType]:
+    """The frames of the SDK's own code that an error, and each error it was raised from, passed through."""
+    package = Path(naiuz.__file__).parent
+    frames: list[FrameType] = []
+    seen: set[int] = set()
+    current: BaseException | None = error
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        walked = traceback.walk_tb(current.__traceback__)
+        frames += [frame for frame, _ in walked if Path(frame.f_code.co_filename).is_relative_to(package)]
+        current = current.__cause__ or current.__context__
+    return frames
 
 
 @contextlib.contextmanager

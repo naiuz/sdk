@@ -28,6 +28,7 @@ HAND_WRITTEN = "_io.py"
 """The file each side writes by hand: it is never generated, and never reported as stale."""
 
 RENAMES = {
+    "AsyncByteStream": "SyncByteStream",
     "AsyncPaginator": "Page",
     "StopAsyncIteration": "StopIteration",
     "__aenter__": "__enter__",
@@ -43,6 +44,14 @@ RENAMES = {
     "asynccontextmanager": "contextmanager",
 }
 """Names the sync code spells differently. Any other name that starts with `Async` and a capital loses the prefix."""
+
+REFUSED = {
+    "AsyncMock": (
+        "AsyncMock has no sync twin: Mock, its sync spelling, answers an assert_awaited_* call with another mock, "
+        "so the check passes without checking anything. Write the test without it."
+    ),
+}
+"""Names the async code may not use, since their sync spelling would quietly change what the code does."""
 
 PREFIXED = re.compile(r"Async([A-Z]\w*)")
 IDENTIFIER = re.compile(r"[A-Za-z_]\w*")
@@ -60,13 +69,18 @@ def rename(name: str) -> str:
 
 
 def unasync(source: str) -> str:
-    """The sync twin of one async module's source."""
+    """The sync twin of one async module's source. A name in REFUSED raises ValueError, naming its line."""
     starts = [0]
     for line in source.splitlines(keepends=True):
         starts.append(starts[-1] + len(line))
 
     def offset(position: tuple[int, int]) -> int:
         return starts[position[0] - 1] + position[1]
+
+    def renamed(token: tokenize.TokenInfo, name: str) -> str:
+        if name in REFUSED:
+            raise ValueError(f"line {token.start[0]}: {REFUSED[name]}")
+        return rename(name)
 
     tokens = list(tokenize.generate_tokens(StringIO(source).readline))
     edits: list[tuple[int, int, str]] = []
@@ -83,13 +97,13 @@ def unasync(source: str) -> str:
             # Drop the keyword and the space after it, so `await x` becomes `x`.
             upto = following.start if following.start[0] == token.end[0] else token.end
             edits.append((offset(token.start), offset(upto), ""))
-        elif token.type == tokenize.NAME and rename(token.string) != token.string:
-            edits.append((offset(token.start), offset(token.end), rename(token.string)))
+        elif token.type == tokenize.NAME and (name := renamed(token, token.string)) != token.string:
+            edits.append((offset(token.start), offset(token.end), name))
         elif token.type == tokenize.STRING and IDENTIFIER.fullmatch(token.string[1:-1]):
             # A name in quotes, such as a forward reference, is a name too.
-            renamed = token.string[0] + rename(token.string[1:-1]) + token.string[-1]
-            if renamed != token.string:
-                edits.append((offset(token.start), offset(token.end), renamed))
+            quoted = token.string[0] + renamed(token, token.string[1:-1]) + token.string[-1]
+            if quoted != token.string:
+                edits.append((offset(token.start), offset(token.end), quoted))
     for start, end, text in reversed(edits):
         source = source[:start] + text + source[end:]
     return source
@@ -104,9 +118,12 @@ def expected() -> dict[Path, str]:
         for path in sorted((ROOT / async_dir).rglob("*.py")):
             if path.name == HAND_WRITTEN:
                 continue
-            relative = path.relative_to(ROOT / async_dir)
-            header = HEADER.format(source=(Path(async_dir) / relative).as_posix())
-            files[ROOT / sync_dir / relative] = header + unasync(path.read_text(encoding="utf-8"))
+            source = (Path(async_dir) / path.relative_to(ROOT / async_dir)).as_posix()
+            try:
+                text = unasync(path.read_text(encoding="utf-8"))
+            except ValueError as error:
+                raise ValueError(f"{source}, {error}") from None
+            files[ROOT / sync_dir / path.relative_to(ROOT / async_dir)] = HEADER.format(source=source) + text
     return files
 
 
@@ -140,7 +157,15 @@ def write() -> list[str]:
 
 
 def main(arguments: list[str]) -> int:
-    """Writes the sync code; with `--check`, reports what is stale instead."""
+    """Writes the sync code; with `--check`, reports what is stale instead. A refused name fails either."""
+    try:
+        return _run(arguments)
+    except ValueError as error:
+        print(f"error: {error}")
+        return 1
+
+
+def _run(arguments: list[str]) -> int:
     if arguments == ["--check"]:
         problems = stale()
         for problem in problems:

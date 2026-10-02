@@ -74,18 +74,18 @@ class AsyncHttpClient:
         options = request.options
         timeout = check_timeout(self._timeout if options.timeout is None else options.timeout)
         max_retries = check_max_retries(self._max_retries if options.max_retries is None else options.max_retries)
-        headers = build_headers(
-            api_key=self._api_key,
-            user_agent=self._user_agent,
-            default_headers=self._default_headers,
-            request=request,
-        )
-        # Built once, so every retry sends the same Idempotency-Key and the same body.
+        # Built once, so every retry sends the same Idempotency-Key and the same body. The headers go straight in, so
+        # no local of this frame holds the key for an error tracker that records locals.
         http_request = self._client.build_request(
             request.method,
             build_url(self._base_url, request.path, request.path_params),
             params=query_items(request.query),
-            headers=headers,
+            headers=build_headers(
+                api_key=self._api_key,
+                user_agent=self._user_agent,
+                default_headers=self._default_headers,
+                request=request,
+            ),
             content=None if isinstance(request.body, NotGiven) else json_body(request.body),
             timeout=attempt_timeout(timeout),
         )

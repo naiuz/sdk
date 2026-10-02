@@ -32,6 +32,7 @@ from tests.helpers import (
     no_content,
     refused,
     reset,
+    sdk_frames,
 )
 
 from ._io import Body, answer
@@ -421,3 +422,16 @@ async def test_the_api_key_is_redacted_from_an_error_whose_body_echoes_it_back()
         await http.request(balance, read_item)
     assert caught.value.message == "Bad Gateway: <pre>Authorization: Bearer [redacted]</pre>"
     assert KEY not in printed(caught.value)
+
+
+async def test_no_frame_of_the_sdk_that_an_error_passes_through_holds_the_key() -> None:
+    """An error tracker that records each frame's locals, as many do, must never record the key."""
+    replies: list[Reply] = [api_error(404, "not_found"), refused(), answer(Body(b"{", gap=0.02, forever=True))]
+    for reply in replies:
+        http, _ = http_client(MockAPI(reply), timeout=0.2, max_retries=0)
+        with pytest.raises(NeuronAIError) as caught:
+            await http.request(balance, read_item)
+        frames = sdk_frames(caught.value)
+        assert frames
+        for frame in frames:
+            assert KEY not in repr(dict(frame.f_locals)), frame.f_code.co_name

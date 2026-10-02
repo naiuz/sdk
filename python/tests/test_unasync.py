@@ -36,6 +36,7 @@ def test_it_renames_what_the_sync_code_spells_differently() -> None:
         "class AsyncVoices:\n"
         "    def __aiter__(self) -> AsyncIterator[Voice]: ...\n"
         "    async def __aenter__(self) -> 'AsyncVoices': ...\n"
+        "class Body(httpx.AsyncByteStream): ...\n"
     )
     assert unasync.unasync(source) == (
         "from naiuz._sync._http import HttpClient\n"
@@ -45,7 +46,17 @@ def test_it_renames_what_the_sync_code_spells_differently() -> None:
         "class Voices:\n"
         "    def __iter__(self) -> Iterator[Voice]: ...\n"
         "    def __enter__(self) -> 'Voices': ...\n"
+        "class Body(httpx.SyncByteStream): ...\n"
     )
+
+
+def test_it_refuses_async_mock_whose_sync_twin_would_check_nothing() -> None:
+    """AsyncMock would become Mock, on which an assert_awaited_* call is just another mock and checks nothing."""
+    with pytest.raises(ValueError, match=r"^line 2: AsyncMock has no sync twin"):
+        unasync.unasync("import unittest.mock\nmock = unittest.mock.AsyncMock()\n")
+    with pytest.raises(ValueError, match=r"^line 1: AsyncMock has no sync twin"):
+        unasync.unasync("Fake = 'AsyncMock'\n")
+    assert unasync.unasync('"""Never AsyncMock."""  # nor AsyncMock\n') == '"""Never AsyncMock."""  # nor AsyncMock\n'
 
 
 def test_it_leaves_other_names_strings_f_strings_and_comments_alone() -> None:
@@ -91,3 +102,12 @@ def test_check_reports_a_twin_edited_by_hand_and_one_without_a_source(tree: Path
     unasync.main([])
     assert not (tree / "src/naiuz/_sync/_gone.py").exists()
     assert unasync.stale() == []
+
+
+def test_the_script_names_the_file_and_line_of_a_refused_name(tree: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    (tree / "src/naiuz/_async/_page.py").write_text("async def first(): ...\nfrom unittest.mock import AsyncMock\n")
+    assert unasync.main(["--check"]) == 1
+    assert unasync.main([]) == 1
+    printed = capsys.readouterr().out.splitlines()
+    assert printed == [f"error: src/naiuz/_async/_page.py, line 2: {unasync.REFUSED['AsyncMock']}"] * 2
+    assert not (tree / "src/naiuz/_sync/_page.py").exists()
