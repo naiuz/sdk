@@ -1,0 +1,42 @@
+{
+    "name": "naiuz/sdk",
+    "description": "The official PHP client for the NeuronAI API.",
+    "type": "library",
+    "license": "MIT",
+    "require": {
+        "php": "^8.2",
+        "php-http/discovery": "^1.20",
+        "psr/http-client": "^1.0",
+        "psr/http-factory": "^1.1"
+    },
+    "require-dev": {
+        "friendsofphp/php-cs-fixer": "^3.95",
+        "guzzlehttp/guzzle": "^7.9 || ^8.0",
+        "phpstan/phpstan": "^2.2",
+        "phpstan/phpstan-phpunit": "^2.0",
+        "phpunit/phpunit": "^11.5",
+        "symfony/http-client": "^7.4"
+    },
+    "suggest": {
+        "guzzlehttp/guzzle": "The HTTP client the SDK builds when you pass none: each attempt's timeout then covers the whole answer."
+    },
+    "autoload": {
+        "psr-4": {
+            "Naiuz\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Naiuz\\Tests\\": "tests/"
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "php-http/discovery": false
+        },
+        "platform": {
+            "php": "8.2.0"
+        },
+        "sort-packages": true
+    }
+}

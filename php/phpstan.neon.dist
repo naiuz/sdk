@@ -1,0 +1,12 @@
+includes:
+    - vendor/phpstan/phpstan-phpunit/extension.neon
+    - vendor/phpstan/phpstan-phpunit/rules.neon
+
+parameters:
+    level: max
+    paths:
+        - src
+        - tests
+    # The SDK checks at runtime what its docblocks promise, for callers who don't run PHPStan, so a docblock type is a
+    # promise to the caller, not a fact about the value.
+    treatPhpDocTypesAsCertain: false
