@@ -180,18 +180,19 @@ final class TransportsTest extends TestCase
         self::assertSame([[true, false], [false, true], [false, false], [true, true]], $outcomes);
     }
 
-    public function test_symfony_gets_each_attempt_s_timeout_and_a_bound_on_the_whole_answer(): void
+    public function test_symfony_gets_each_attempt_s_timeout_a_bound_on_the_whole_answer_and_no_redirects(): void
     {
         $seen = [];
         $mock = new MockHttpClient(static function (string $method, string $url, array $options) use (&$seen): MockResponse {
-            $seen[] = [$options['timeout'] ?? null, $options['max_duration'] ?? null];
+            $seen[] = [$options['timeout'] ?? null, $options['max_duration'] ?? null, $options['max_redirects'] ?? null];
 
             return new MockResponse('{}', ['http_code' => 200]);
         });
         $transport = new SymfonyTransport(new SymfonyClient($mock));
         $transport->fetch(self::request(), 0.25);
         $transport->open(self::request(), 0.3);
-        self::assertSame([[0.25, 0.25], [0.3, 0.0]], $seen);
+        // As Guzzle's sendRequest() has it: a redirect comes back as the answer, which the core throws as APIException.
+        self::assertSame([[0.25, 0.25, 0], [0.3, 0.0, 0]], $seen);
     }
 
     public function test_guzzle_reads_a_stream_that_outlasts_the_timeout_while_pieces_keep_coming(): void

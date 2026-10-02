@@ -16,7 +16,8 @@ use Symfony\Contracts\HttpClient\Exception\TimeoutExceptionInterface;
 /**
  * Symfony HttpClient, through its PSR-18 client, given or made by the SDK. Each attempt sets the client's `timeout`
  * (the longest silence) and `max_duration` (the whole answer, its body included), which win over the client's own:
- * its default silence of `default_socket_timeout`, 60 seconds, would otherwise end a long call early.
+ * its default silence of `default_socket_timeout`, 60 seconds, would otherwise end a long call early. It follows no
+ * redirect (`max_redirects` 0), as Guzzle's `sendRequest()` has it: a redirect comes back as the answer.
  *
  * Symfony can't say whether a failed request was sent, so a failure is taken as possibly sent.
  *
@@ -31,12 +32,12 @@ final readonly class SymfonyTransport implements Transport
         $deadline = Clock::monotonic() + $timeout;
         $seconds = Clock::forClient($timeout);
 
-        return Body::answer($this->send($this->client->withOptions(['timeout' => $seconds, 'max_duration' => $seconds]), $request, $deadline), $deadline);
+        return Body::answer($this->send($this->client->withOptions(['timeout' => $seconds, 'max_duration' => $seconds, 'max_redirects' => 0]), $request, $deadline), $deadline);
     }
 
     public function open(#[\SensitiveParameter] RequestInterface $request, float $timeout): ResponseInterface
     {
-        return $this->send($this->client->withOptions(['timeout' => Clock::forClient($timeout), 'max_duration' => 0]), $request, Clock::monotonic() + $timeout);
+        return $this->send($this->client->withOptions(['timeout' => Clock::forClient($timeout), 'max_duration' => 0, 'max_redirects' => 0]), $request, Clock::monotonic() + $timeout);
     }
 
     private function send(Psr18Client $client, #[\SensitiveParameter] RequestInterface $request, float $deadline): ResponseInterface
