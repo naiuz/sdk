@@ -73,11 +73,16 @@ MAX_TIMEOUT = 2_147_483.647
 """The longest timeout, in seconds: the longest a JavaScript timer can wait, kept the same in every NeuronAI SDK."""
 
 
+def check_seconds(name: str, value: object) -> float:
+    """An option given in seconds, checked: a number more than 0 and at most MAX_TIMEOUT."""
+    if isinstance(value, bool) or not isinstance(value, int | float) or not 0 < value <= MAX_TIMEOUT:
+        raise NeuronAIError(f"{name} must be a number of seconds, more than 0 and at most {MAX_TIMEOUT}.")
+    return float(value)
+
+
 def check_timeout(value: object) -> float:
     """A timeout option, checked: a number of seconds, more than 0 and at most MAX_TIMEOUT."""
-    if isinstance(value, bool) or not isinstance(value, int | float) or not 0 < value <= MAX_TIMEOUT:
-        raise NeuronAIError(f"timeout must be a number of seconds, more than 0 and at most {MAX_TIMEOUT}.")
-    return float(value)
+    return check_seconds("timeout", value)
 
 
 def check_max_retries(value: object) -> int:

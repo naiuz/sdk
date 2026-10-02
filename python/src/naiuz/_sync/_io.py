@@ -60,6 +60,15 @@ def deadline(seconds: float) -> Generator[Deadline, None, None]:
     yield Deadline(_nothing)
 
 
+def within(seconds: float, call: T) -> T:
+    """The result of a call made already: the sync client can't abandon a call in flight.
+
+    A wait bounds each poll by passing it the time left as its timeout instead, so a poll in flight at the deadline
+    ends about then, or, on a connection that goes silent, within about that much more.
+    """
+    return call
+
+
 @final
 class TakeOver(Generic[T]):
     """A reader that takes the open answer over, instead of the core reading its whole body, as a stream does.

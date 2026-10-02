@@ -5,17 +5,30 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 
-from ..._request import NOT_GIVEN, APIRequest, NotGiven, RequestOptions, given
+from ..._errors import APIConnectionError, APIError, NeuronAIError, RateLimitError, WaitTimeoutError
+from ..._request import NOT_GIVEN, APIRequest, NotGiven, RequestOptions, check_seconds, given
 from ..._response import read_dialogue_audio, read_envelope, read_speech_audio
+from ..._retry import StatusFailure, is_retryable
 from ...types.audio import DialogueAudio, SpeechAudio
 from ...types.shared import SpeechLanguage, SpeechQuality
 from ...types.tts import DialogueTurn, TtsJob
 from .._http import HttpClient
-from .._io import to_raw
+from .._io import to_raw, within
 from .._resource import APIResource
 
 AUDIO = "audio/wav, application/json"
 """What the audio calls accept: the WAV, or an error in the API's JSON envelope."""
+
+FINAL = ("succeeded", "failed")
+"""The statuses a job never leaves."""
+
+
+def keeps_waiting(error: NeuronAIError) -> bool:
+    """Whether a failed poll lets a wait go on: a failure the safe class would retry, a connection error or a timeout,
+    or a 429, 500, 502, 503 or 504."""
+    if isinstance(error, APIConnectionError):
+        return True
+    return isinstance(error, APIError) and is_retryable("safe", StatusFailure(error.status, enveloped=True))
 
 
 class TtsJobs(APIResource):
@@ -93,6 +106,77 @@ class TtsJobs(APIResource):
         path = "/tts/jobs/{id}/audio"
         request = APIRequest("GET", path, "safe", path_params={"id": id}, accept=AUDIO, options=options)
         return self._http.request(request, read_speech_audio)
+
+    def create_and_wait(
+        self,
+        *,
+        text: str,
+        voice_id: str | NotGiven | None = NOT_GIVEN,
+        language: SpeechLanguage | NotGiven | None = NOT_GIVEN,
+        quality: SpeechQuality | NotGiven | None = NOT_GIVEN,
+        speed: float | NotGiven | None = NOT_GIVEN,
+        poll_interval: float = 2.0,
+        timeout: float = 600.0,
+        idempotency_key: str | None = None,
+        max_retries: int | None = None,
+        extra_headers: Mapping[str, str] | None = None,
+    ) -> TtsJob:
+        """Creates a job, polls it until it has `succeeded` or `failed`, and returns it in either state.
+
+        Check `status`, then fetch a succeeded job's WAV with `audio(job.id)`. A poll that fails with a connection
+        error, a timeout, or a 429, 500, 502, 503 or 504 doesn't end the wait: it is tried again at the next interval,
+        or after a 429's longer `retry_after`. Any other error raises at once. When `timeout` runs out first, it
+        raises WaitTimeoutError, which carries the job as last seen: the job may still finish. Pass your own
+        `idempotency_key`: calling again with it and the same text picks up the same job, instead of queuing and
+        billing a second one.
+
+        Args:
+            text: The text to speak, as `create` takes it, with `voice_id`, `language`, `quality` and `speed`.
+            poll_interval: Seconds between polls: 2 by default.
+            timeout: Seconds to wait for the job to finish, counted from when it is created: 600 (10 minutes) by
+                default. Each request keeps the client's own timeout, cut to the time left.
+            idempotency_key: The create's Idempotency-Key, at most 191 characters. None or "" sends a generated
+                UUIDv4.
+            max_retries: How many times the create may be retried. Each poll is one attempt: a failed one is tried
+                again at the next interval.
+            extra_headers: Headers for every request of the wait.
+        """
+        interval = check_seconds("poll_interval", poll_interval)
+        limit = check_seconds("timeout", timeout)
+        job = self.create(
+            text=text,
+            voice_id=voice_id,
+            language=language,
+            quality=quality,
+            speed=speed,
+            idempotency_key=idempotency_key,
+            max_retries=max_retries,
+            extra_headers=extra_headers,
+        )
+        deadline = self._http.monotonic() + limit
+        pause = interval
+        while job.status not in FINAL:
+            left = deadline - self._http.monotonic()
+            if left <= 0:
+                raise WaitTimeoutError(job)
+            self._http.sleep(min(pause, left))
+            left = deadline - self._http.monotonic()
+            if left <= 0:
+                raise WaitTimeoutError(job)
+            try:
+                poll = self.retrieve(
+                    job.id, timeout=min(self._http.timeout, left), max_retries=0, extra_headers=extra_headers
+                )
+                job = within(left, poll)
+                pause = interval
+            except TimeoutError:
+                raise WaitTimeoutError(job) from None
+            except NeuronAIError as error:
+                if not keeps_waiting(error):
+                    raise
+                waited = error.retry_after if isinstance(error, RateLimitError) else None
+                pause = interval if waited is None else max(interval, waited)
+        return job
 
 
 class TtsJobsWithRawResponse:

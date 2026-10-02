@@ -69,6 +69,19 @@ class AsyncHttpClient:
         self._monotonic = time.monotonic if monotonic is None else monotonic
         """The time for deadlines."""
 
+    @property
+    def timeout(self) -> float:
+        """Seconds each attempt may take, unless a call passes its own `timeout`."""
+        return self._timeout
+
+    def monotonic(self) -> float:
+        """The time, in seconds, for deadlines."""
+        return self._monotonic()
+
+    async def sleep(self, seconds: float) -> None:
+        """Waits, as the client waits between attempts."""
+        await self._sleep(seconds)
+
     async def request(self, request: APIRequest, reader: Reader[T] | _io.TakeOver[T]) -> T:
         """Sends the call, retrying as its class allows, and returns what `reader` makes of the answer."""
         options = request.options

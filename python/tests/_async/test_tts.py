@@ -1,9 +1,10 @@
 import json
+import time
 
 import httpx
 import pytest
 
-from naiuz import APIError, GoneError, InsufficientQuotaError
+from naiuz import APIError, AuthenticationError, GoneError, InsufficientQuotaError, NeuronAIError, WaitTimeoutError
 from naiuz.types import (
     DialogueAudio,
     DialogueTurn,
@@ -12,9 +13,10 @@ from naiuz.types import (
     SynthesizeSpeechRequest,
     TtsJob,
 )
-from tests.helpers import KEY, UUID_V4, MockAPI, api_error, body_of, envelope, json_response
+from tests.helpers import KEY, UUID_V4, MockAPI, api_error, body_of, envelope, json_response, refused
 
-from .clients import client_for, retry_classes
+from ._io import Body, answer
+from .clients import Clock, client_for, jobs_on, options_of, retry_classes
 
 WAV = b"RIFF\x24\x00\x00\x00WAVEfmt "
 SALOM: list[DialogueTurn] = [{"voice_id": "uz-sardor", "text": "Salom!"}]
@@ -194,3 +196,116 @@ async def test_with_raw_response_gives_the_audio_with_its_status_and_headers() -
     downloaded = await client.tts.jobs.with_raw_response.audio("job-1")
     assert (spoken.data.replayed, spoken.status, spoken.headers["x-request-id"]) == (True, 200, "req-audio")
     assert (rendered.data.turns, downloaded.data.audio) == ([], WAV)
+
+
+def queued() -> httpx.Response:
+    return envelope(job("queued"), "req-create", 202)
+
+
+def polled(status: str) -> httpx.Response:
+    return envelope(job(status), f"req-{status}")
+
+
+async def test_create_and_wait_polls_every_2_seconds_until_the_job_succeeds_and_returns_it() -> None:
+    api, clock = MockAPI(queued(), polled("running"), polled("succeeded")), Clock()
+    done = await jobs_on(api, clock).create_and_wait(text="Salom")
+    assert (done.status, done.request_id) == ("succeeded", "req-succeeded")
+    assert clock.sleeps == [2.0, 2.0]
+    assert [(request.method, request.url.raw_path) for request in api.requests] == [
+        ("POST", b"/api/v1/tts/jobs"),
+        ("GET", b"/api/v1/tts/jobs/job-1"),
+        ("GET", b"/api/v1/tts/jobs/job-1"),
+    ]
+
+
+async def test_create_and_wait_returns_a_job_that_failed_as_well() -> None:
+    done = await jobs_on(MockAPI(queued(), polled("failed")), Clock()).create_and_wait(text="Salom")
+    assert done.status == "failed"
+
+
+async def test_create_and_wait_returns_a_job_already_final_without_polling() -> None:
+    api, clock = MockAPI(envelope(job("succeeded"), "req-replay")), Clock()
+    assert (await jobs_on(api, clock).create_and_wait(text="Salom")).status == "succeeded"
+    assert (len(api.requests), clock.sleeps) == (1, [])
+
+
+async def test_create_and_wait_raises_wait_timeout_error_with_the_job_as_last_seen() -> None:
+    api, clock = MockAPI(queued(), polled("running"), polled("running")), Clock()
+    with pytest.raises(WaitTimeoutError) as caught:
+        await jobs_on(api, clock).create_and_wait(text="Salom", timeout=5)
+    assert (caught.value.job.status, caught.value.job.request_id) == ("running", "req-running")
+    assert str(caught.value) == "The job job-1 was still running when the wait ran out."
+    assert (len(api.requests), clock.sleeps) == (3, [2.0, 2.0, 1.0])
+
+
+async def test_create_and_wait_keeps_polling_through_failures_the_safe_class_would_retry() -> None:
+    api = MockAPI(
+        queued(),
+        httpx.Response(502, content=b"<html>Bad Gateway</html>"),
+        refused(),
+        api_error(429, "rate_limit_exceeded", {"retry-after": "5"}),
+        api_error(503, "service_unavailable"),
+        polled("succeeded"),
+    )
+    clock = Clock()
+    done = await jobs_on(api, clock).create_and_wait(text="Salom")
+    assert done.status == "succeeded"
+    assert clock.sleeps == [2.0, 2.0, 2.0, 5.0, 2.0]
+
+
+async def test_create_and_wait_ends_at_once_on_an_error_it_can_t_outlast_such_as_a_401() -> None:
+    api = MockAPI(queued(), api_error(401, "invalid_api_key"))
+    with pytest.raises(AuthenticationError):
+        await jobs_on(api, Clock()).create_and_wait(text="Salom")
+    assert len(api.requests) == 2
+
+
+async def test_create_and_wait_raises_wait_timeout_error_when_failures_run_past_the_deadline() -> None:
+    api = MockAPI(queued(), api_error(503, "service_unavailable"), api_error(503, "service_unavailable"))
+    with pytest.raises(WaitTimeoutError) as caught:
+        await jobs_on(api, Clock()).create_and_wait(text="Salom", timeout=5)
+    assert (caught.value.job.status, caught.value.job.id) == ("queued", "job-1")
+    assert len(api.requests) == 3
+
+
+async def test_create_and_wait_sends_its_key_with_the_create_and_extra_headers_with_every_request() -> None:
+    api, clock = MockAPI(queued(), polled("succeeded")), Clock()
+    jobs = jobs_on(api, clock)
+    await jobs.create_and_wait(
+        text="Salom", idempotency_key="order-42", extra_headers={"x-trace": "t1"}, poll_interval=0.5
+    )
+    assert [request.headers.get("idempotency-key") for request in api.requests] == ["order-42", None]
+    assert [request.headers["x-trace"] for request in api.requests] == ["t1", "t1"]
+    assert clock.sleeps == [0.5]
+
+
+async def test_each_poll_is_one_attempt_with_the_client_s_timeout_cut_to_the_time_left(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    seen = options_of(monkeypatch)
+    api = MockAPI(queued(), polled("running"), polled("running"))
+    with pytest.raises(WaitTimeoutError):
+        await jobs_on(api, Clock()).create_and_wait(text="Salom", timeout=5, max_retries=3)
+    assert seen == [("POST", None, 3), ("GET", 3.0, 0), ("GET", 1.0, 0)]
+
+
+@pytest.mark.parametrize(
+    ("option", "value"), [("poll_interval", 0), ("poll_interval", True), ("timeout", float("nan")), ("timeout", -1)]
+)
+async def test_create_and_wait_refuses_an_invalid_poll_interval_or_timeout_sending_nothing(
+    option: str, value: object
+) -> None:
+    api = MockAPI()
+    with pytest.raises(NeuronAIError, match=rf"^{option} must be a number of seconds, more than 0 and at most"):
+        await jobs_on(api, Clock()).create_and_wait(text="Salom", **{option: value})  # type: ignore[arg-type]
+    assert api.requests == []
+
+
+async def test_create_and_wait_cuts_a_poll_still_in_flight_at_the_deadline() -> None:
+    """The poll's answer drips forever: the wait still ends near its own deadline, not the client's 60 s timeout."""
+    api = MockAPI(queued(), answer(Body(b"{", gap=0.02, forever=True)))
+    started = time.monotonic()
+    with pytest.raises(WaitTimeoutError) as caught:
+        await client_for(api, timeout=60).tts.jobs.create_and_wait(text="Salom", timeout=0.3, poll_interval=0.1)
+    assert time.monotonic() - started < 2
+    assert caught.value.job.status == "queued"

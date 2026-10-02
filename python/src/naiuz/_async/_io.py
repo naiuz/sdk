@@ -64,6 +64,19 @@ async def deadline(seconds: float) -> AsyncGenerator[Deadline, None]:
         yield Deadline(_nothing)
 
 
+async def within(seconds: float, call: Awaitable[T]) -> T:
+    """Awaits `call`, and abandons it with TimeoutError once `seconds` have passed, as a wait abandons a poll still in
+    flight at its deadline. Cancelling it cancels the call, which closes the call's answer."""
+    if sys.version_info >= (3, 11):
+        async with asyncio.timeout(seconds):
+            return await call
+    try:
+        return await asyncio.wait_for(call, seconds)
+    except asyncio.TimeoutError:
+        # Before Python 3.11, asyncio's TimeoutError isn't the builtin one.
+        raise TimeoutError from None
+
+
 @final
 class TakeOver(Generic[T]):
     """A reader that takes the open answer over, instead of the core reading its whole body, as a stream does.

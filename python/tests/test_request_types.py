@@ -18,12 +18,13 @@ from naiuz.types import (
 )
 from tests.helpers import KEY
 
-OPTIONS = {"timeout", "max_retries", "extra_headers", "idempotency_key"}
+OPTIONS = {"timeout", "max_retries", "extra_headers", "idempotency_key", "poll_interval"}
 
 REQUEST_TYPES: list[tuple[Any, str]] = [
     (SynthesizeSpeechRequest, "tts.synthesize"),
     (SynthesizeDialogueRequest, "tts.dialogue"),
     (SynthesizeSpeechRequest, "tts.jobs.create"),
+    (SynthesizeSpeechRequest, "tts.jobs.create_and_wait"),
     (UpdateVoiceRequest, "voices.update"),
     (CreateApiKeyRequest, "api_keys.create"),
     (UpdateApiKeyRequest, "api_keys.update"),

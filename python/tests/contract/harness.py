@@ -39,7 +39,6 @@ DEFERRED_FIXTURES = [
 When one starts to replay, a test fails until it leaves this list."""
 
 DEFERRED_METHODS = [
-    "tts.jobs.create_and_wait",
     "voices.create",
     "voices.replace_audio",
     "stt.transcribe",
