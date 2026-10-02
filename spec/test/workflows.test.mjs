@@ -1,6 +1,9 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
-import {readFile} from "node:fs/promises";
+import {spawnSync} from "node:child_process";
+import {mkdtemp, readFile, rm} from "node:fs/promises";
+import {tmpdir} from "node:os";
+import {join} from "node:path";
 
 const read = (name) => readFile(new URL(`../../.github/workflows/${name}`, import.meta.url), "utf8");
 
@@ -13,7 +16,7 @@ test("CI checks the contract on every pull request and every push to main", asyn
 });
 
 test("no workflow runs an action major built for Node 20", async () => {
-    for (const name of ["ci.yml", "drift.yml", "js.yml", "python.yml", "php.yml", "smoke.yml"]) {
+    for (const name of ["ci.yml", "drift.yml", "js.yml", "python.yml", "php.yml", "smoke.yml", "split-php.yml"]) {
         const text = await read(name);
         assert.doesNotMatch(text, /actions\/(checkout|setup-node)@v[1-4]\b/);
         assert.doesNotMatch(text, /(oven-sh\/setup-bun|denoland\/setup-deno)@v1\b/);
@@ -114,6 +117,50 @@ test("each SDK's smoke suite gets the key in its own step's env, and nothing els
     const smoke = await read("smoke.yml");
     // One mention per suite's step: never in a job's or the workflow's env, where every step would see it.
     assert.equal(smoke.match(/secrets\.NEURONAI_SMOKE_API_KEY/g)?.length, 3);
+});
+
+test("the PHP SDK's mirror pushes php/, with its history, to naiuz/sdk-php when php/ changes on main", async () => {
+    const split = await read("split-php.yml");
+    assert.match(split, /on:\n\s+push:\n\s+branches: \[main\]\n\s+paths:\n\s+- "php\/\*\*"\n\s+- "\.github\/workflows\/split-php\.yml"\n\s+workflow_dispatch:\n/);
+    assert.doesNotMatch(split, /pull_request/);
+    assert.match(split, /permissions:\n\s+contents: read\n/);
+    assert.match(split, /concurrency:\n\s+group: split-php\n\s+cancel-in-progress: false\n/);
+    assert.match(split, /runs-on: ubuntu-latest\n\s+timeout-minutes: 10\n/);
+    assert.match(split, /uses: actions\/checkout@v7\n\s+if: steps\.key\.outputs\.present == 'true'\n\s+with:\n\s+fetch-depth: 0\n\s+persist-credentials: false\n/);
+    assert.match(split, /run: git subtree split --prefix=php --branch=sdk-php\n/);
+    // A fast-forward of main alone: never forced, and no tags until the releases add them.
+    assert.match(split, /git push git@github\.com:naiuz\/sdk-php\.git sdk-php:refs\/heads\/main\n/);
+    assert.doesNotMatch(split, /--force|--tags|--mirror/);
+    assert.match(split, /echo "github\.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl" > ~\/\.ssh\/known_hosts\n/);
+    assert.match(split, /StrictHostKeyChecking=yes/);
+    // The key only in the two steps that need it.
+    assert.equal(split.match(/secrets\.SDK_PHP_DEPLOY_KEY/g)?.length, 2);
+    assert.match(split, /env:\n\s+SDK_PHP_DEPLOY_KEY: \$\{\{ secrets\.SDK_PHP_DEPLOY_KEY \}\}\n\s+SDK_PHP_MIRROR: \$\{\{ vars\.SDK_PHP_MIRROR \}\}\n/);
+});
+
+test("the PHP SDK's mirror warns without its deploy key, and fails without it once SDK_PHP_MIRROR is on", async () => {
+    const split = await read("split-php.yml");
+    const script = split.match(/id: key\n[\s\S]*?run: \|\n([\s\S]*?)\n {6}- uses:/)?.[1];
+    assert.ok(script, "the key check's script");
+    const directory = await mkdtemp(join(tmpdir(), "split-php-"));
+    try {
+        const check = async (key, mirror) => {
+            const output = join(directory, `${key}-${mirror}`);
+            const run = spawnSync("bash", ["-e", "-c", script], {env: {PATH: process.env.PATH, GITHUB_OUTPUT: output, SDK_PHP_DEPLOY_KEY: key, SDK_PHP_MIRROR: mirror}, encoding: "utf8"});
+            const said = await readFile(output, "utf8").catch(() => "");
+            return {status: run.status, stdout: run.stdout, said};
+        };
+        const missing = await check("", "");
+        assert.deepEqual([missing.status, missing.said], [0, "present=false\n"]);
+        assert.match(missing.stdout, /^::warning title=Mirror skipped::/);
+        const expected = await check("", "on");
+        assert.equal(expected.status, 1);
+        assert.match(expected.stdout, /^::error title=No deploy key::/);
+        const present = await check("-----BEGIN OPENSSH PRIVATE KEY-----", "on");
+        assert.deepEqual([present.status, present.said, present.stdout], [0, "present=true\n", ""]);
+    } finally {
+        await rm(directory, {recursive: true, force: true});
+    }
 });
 
 test("the drift job runs daily and on demand, and only reports drift as drift", async () => {

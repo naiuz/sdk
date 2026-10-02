@@ -1,0 +1,60 @@
+name: PHP SDK mirror
+
+# Mirrors php/, with its history, to the read-only naiuz/sdk-php, the repository Packagist reads naiuz/sdk from.
+# It pushes with a deploy key of naiuz/sdk-php, kept as the SDK_PHP_DEPLOY_KEY secret. Until that secret is set, it
+# only warns; once the SDK_PHP_MIRROR variable is "on", a missing key fails the run. Tags come with the releases.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "php/**"
+      - ".github/workflows/split-php.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: split-php
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    name: Mirror php/ to naiuz/sdk-php
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check for the deploy key
+        id: key
+        env:
+          SDK_PHP_DEPLOY_KEY: ${{ secrets.SDK_PHP_DEPLOY_KEY }}
+          SDK_PHP_MIRROR: ${{ vars.SDK_PHP_MIRROR }}
+        run: |
+          if [ -n "$SDK_PHP_DEPLOY_KEY" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          elif [ "$SDK_PHP_MIRROR" = "on" ]; then
+            echo "::error title=No deploy key::SDK_PHP_MIRROR is on, but the SDK_PHP_DEPLOY_KEY secret isn't set, so php/ can't be mirrored to naiuz/sdk-php."
+            exit 1
+          else
+            echo "::warning title=Mirror skipped::php/ isn't mirrored to naiuz/sdk-php until the SDK_PHP_DEPLOY_KEY secret is set."
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v7
+        if: steps.key.outputs.present == 'true'
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Split php/ out with its history
+        if: steps.key.outputs.present == 'true'
+        run: git subtree split --prefix=php --branch=sdk-php
+      - name: Push it to naiuz/sdk-php
+        if: steps.key.outputs.present == 'true'
+        env:
+          SDK_PHP_DEPLOY_KEY: ${{ secrets.SDK_PHP_DEPLOY_KEY }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SDK_PHP_DEPLOY_KEY" > ~/.ssh/sdk-php
+          chmod 600 ~/.ssh/sdk-php
+          echo "github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl" > ~/.ssh/known_hosts
+          GIT_SSH_COMMAND="ssh -i ~/.ssh/sdk-php -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes" git push git@github.com:naiuz/sdk-php.git sdk-php:refs/heads/main
