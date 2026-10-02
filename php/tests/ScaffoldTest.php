@@ -41,7 +41,7 @@ final class ScaffoldTest extends TestCase
     public function test_a_packagist_download_holds_the_library_and_leaves_out_the_tests_and_tools(): void
     {
         $ignored = ['.gitattributes', '.gitignore', '.php-cs-fixer.dist.php', 'composer.lock', 'examples', 'phpstan.neon.dist', 'phpunit.xml.dist', 'smoke', 'tests'];
-        $kept = ['LICENSE', 'composer.json', 'src'];
+        $kept = ['LICENSE', 'README.md', 'api.md', 'composer.json', 'src'];
         $process = proc_open(['git', '-C', self::PHP_DIR, 'check-attr', 'export-ignore', '--', ...$ignored, ...$kept], [1 => ['pipe', 'w']], $pipes);
         self::assertIsResource($process);
         $output = stream_get_contents($pipes[1]);
@@ -52,6 +52,17 @@ final class ScaffoldTest extends TestCase
             array_map(static fn(string $path): string => "{$path}: export-ignore: unspecified", $kept),
         );
         self::assertSame($expected, explode("\n", trim((string) $output)));
+    }
+
+    public function test_the_readme_names_every_resource_and_links_the_reference_and_the_examples(): void
+    {
+        $readme = (string) file_get_contents(self::PHP_DIR . '/README.md');
+        self::assertStringStartsWith("# NeuronAI PHP SDK\n", $readme);
+        foreach (['tts', 'tts->jobs', 'voices', 'stt', 'chat->completions', 'models', 'embeddings', 'rerank', 'account', 'apiKeys'] as $resource) {
+            self::assertStringContainsString("| `\$client->{$resource}` |", $readme);
+        }
+        self::assertStringContainsString('[api.md](api.md)', $readme);
+        self::assertStringContainsString('[examples/](examples)', $readme);
     }
 
     public function test_the_api_reference_lists_every_method(): void
