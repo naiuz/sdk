@@ -6,6 +6,9 @@ namespace Naiuz\Tests;
 
 use Naiuz\Resources\Account;
 use Naiuz\Resources\ApiKeys;
+use Naiuz\Resources\Completions;
+use Naiuz\Resources\Embeddings;
+use Naiuz\Resources\Rerank;
 use Naiuz\Resources\TtsJobs;
 use Naiuz\Resources\Voices;
 use Naiuz\Tests\Support\Spec;
@@ -26,6 +29,9 @@ final class RequestTypesTest extends TestCase
         yield 'ListApiKeysParams' => [ApiKeys::class, 'ListApiKeysParams'];
         yield 'CreateApiKeyRequest' => [ApiKeys::class, 'CreateApiKeyRequest'];
         yield 'UpdateApiKeyRequest' => [ApiKeys::class, 'UpdateApiKeyRequest'];
+        yield 'CreateEmbeddingRequest' => [Embeddings::class, 'CreateEmbeddingRequest'];
+        yield 'RerankRequest' => [Rerank::class, 'RerankRequest'];
+        yield 'CreateChatCompletionRequest' => [Completions::class, 'CreateChatCompletionRequest'];
     }
 
     /** @param class-string $class */

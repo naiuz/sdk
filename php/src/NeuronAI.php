@@ -12,6 +12,10 @@ use Naiuz\Core\Transport\Transports;
 use Naiuz\Exceptions\NeuronAIException;
 use Naiuz\Resources\Account;
 use Naiuz\Resources\ApiKeys;
+use Naiuz\Resources\Chat;
+use Naiuz\Resources\Embeddings;
+use Naiuz\Resources\Models;
+use Naiuz\Resources\Rerank;
 use Naiuz\Resources\Tts;
 use Naiuz\Resources\Voices;
 use Psr\Http\Client\ClientInterface;
@@ -61,6 +65,18 @@ final readonly class NeuronAI
     /** Your organization's API keys. */
     public ApiKeys $apiKeys;
 
+    /** The chat models available to your account. */
+    public Models $models;
+
+    /** Dense vectors for text. */
+    public Embeddings $embeddings;
+
+    /** Ranking documents against a query. */
+    public Rerank $rerank;
+
+    /** Chat completions. */
+    public Chat $chat;
+
     private HttpClient $http;
 
     /**
@@ -103,6 +119,10 @@ final readonly class NeuronAI
         $this->voices = new Voices($this->http);
         $this->tts = new Tts($this->http);
         $this->apiKeys = new ApiKeys($this->http);
+        $this->models = new Models($this->http);
+        $this->embeddings = new Embeddings($this->http);
+        $this->rerank = new Rerank($this->http);
+        $this->chat = new Chat($this->http);
     }
 
     /** The client's resources, each method returning a RawResponse: its result with the answer's status and headers. */
