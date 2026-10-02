@@ -284,6 +284,10 @@ final class TransportsTest extends TestCase
         $body = $transport->open((new HttpFactory())->createRequest('GET', "{$baseUrl}/stream"), $timeout)->getBody();
         $content = '';
         while (strlen($content) < $length) {
+            // A stream that ends short fails here, rather than spinning on empty reads until CI's limit.
+            if ($body->eof()) {
+                self::fail(sprintf('The stream ended after %d of %d bytes.', strlen($content), $length));
+            }
             $content .= Body::piece($body, $length - strlen($content), Clock::monotonic() + $timeout);
         }
         $body->close();

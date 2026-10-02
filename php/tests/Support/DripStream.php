@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Naiuz\Tests\Support;
 
-use PHPUnit\Framework\AssertionFailedError;
 use Psr\Http\Message\StreamInterface;
 
 /**
@@ -39,7 +38,9 @@ final class DripStream implements StreamInterface
         }
         if ($this->forever) {
             if (microtime(true) - $this->started > self::GIVE_UP) {
-                throw new AssertionFailedError(sprintf('The body dripped for %d s: nothing cut it off.', self::GIVE_UP));
+                // An \Error: PHPUnit's own failure is a \RuntimeException, which the SDK reads as a failed read, and so as
+                // the very timeout the test waits for.
+                throw new \Error(sprintf('The body dripped for %d s: nothing cut it off.', self::GIVE_UP));
             }
             usleep((int) ($this->gap * 1_000_000));
 
