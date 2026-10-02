@@ -116,7 +116,9 @@ final class TransportsTest extends TestCase
         $mock = new MockHandler([new Response(200)]);
         (new GuzzleTransport(new GuzzleClient(['handler' => $mock])))->open(self::request(), 0.3);
         $options = $mock->getLastOptions();
-        self::assertSame([true, 0.3, 0.3], [$options['stream'] ?? null, $options['timeout'] ?? null, $options['read_timeout'] ?? null]);
+        // Guzzle 7's stream handler scales read_timeout's fraction ten times too short, so there timeout alone bounds each read.
+        $readTimeout = \constant('GuzzleHttp\\ClientInterface::MAJOR_VERSION') === 7 ? null : 0.3;
+        self::assertSame([true, 0.3, $readTimeout], [$options['stream'] ?? null, $options['timeout'] ?? null, $options['read_timeout'] ?? null]);
     }
 
     /** @param list<string> $then */

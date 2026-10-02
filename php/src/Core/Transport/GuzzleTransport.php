@@ -47,7 +47,7 @@ final readonly class GuzzleTransport implements Transport
         // As Guzzle's own sendRequest() does: no redirects, and an error status comes back as an answer. A stream's
         // timeout bounds the wait for its headers and then each read, not the whole body.
         $options = $stream
-            ? ['stream' => true, 'timeout' => $seconds, 'read_timeout' => $seconds, 'allow_redirects' => false, 'http_errors' => false]
+            ? ['stream' => true, 'timeout' => $seconds, ...self::readTimeout($seconds), 'allow_redirects' => false, 'http_errors' => false]
             : ['timeout' => $seconds, 'allow_redirects' => false, 'http_errors' => false];
         try {
             return $this->client->send($request, $options);
@@ -56,6 +56,21 @@ final readonly class GuzzleTransport implements Transport
 
             throw new TransportFailure(ErrorFactory::rootMessage($error), $timedOut, self::beforeSend($error));
         }
+    }
+
+    /**
+     * A stream's bound on each read. Guzzle 8 takes it as read_timeout. Guzzle 7's stream handler scales that option's
+     * fraction of a second ten times too short (0.3 s waits 0.03 s), so there the stream relies on timeout alone,
+     * which that handler applies to each read in full.
+     *
+     * @return array{read_timeout?: float}
+     */
+    private static function readTimeout(float $seconds): array
+    {
+        $constant = ClientInterface::class . '::MAJOR_VERSION';
+        $major = \defined($constant) ? \constant($constant) : null;
+
+        return is_int($major) && $major >= 8 ? ['read_timeout' => $seconds] : [];
     }
 
     private static function timedOut(\Throwable $error): bool
