@@ -40,3 +40,22 @@ jobs:
       - run: vendor/bin/phpstan analyse --no-progress
       - run: vendor/bin/php-cs-fixer check --diff
       - run: vendor/bin/phpunit
+
+  guzzle7:
+    name: PHP 8.2 on Guzzle 7
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: php
+    steps:
+      - uses: actions/checkout@v7
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          coverage: none
+          tools: composer:v2
+      - run: composer install --no-interaction --no-progress
+      # The lock holds Guzzle 8; many apps still run Guzzle 7, whose stream handler works differently.
+      - run: composer update "guzzlehttp/guzzle:^7.9" --with-all-dependencies --no-interaction --no-progress
+      - run: vendor/bin/phpunit

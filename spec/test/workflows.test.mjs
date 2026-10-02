@@ -72,6 +72,12 @@ test("the PHP SDK's checks run on PHP 8.2 to 8.5 when php/ or spec/ changes", as
     assert.deepEqual([...steps].sort((a, b) => a - b), steps, "in this order");
 });
 
+test("the PHP SDK's checks also run on Guzzle 7, which many apps still use", async () => {
+    const php = await read("php.yml");
+    assert.match(php, /name: PHP 8\.2 on Guzzle 7\n\s+runs-on: ubuntu-latest\n\s+timeout-minutes: 15\n/);
+    assert.match(php, /run: composer update "guzzlehttp\/guzzle:\^7\.9" --with-all-dependencies --no-interaction --no-progress\n\s+- run: vendor\/bin\/phpunit\n/);
+});
+
 test("the live smoke tests run nightly and on demand, never on a pull request, with the key from the Actions secret", async () => {
     const smoke = await read("smoke.yml");
     assert.match(smoke, /schedule:\n\s+- cron: /);
