@@ -41,6 +41,14 @@ describe("toFormData", () => {
         ]);
     });
 
+    it("sends each line break in a text field as CRLF, as an HTML form does, whatever the runtime's fetch would", () => {
+        const form = toFormData({ref_text: "one\ntwo\rthree\r\nfour", tags: ["a\nb"]}, []);
+        expect([...form.entries()]).toEqual([
+            ["ref_text", "one\r\ntwo\r\nthree\r\nfour"],
+            ["tags[]", "a\r\nb"],
+        ]);
+    });
+
     it("leaves out undefined and null fields, and sends an empty list as no parts", () => {
         const form = toFormData({name: "Office voice", ref_text: null, category: undefined, tags: []}, []);
         expect([...form.keys()]).toEqual(["name"]);

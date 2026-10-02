@@ -53,9 +53,13 @@ function filePart(field: string, value: unknown): {blob: Blob; filename: string}
     return {blob: new Blob([data instanceof Blob ? data : new Uint8Array(data)], {type}), filename};
 }
 
-/** A multipart field's text: a string as it is, anything else as JSON, such as `2` or `true`. */
+/**
+ * A multipart field's text: a string with each line break as CRLF, as an HTML
+ * form sends it, since runtimes differ (Node's fetch writes CRLF, Bun's sends a
+ * lone LF as it is); anything else as JSON, such as `2` or `true`.
+ */
 function fieldText(value: unknown): string {
-    return typeof value === "string" ? value : JSON.stringify(value);
+    return typeof value === "string" ? value.replace(/\r\n|\r|\n/g, "\r\n") : JSON.stringify(value);
 }
 
 /**
