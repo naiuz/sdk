@@ -6,13 +6,13 @@ from __future__ import annotations
 import random as random_module
 import time
 from collections.abc import Callable, Mapping
-from typing import TypeVar, cast
+from typing import TypeVar
 
 import httpx
 
 from .._errors import APITimeoutError, connection_error, make_api_error
 from .._request import APIRequest, build_headers, check_max_retries, check_timeout, encode_body
-from .._response import Answer, Answered, Attempt, Failed, Reader, record
+from .._response import Answer, Answered, Attempt, Failed, Reader, record, unusable
 from .._retry import ConnectionFailure, StatusFailure, TimeoutFailure, failed_before_sending, is_retryable, retry_delay
 from .._retry_after import parse_retry_after
 from .._url import build_url, query_items
@@ -128,7 +128,7 @@ class HttpClient:
             with _io.deadline(timeout) as deadline:
                 response = self._client.send(http_request, stream=True)
                 reading = True
-                if response.is_success and isinstance(reader, _io.TakeOver):
+                if response.is_success and isinstance(reader, _io.TakeOver) and reader.takes(response.headers):
                     deadline.disarm()
                     return self._hand_over(response, reader, timeout)
                 try:
@@ -147,8 +147,10 @@ class HttpClient:
         status, reason, headers = response.status_code, response.reason_phrase, response.headers
         answer = Answer(status, reason, headers, content, self._redact)
         if response.is_success:
-            # A reader that takes the answer over was handed it above.
-            return Answered(cast("Reader[T]", reader)(answer), status, headers)
+            if isinstance(reader, _io.TakeOver):
+                # A reader that takes answers over was handed one it takes, above: this one isn't.
+                raise unusable(answer)
+            return Answered(reader(answer), status, headers)
         now = self._clock()
         error = make_api_error(status, reason, headers, self._redact(answer.text()), now)
         retry_after = parse_retry_after(headers.get("retry-after"), now)

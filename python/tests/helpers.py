@@ -152,8 +152,9 @@ def sdk_frames(error: BaseException) -> list[FrameType]:
 
 
 @contextlib.contextmanager
-def silent_server(first: bytes) -> Generator[str, None, None]:
-    """A local HTTP server that sends `first` on each connection, then goes silent. Yields its base URL.
+def silent_server(first: bytes, *then: bytes, gap: float = 0.0) -> Generator[str, None, None]:
+    """A local HTTP server that sends `first` on each connection, then each of `then` `gap` seconds apart, then goes
+    silent. Yields its base URL.
 
     It hangs up after 5 seconds, so a client that never times out fails its test instead of hanging it.
     """
@@ -172,6 +173,9 @@ def silent_server(first: bytes) -> Generator[str, None, None]:
             connections.append(connection)
             connection.recv(65536)
             connection.sendall(first)
+            for piece in then:
+                time.sleep(gap)
+                connection.sendall(piece)
         for connection in connections:
             connection.close()
 

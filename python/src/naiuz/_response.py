@@ -44,7 +44,7 @@ Reader = Callable[[Answer], T]
 """Turns a success answer into the call's result, raising APIError for a body the call can't use."""
 
 
-def _unusable(answer: Answer) -> APIError:
+def unusable(answer: Answer) -> APIError:
     """The error for a success answer whose body isn't what the call returns, with the API key redacted from it."""
     return make_api_error(answer.status, answer.reason, answer.headers, answer.redact(answer.text()))
 
@@ -61,7 +61,7 @@ def _validate(model: type[M], data: object, context: dict[str, object], answer: 
     with contextlib.suppress(pydantic.ValidationError):
         return model.model_validate(data, context=context)
     # Raised once the validation error is gone, since that error quotes the body.
-    raise _unusable(answer)
+    raise unusable(answer)
 
 
 def request_id_of(body: dict[str, Any], headers: httpx.Headers) -> str | None:
@@ -86,7 +86,7 @@ def read_envelope(model: type[M]) -> Reader[M]:
     def read(answer: Answer) -> M:
         body = _json_object(answer)
         if body is None or not isinstance(body.get("data"), dict):
-            raise _unusable(answer)
+            raise unusable(answer)
         return _validate(model, body["data"], {REQUEST_ID: request_id_of(body, answer.headers)}, answer)
 
     return read
@@ -98,7 +98,7 @@ def read_body(model: type[M]) -> Reader[M]:
     def read(answer: Answer) -> M:
         body = _json_object(answer)
         if body is None:
-            raise _unusable(answer)
+            raise unusable(answer)
         return _validate(model, body, {COST: number_header(answer.headers, "x-cost")}, answer)
 
     return read
@@ -120,7 +120,7 @@ def read_page(model: type[M]) -> Reader[PageData[M]]:
         body = _json_object(answer)
         data: object = None if body is None else body.get("data")
         if body is None or not isinstance(data, list):
-            raise _unusable(answer)
+            raise unusable(answer)
         items = [_validate(model, item, {}, answer) for item in cast("list[object]", data)]
         next_cursor = body.get("next_cursor")
         cursor = next_cursor if isinstance(next_cursor, str) else None
@@ -165,7 +165,7 @@ def _read_audio(answer: Answer, kind: type[A], **dialogue: Any) -> A:
     proxy's or a captive portal's page, raises APIError with its status and the start of its body, the key redacted."""
     headers = answer.headers
     if not headers.get("content-type", "").strip().lower().startswith("audio/"):
-        raise _unusable(answer)
+        raise unusable(answer)
     return kind(
         audio=answer.content,
         content_type=headers.get("content-type", "audio/wav"),

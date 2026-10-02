@@ -32,6 +32,8 @@ class Body(httpx.AsyncByteStream):
         """Whether the body stops arriving after its chunks, without ending. The sync twin has no such body."""
         self.closed = False
         """Whether the client closed the answer."""
+        self.finished = False
+        """Whether the client read the body to its end."""
 
     async def __aiter__(self) -> AsyncIterator[bytes]:
         for chunk in self.chunks:
@@ -48,6 +50,7 @@ class Body(httpx.AsyncByteStream):
         if self.stall:
             await asyncio.sleep(GIVE_UP)
             raise AssertionError(f"The body stalled for {GIVE_UP:g} s: nothing cut it off.")
+        self.finished = True
 
     async def aclose(self) -> None:
         self.closed = True
@@ -56,6 +59,17 @@ class Body(httpx.AsyncByteStream):
 def answer(body: Body, status: int = 200) -> httpx.Response:
     """A JSON answer whose body is `body`."""
     return httpx.Response(status, headers={"content-type": "application/json"}, stream=body)
+
+
+def events(body: Body) -> httpx.Response:
+    """An event stream whose body is `body`."""
+    return httpx.Response(200, headers={"content-type": "text/event-stream", "x-request-id": "req-stream"}, stream=body)
+
+
+async def settle() -> None:
+    """Lets the event loop run what a step of the test scheduled, such as closing a loop's iterator after `break`."""
+    for _ in range(5):
+        await asyncio.sleep(0)
 
 
 def other_kind_of_client() -> httpx.Client:

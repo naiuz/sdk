@@ -8,7 +8,7 @@ from __future__ import annotations
 import contextlib
 import functools
 import time
-from collections.abc import Callable, Generator
+from collections.abc import Callable, Generator, Iterator
 from typing import TYPE_CHECKING, Generic, ParamSpec, TypeVar, final
 
 import httpx
@@ -73,12 +73,32 @@ def within(seconds: float, call: T) -> T:
 class TakeOver(Generic[T]):
     """A reader that takes the open answer over, instead of the core reading its whole body, as a stream does.
 
-    `take` gets the answer with its body unread, and the attempt's deadline no longer runs. Once `take` returns, the
-    answer is the reader's to close; if `take` raises, the core closes it.
+    `take` gets a success answer of `media_type` (any, when it is None) with its body unread, and the attempt's
+    deadline no longer runs. Once `take` returns, the answer is the reader's to close; if `take` raises, the core
+    closes it. The core reads a success of another media type whole, within the deadline, and raises APIError for it.
     """
 
-    def __init__(self, take: Callable[[httpx.Response, Attempt], T]) -> None:
+    def __init__(self, take: Callable[[httpx.Response, Attempt], T], media_type: str | None = None) -> None:
         self.take = take
+        self.media_type = media_type
+
+    def takes(self, headers: httpx.Headers) -> bool:
+        """Whether an answer with these headers is one to take over: its content type is `media_type`."""
+        kind = headers.get("content-type", "").partition(";")[0].strip().lower()
+        return self.media_type is None or kind == self.media_type
+
+
+def drain(pieces: Iterator[bytes], seconds: float) -> None:
+    """Reads the rest of a streamed answer and drops it, so its connection ends cleanly and can be reused: until the
+    answer ends, or until the first piece past `seconds`. A read that fails only ends it: the answer was whole already.
+
+    A wait for a piece can't be cut short here: httpx's read timeout, the call's timeout, bounds it.
+    """
+    stop_at = time.monotonic() + seconds
+    with contextlib.suppress(httpx.HTTPError):
+        for _ in pieces:
+            if time.monotonic() >= stop_at:
+                return
 
 
 def paginate(http: HttpClient, request: APIRequest, model: type[M]) -> Page[M]:

@@ -24,6 +24,8 @@ class Body(httpx.SyncByteStream):
         self.error = error
         self.closed = False
         """Whether the client closed the answer."""
+        self.finished = False
+        """Whether the client read the body to its end."""
 
     def __iter__(self) -> Iterator[bytes]:
         for chunk in self.chunks:
@@ -37,6 +39,7 @@ class Body(httpx.SyncByteStream):
             yield b" "
         if self.error is not None:
             raise self.error
+        self.finished = True
 
     def close(self) -> None:
         self.closed = True
@@ -45,6 +48,15 @@ class Body(httpx.SyncByteStream):
 def answer(body: Body, status: int = 200) -> httpx.Response:
     """A JSON answer whose body is `body`."""
     return httpx.Response(status, headers={"content-type": "application/json"}, stream=body)
+
+
+def events(body: Body) -> httpx.Response:
+    """An event stream whose body is `body`."""
+    return httpx.Response(200, headers={"content-type": "text/event-stream", "x-request-id": "req-stream"}, stream=body)
+
+
+def settle() -> None:
+    """Nothing to let run: the sync client closes a loop's iterator at `break`, as the loop drops it."""
 
 
 def other_kind_of_client() -> httpx.AsyncClient:

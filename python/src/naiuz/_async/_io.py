@@ -81,12 +81,35 @@ async def within(seconds: float, call: Awaitable[T]) -> T:
 class TakeOver(Generic[T]):
     """A reader that takes the open answer over, instead of the core reading its whole body, as a stream does.
 
-    `take` gets the answer with its body unread, and the attempt's deadline no longer runs. Once `take` returns, the
-    answer is the reader's to close; if `take` raises, the core closes it.
+    `take` gets a success answer of `media_type` (any, when it is None) with its body unread, and the attempt's
+    deadline no longer runs. Once `take` returns, the answer is the reader's to close; if `take` raises, the core
+    closes it. The core reads a success of another media type whole, within the deadline, and raises APIError for it.
     """
 
-    def __init__(self, take: Callable[[httpx.Response, Attempt], Awaitable[T]]) -> None:
+    def __init__(self, take: Callable[[httpx.Response, Attempt], Awaitable[T]], media_type: str | None = None) -> None:
         self.take = take
+        self.media_type = media_type
+
+    def takes(self, headers: httpx.Headers) -> bool:
+        """Whether an answer with these headers is one to take over: its content type is `media_type`."""
+        kind = headers.get("content-type", "").partition(";")[0].strip().lower()
+        return self.media_type is None or kind == self.media_type
+
+
+async def drain(pieces: AsyncIterator[bytes], seconds: float) -> None:
+    """Reads the rest of a streamed answer and drops it, for at most `seconds`, so its connection ends cleanly and can
+    be reused. Running out of time, or a read that fails, only ends it: the answer was whole already."""
+    with contextlib.suppress(TimeoutError, asyncio.TimeoutError, httpx.HTTPError):
+        if sys.version_info >= (3, 11):
+            async with asyncio.timeout(seconds):
+                await _drop(pieces)
+        else:
+            await asyncio.wait_for(_drop(pieces), seconds)
+
+
+async def _drop(pieces: AsyncIterator[bytes]) -> None:
+    async for _ in pieces:
+        pass
 
 
 class AsyncPaginator(Generic[M]):
