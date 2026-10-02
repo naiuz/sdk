@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Naiuz\Tests;
 
+use Naiuz\Exceptions\NeuronAIException;
+use Naiuz\NeuronAI;
 use Naiuz\Resources\Account;
 use Naiuz\Resources\ApiKeys;
 use Naiuz\Resources\Completions;
@@ -11,6 +13,8 @@ use Naiuz\Resources\Embeddings;
 use Naiuz\Resources\Rerank;
 use Naiuz\Resources\TtsJobs;
 use Naiuz\Resources\Voices;
+use Naiuz\Tests\Support\Clients;
+use Naiuz\Tests\Support\MockClient;
 use Naiuz\Tests\Support\Spec;
 use PHPUnit\Framework\Attributes\DataProvider;
 
@@ -50,6 +54,37 @@ final class RequestTypesTest extends TestCase
     {
         $constant = strtoupper((string) preg_replace('/(?<!^)[A-Z]/', '_$0', $type));
         self::assertSame(array_keys(self::shape($class, $type)), (new \ReflectionClassConstant($class, $constant))->getValue());
+    }
+
+    /** @return iterable<string, array{string, string, \Closure(NeuronAI, array<string, mixed>): mixed}> */
+    public static function checkedCalls(): iterable
+    {
+        // Each with a camelCase name, as a caller who knows the TypeScript SDK writes it. PHPStan's array shapes let a key
+        // they don't name through, so the calls below pass what the types refuse, as an untyped caller would.
+        yield 'account->usage' => ['account->usage', 'lastDays', static fn(NeuronAI $client, array $params): mixed => $client->account->usage($params)]; // @phpstan-ignore argument.type
+        yield 'voices->list' => ['voices->list', 'voiceType', static fn(NeuronAI $client, array $params): mixed => $client->voices->list($params)]; // @phpstan-ignore argument.type
+        yield 'voices->update' => ['voices->update', 'refText', static fn(NeuronAI $client, array $params): mixed => $client->voices->update('v1', $params)]; // @phpstan-ignore argument.type
+        yield 'tts->jobs->create' => ['tts->jobs->create', 'voiceId', static fn(NeuronAI $client, array $params): mixed => $client->tts->jobs->create($params)]; // @phpstan-ignore argument.type
+        yield 'apiKeys->list' => ['apiKeys->list', 'pageSize', static fn(NeuronAI $client, array $params): mixed => $client->apiKeys->list($params)]; // @phpstan-ignore argument.type
+        yield 'apiKeys->create' => ['apiKeys->create', 'expiresAt', static fn(NeuronAI $client, array $params): mixed => $client->apiKeys->create($params)]; // @phpstan-ignore argument.type
+        yield 'apiKeys->update' => ['apiKeys->update', 'monthlySpendLimit', static fn(NeuronAI $client, array $params): mixed => $client->apiKeys->update('k1', $params)]; // @phpstan-ignore argument.type
+        yield 'embeddings->create' => ['embeddings->create', 'encodingFormat', static fn(NeuronAI $client, array $params): mixed => $client->embeddings->create($params)]; // @phpstan-ignore argument.type
+        yield 'rerank->create' => ['rerank->create', 'topN', static fn(NeuronAI $client, array $params): mixed => $client->rerank->create($params)]; // @phpstan-ignore argument.type
+        yield 'chat->completions->create' => ['chat->completions->create', 'maxTokens', static fn(NeuronAI $client, array $params): mixed => $client->chat->completions->create($params)]; // @phpstan-ignore argument.type
+    }
+
+    /** @param \Closure(NeuronAI, array<string, mixed>): mixed $call */
+    #[DataProvider('checkedCalls')]
+    public function test_each_method_refuses_a_key_its_request_type_doesn_t_name_sending_nothing(string $method, string $key, \Closure $call): void
+    {
+        $api = new MockClient();
+        try {
+            $call(Clients::on($api), [$key => 1]);
+            self::fail('The key should have been refused.');
+        } catch (NeuronAIException $error) {
+            self::assertStringStartsWith("{$method}() takes no parameter \"{$key}\": it takes ", $error->getMessage());
+        }
+        self::assertCount(0, $api);
     }
 
     /**
