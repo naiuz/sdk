@@ -32,6 +32,9 @@ final class HttpClient
     /** @var \Closure(): float */
     private readonly \Closure $now;
 
+    /** @var \Closure(): float */
+    private readonly \Closure $monotonic;
+
     /** Where the status and headers of each answer a call takes its result from go, for withRawResponse(). */
     private ?Captured $captured = null;
 
@@ -42,6 +45,7 @@ final class HttpClient
      * @param (\Closure(float): void)|null $sleep Waits between attempts; usleep() by default.
      * @param (\Closure(): float)|null $random The jitter's random source, in [0, 1).
      * @param (\Closure(): float)|null $now The time in Unix seconds, for Retry-After dates.
+     * @param (\Closure(): float)|null $monotonic Seconds on a clock that never goes back, for a wait's deadline.
      */
     public function __construct(
         private readonly \SensitiveParameterValue $apiKey,
@@ -56,12 +60,26 @@ final class HttpClient
         ?\Closure $sleep = null,
         ?\Closure $random = null,
         ?\Closure $now = null,
+        ?\Closure $monotonic = null,
     ) {
         $this->sleep = $sleep ?? static function (float $seconds): void {
             usleep((int) round($seconds * 1_000_000));
         };
         $this->random = $random ?? static fn(): float => mt_rand(0, mt_getrandmax() - 1) / mt_getrandmax();
         $this->now = $now ?? static fn(): float => microtime(true);
+        $this->monotonic = $monotonic ?? Clock::monotonic(...);
+    }
+
+    /** Seconds on a clock that never goes back, for a wait's deadline. */
+    public function monotonic(): float
+    {
+        return ($this->monotonic)();
+    }
+
+    /** Waits $seconds, as between attempts. */
+    public function sleep(float $seconds): void
+    {
+        ($this->sleep)($seconds);
     }
 
     /** A copy of this core that records, into $captured, the status and headers of each answer a call takes its result from. */

@@ -12,7 +12,7 @@ use Psr\Http\Client\ClientInterface;
 
 /**
  * An HTTP core for the tests, on a mocked HTTP layer: it records its waits instead of waiting, has no jitter and runs
- * at a fixed time.
+ * at a fixed time. Its clock for a wait's deadline moves only when it waits.
  */
 final class TestHttp
 {
@@ -30,6 +30,9 @@ final class TestHttp
 
     /** @var list<float> Every wait between attempts, in seconds. */
     public array $waits = [];
+
+    /** The clock a wait's deadline reads, in seconds: each wait moves it on. */
+    public float $time = 0.0;
 
     /**
      * @param array<string, string> $defaultHeaders
@@ -50,9 +53,11 @@ final class TestHttp
             $factory,
             sleep: function (float $seconds): void {
                 $this->waits[] = $seconds;
+                $this->time += $seconds;
             },
             random: $random ?? static fn(): float => 0.0,
             now: static fn(): float => self::NOW,
+            monotonic: fn(): float => $this->time,
         );
     }
 }

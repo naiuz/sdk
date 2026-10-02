@@ -87,6 +87,7 @@ final class RequestTypesTest extends TestCase
         yield 'tts->synthesize' => ['tts->synthesize', 'voiceId', static fn(NeuronAI $client, array $params): mixed => $client->tts->synthesize($params)]; // @phpstan-ignore argument.type
         yield 'tts->dialogue' => ['tts->dialogue', 'gapMs', static fn(NeuronAI $client, array $params): mixed => $client->tts->dialogue($params)]; // @phpstan-ignore argument.type
         yield 'tts->jobs->create' => ['tts->jobs->create', 'voiceId', static fn(NeuronAI $client, array $params): mixed => $client->tts->jobs->create($params)]; // @phpstan-ignore argument.type
+        yield 'tts->jobs->createAndWait' => ['tts->jobs->create', 'voiceId', static fn(NeuronAI $client, array $params): mixed => $client->tts->jobs->createAndWait($params)]; // @phpstan-ignore argument.type
         yield 'apiKeys->list' => ['apiKeys->list', 'pageSize', static fn(NeuronAI $client, array $params): mixed => $client->apiKeys->list($params)]; // @phpstan-ignore argument.type
         yield 'apiKeys->create' => ['apiKeys->create', 'expiresAt', static fn(NeuronAI $client, array $params): mixed => $client->apiKeys->create($params)]; // @phpstan-ignore argument.type
         yield 'apiKeys->update' => ['apiKeys->update', 'monthlySpendLimit', static fn(NeuronAI $client, array $params): mixed => $client->apiKeys->update('k1', $params)]; // @phpstan-ignore argument.type

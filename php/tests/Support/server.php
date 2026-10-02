@@ -3,22 +3,26 @@
 declare(strict_types=1);
 
 /*
- * A local HTTP server for the tests: on each connection it reads the request, sends the first piece, then each
- * further piece a gap apart, then goes silent. It prints its port, and hangs up after 5 seconds, so a client that
- * never times out fails its test instead of hanging it.
+ * A local HTTP server for the tests. It prints its port, then serves each connection in turn by the next plan: it
+ * reads the request, sends the plan's first piece, then each further piece a gap apart, then goes silent. The last
+ * plan serves every connection after it. It hangs up after 5 seconds, so a client that never times out fails its test
+ * instead of hanging it.
  *
- * Usage: php server.php <first piece, base64> <gap in seconds> [<piece, base64>...]
+ * Usage: php server.php <plan>...
+ * A plan is base64 of JSON: {"pieces": [<piece, base64>...], "gap": <seconds>}.
  */
 
-$arguments = [];
-foreach (is_array($_SERVER['argv'] ?? null) ? $_SERVER['argv'] : [] as $argument) {
-    $arguments[] = is_string($argument) ? $argument : '';
+$plans = [];
+foreach (array_slice(is_array($_SERVER['argv'] ?? null) ? $_SERVER['argv'] : [], 1) as $argument) {
+    $plan = json_decode((string) base64_decode(is_string($argument) ? $argument : '', true), true);
+    $pieces = is_array($plan) && is_array($plan['pieces'] ?? null) ? $plan['pieces'] : [];
+    $plans[] = [
+        'pieces' => array_map(static fn(mixed $piece): string => (string) base64_decode(is_string($piece) ? $piece : '', true), $pieces),
+        'gap' => is_array($plan) && is_numeric($plan['gap'] ?? null) ? (float) $plan['gap'] : 0.0,
+    ];
 }
-$first = base64_decode($arguments[1] ?? '', true);
-$gap = (float) ($arguments[2] ?? '0');
-$then = array_map(static fn(string $piece): string => (string) base64_decode($piece, true), array_slice($arguments, 3));
 $server = stream_socket_server('tcp://127.0.0.1:0', $code, $message);
-if ($server === false || $first === false) {
+if ($server === false || $plans === []) {
     fwrite(STDERR, "The server couldn't start: {$message}\n");
     exit(1);
 }
@@ -31,12 +35,14 @@ while (microtime(true) < $giveUp) {
     if ($connection === false) {
         continue;
     }
+    $plan = $plans[min(count($connections), count($plans) - 1)];
     $connections[] = $connection;
     stream_set_timeout($connection, 1);
     fread($connection, 65536);
-    fwrite($connection, $first);
-    foreach ($then as $piece) {
-        usleep((int) ($gap * 1_000_000));
+    foreach ($plan['pieces'] as $n => $piece) {
+        if ($n > 0) {
+            usleep((int) ($plan['gap'] * 1_000_000));
+        }
         fwrite($connection, $piece);
     }
 }

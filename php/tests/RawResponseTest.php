@@ -10,6 +10,9 @@ use Naiuz\RawResponse;
 
 final class RawResponseTest extends TestCase
 {
+    /** Methods that send several requests, so no one answer gives their result: they have no twin. */
+    private const WITHOUT_TWIN = ['Naiuz\\Resources\\TtsJobs::createAndWait'];
+
     public function test_every_resource_has_a_twin_whose_methods_take_the_same_arguments_and_return_a_raw_response(): void
     {
         $resources = array_map(static fn(string $path): string => 'Naiuz\\Resources\\' . basename($path, '.php'), glob(__DIR__ . '/../src/Resources/*.php') ?: []);
@@ -30,6 +33,13 @@ final class RawResponseTest extends TestCase
         }
     }
 
+    public function test_a_method_without_a_twin_is_one_the_resource_has(): void
+    {
+        foreach (self::WITHOUT_TWIN as $method) {
+            self::assertTrue(method_exists(...explode('::', $method)), $method);
+        }
+    }
+
     public function test_the_raw_client_has_a_twin_of_every_resource_of_the_client(): void
     {
         self::assertSame(self::properties(NeuronAI::class, ['base_url', 'timeout', 'max_retries']), self::properties(NeuronAIWithRawResponse::class));
@@ -46,7 +56,7 @@ final class RawResponseTest extends TestCase
     {
         $methods = [];
         foreach ((new \ReflectionClass($class))->getMethods(\ReflectionMethod::IS_PUBLIC) as $method) {
-            if (!$method->isConstructor()) {
+            if (!$method->isConstructor() && !in_array("{$class}::{$method->name}", self::WITHOUT_TWIN, true)) {
                 $methods[$method->name] = array_map(
                     static fn(\ReflectionParameter $parameter): string => sprintf('%s $%s%s', $parameter->getType(), $parameter->name, $parameter->isDefaultValueAvailable() ? ' = ' . var_export($parameter->getDefaultValue(), true) : ''),
                     $method->getParameters(),

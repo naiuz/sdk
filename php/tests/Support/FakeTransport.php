@@ -13,12 +13,15 @@ use Psr\Http\Message\ResponseInterface;
 
 /**
  * A transport for the tests, for failures a PSR-18 client can't report: it answers the n-th attempt with the n-th
- * reply, an answer or a failure, and records every request.
+ * reply, an answer or a failure, and records every request and its timeout.
  */
 final class FakeTransport implements Transport
 {
     /** @var list<RequestInterface> */
     public array $requests = [];
+
+    /** @var list<float> Each attempt's timeout, in seconds. */
+    public array $timeouts = [];
 
     /** @var list<Answer|TransportFailure> */
     private array $replies;
@@ -48,6 +51,7 @@ final class FakeTransport implements Transport
     public function fetch(#[\SensitiveParameter] RequestInterface $request, float $timeout): Answer
     {
         $this->requests[] = $request;
+        $this->timeouts[] = $timeout;
         $reply = $this->replies[count($this->requests) - 1] ?? throw new AssertionFailedError('Unexpected request ' . count($this->requests));
         if ($reply instanceof TransportFailure) {
             throw $reply;

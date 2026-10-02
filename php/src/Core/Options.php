@@ -20,8 +20,14 @@ final class Options
     /** A timeout option, checked: a number of seconds, more than 0 and at most MAX_TIMEOUT. */
     public static function checkTimeout(mixed $value): float
     {
+        return self::checkSeconds('timeout', $value);
+    }
+
+    /** An option given in seconds, checked: a number, more than 0 and at most MAX_TIMEOUT. */
+    public static function checkSeconds(string $name, mixed $value): float
+    {
         if ((!is_int($value) && !is_float($value)) || !($value > 0 && $value <= self::MAX_TIMEOUT)) {
-            throw new NeuronAIException('timeout must be a number of seconds, more than 0 and at most 2147483.647.');
+            throw new NeuronAIException("{$name} must be a number of seconds, more than 0 and at most 2147483.647.");
         }
 
         return (float) $value;

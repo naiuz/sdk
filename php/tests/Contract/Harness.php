@@ -48,7 +48,6 @@ final class Harness
 
     /** Methods from spec/operations.json that the client doesn't have yet. When one appears, a test fails until it leaves this list. */
     public const DEFERRED_METHODS = [
-        'tts->jobs->createAndWait',
         'voices->create',
         'voices->replaceAudio',
         'stt->transcribe',
