@@ -11,6 +11,7 @@ from typing import Final, Literal
 
 from ._errors import NeuronAIError
 from ._retry import RetryClass
+from ._uploads import Form, encode_form
 from ._url import QueryValue
 
 
@@ -61,6 +62,8 @@ class APIRequest:
     """The query. None values are left out."""
     body: object = NOT_GIVEN
     """Sent as JSON, unless it is NOT_GIVEN."""
+    form: Form | None = None
+    """Sent as multipart/form-data in place of `body`, when given."""
     accept: str = "application/json"
     """What the call takes back: JSON unless it answers with something else, such as audio."""
     options: RequestOptions = RequestOptions()
@@ -94,8 +97,9 @@ def build_headers(
     user_agent: str,
     default_headers: Mapping[str, str],
     request: APIRequest,
+    content_type: str | None,
 ) -> dict[str, str]:
-    """The headers of one call.
+    """The headers of one call, whose body has `content_type` (None for no body).
 
     Each group goes on over the ones before it: the SDK's own headers, the client's `default_headers`, the call's
     Idempotency-Key, then the call's `extra_headers`. A name that isn't an HTTP token, or a value with a character
@@ -113,8 +117,8 @@ def build_headers(
     put("authorization", f"Bearer {api_key}")
     put("accept", request.accept)
     put("user-agent", user_agent)
-    if not isinstance(request.body, NotGiven):
-        put("content-type", "application/json")
+    if content_type is not None:
+        put("content-type", content_type)
     for name, value in default_headers.items():
         put(name, value)
     if request.retry == "idempotent":
@@ -123,6 +127,19 @@ def build_headers(
     for name, value in (request.options.extra_headers or {}).items():
         put(name, value)
     return headers
+
+
+def encode_body(request: APIRequest) -> tuple[bytes | None, str | None]:
+    """The call's body and its content type: its multipart form, its JSON body, or neither (None, None).
+
+    A form's files are read here, once, so every retry sends the same bytes; one that can't be sent raises
+    NeuronAIError before anything is.
+    """
+    if request.form is not None:
+        return encode_form(request.form)
+    if isinstance(request.body, NotGiven):
+        return None, None
+    return json_body(request.body), "application/json"
 
 
 def json_body(body: object) -> bytes:

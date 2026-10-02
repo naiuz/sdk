@@ -1,7 +1,9 @@
+import base64
 import contextlib
 import math
 import traceback
 from dataclasses import replace
+from pathlib import Path
 
 import httpx
 import pytest
@@ -20,6 +22,7 @@ from naiuz._models import WithRequestId
 from naiuz._request import APIRequest, RequestOptions
 from naiuz._response import capture, read_envelope, read_nothing
 from naiuz._retry import RetryClass
+from naiuz._uploads import Form
 from tests.helpers import (
     KEY,
     UUID_V4,
@@ -28,6 +31,7 @@ from tests.helpers import (
     api_error,
     body_of,
     envelope,
+    form_of,
     json_response,
     no_content,
     refused,
@@ -46,6 +50,10 @@ class Item(WithRequestId):
 read_item = read_envelope(Item)
 balance = APIRequest("GET", "/balance", "safe")
 create_job = APIRequest("POST", "/tts/jobs", "idempotent", body={"text": "Salom"})
+WAV = b"RIFF\x24\x00\x00\x00WAVEfmt "
+clip = {"filename": "sample.wav", "content_type": "audio/wav", "base64": base64.b64encode(WAV).decode()}
+voice_form = Form({"name": "Office voice", "tags": ["support"], "ref_audio": ("sample.wav", WAV)}, ("ref_audio",))
+create_voice = APIRequest("POST", "/tts/voices", "idempotent", form=voice_form)
 
 
 def printed(error: BaseException) -> str:
@@ -435,3 +443,32 @@ async def test_no_frame_of_the_sdk_that_an_error_passes_through_holds_the_key() 
         assert frames
         for frame in frames:
             assert KEY not in repr(dict(frame.f_locals)), frame.f_code.co_name
+
+
+async def test_it_sends_a_form_as_multipart_built_once_so_each_retry_sends_the_same_bytes_and_key() -> None:
+    api = MockAPI(api_error(503, "service_unavailable"), envelope({"id": "v1"}))
+    http, _ = http_client(api)
+    await http.request(create_voice, read_item)
+    first, second = api.requests
+    assert first.headers["content-type"].startswith("multipart/form-data; boundary=")
+    assert (second.content, second.headers["content-type"]) == (first.content, first.headers["content-type"])
+    assert second.headers["idempotency-key"] == first.headers["idempotency-key"]
+    assert form_of(first) == {"fields": {"name": "Office voice", "tags": ["support"]}, "files": {"ref_audio": clip}}
+
+
+async def test_a_file_object_in_a_form_is_read_once_so_a_retry_sends_the_whole_file_again(tmp_path: Path) -> None:
+    path = tmp_path / "sample.wav"
+    path.write_bytes(WAV)
+    api = MockAPI(reset(), envelope({}))
+    http, _ = http_client(api)
+    with path.open("rb") as file:
+        await http.request(replace(create_voice, form=Form({"ref_audio": file}, ("ref_audio",))), read_item)
+    assert [form_of(request)["files"] for request in api.requests] == [{"ref_audio": clip}] * 2
+
+
+async def test_it_refuses_bytes_without_a_filename_in_a_form_sending_nothing() -> None:
+    api = MockAPI()
+    http, _ = http_client(api)
+    with pytest.raises(NeuronAIError, match=r'^ref_audio needs a filename: pass \("clip\.wav", data\)'):
+        await http.request(replace(create_voice, form=Form({"ref_audio": WAV}, ("ref_audio",))), read_item)
+    assert api.requests == []

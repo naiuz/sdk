@@ -11,7 +11,7 @@ from typing import TypeVar, cast
 import httpx
 
 from .._errors import APITimeoutError, connection_error, make_api_error
-from .._request import APIRequest, NotGiven, build_headers, check_max_retries, check_timeout, json_body
+from .._request import APIRequest, build_headers, check_max_retries, check_timeout, encode_body
 from .._response import Answer, Answered, Attempt, Failed, Reader, record
 from .._retry import ConnectionFailure, StatusFailure, TimeoutFailure, failed_before_sending, is_retryable, retry_delay
 from .._retry_after import parse_retry_after
@@ -75,6 +75,7 @@ class HttpClient:
         options = request.options
         timeout = check_timeout(self._timeout if options.timeout is None else options.timeout)
         max_retries = check_max_retries(self._max_retries if options.max_retries is None else options.max_retries)
+        content, content_type = encode_body(request)
         # Built once, so every retry sends the same Idempotency-Key and the same body. The headers go straight in, so
         # no local of this frame holds the key for an error tracker that records locals.
         http_request = self._client.build_request(
@@ -86,8 +87,9 @@ class HttpClient:
                 user_agent=self._user_agent,
                 default_headers=self._default_headers,
                 request=request,
+                content_type=content_type,
             ),
-            content=None if isinstance(request.body, NotGiven) else json_body(request.body),
+            content=content,
             timeout=attempt_timeout(timeout),
         )
         retry = 0

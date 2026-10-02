@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import base64
 import contextlib
+import email.parser
+import email.policy
 import json
 import re
 import socket
@@ -13,6 +16,7 @@ from collections.abc import Callable, Generator
 from datetime import datetime, timezone
 from pathlib import Path
 from types import FrameType
+from typing import cast
 
 import httpx
 
@@ -103,6 +107,34 @@ def reset() -> httpx.ReadError:
 def body_of(request: httpx.Request) -> object:
     """A request's JSON body, parsed; None when it has none."""
     return json.loads(request.content) if request.content else None
+
+
+def form_of(request: httpx.Request) -> dict[str, dict[str, object]]:
+    """A multipart request's form, parsed as a mail reader parses one, in the fixtures' `{fields, files}` shape.
+
+    Each `name[]` part's text goes into a list under `name`, and each file is its filename, content type and bytes in
+    base64. A body that isn't a well-formed multipart form, or a part sent twice under one name, fails the test.
+    """
+    head = f"Content-Type: {request.headers['content-type']}\r\n\r\n".encode()
+    message = email.parser.BytesParser(policy=email.policy.HTTP).parsebytes(head + request.content)
+    assert message.is_multipart(), "the body is a multipart form"
+    assert not message.defects, message.defects
+    fields: dict[str, object] = {}
+    files: dict[str, object] = {}
+    for part in message.iter_parts():
+        name = str(part.get_param("name", header="content-disposition"))
+        content = cast("bytes", part.get_payload(decode=True))
+        filename = part.get_filename()
+        if filename is not None:
+            assert name not in files, f"the file {name} is sent once"
+            encoded = base64.b64encode(content).decode()
+            files[name] = {"filename": filename, "content_type": str(part.get("content-type")), "base64": encoded}
+        elif name.endswith("[]"):
+            cast("list[str]", fields.setdefault(name[:-2], [])).append(content.decode())
+        else:
+            assert name not in fields, f"the field {name} is sent once"
+            fields[name] = content.decode()
+    return {"fields": fields, "files": files}
 
 
 def sdk_frames(error: BaseException) -> list[FrameType]:
