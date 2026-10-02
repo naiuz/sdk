@@ -15,4 +15,4 @@ return (new Config())
         'ordered_imports' => true,
         'single_quote' => true,
     ])
-    ->setFinder((new Finder())->in([__DIR__ . '/src', __DIR__ . '/tests', __DIR__ . '/smoke'])->append([__FILE__]));
+    ->setFinder((new Finder())->in([__DIR__ . '/src', __DIR__ . '/tests', __DIR__ . '/smoke', __DIR__ . '/examples'])->append([__FILE__]));

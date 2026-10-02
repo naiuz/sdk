@@ -8,6 +8,7 @@ parameters:
         - src
         - tests
         - smoke
+        - examples
     # The SDK checks at runtime what its docblocks promise, for callers who don't run PHPStan, so a docblock type is a
     # promise to the caller, not a fact about the value.
     treatPhpDocTypesAsCertain: false

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Naiuz\Tests;
 
 use Naiuz\NeuronAI;
+use Naiuz\Tests\Contract\Harness;
 
 final class ScaffoldTest extends TestCase
 {
@@ -39,7 +40,7 @@ final class ScaffoldTest extends TestCase
 
     public function test_a_packagist_download_holds_the_library_and_leaves_out_the_tests_and_tools(): void
     {
-        $ignored = ['.gitattributes', '.gitignore', '.php-cs-fixer.dist.php', 'composer.lock', 'phpstan.neon.dist', 'phpunit.xml.dist', 'smoke', 'tests'];
+        $ignored = ['.gitattributes', '.gitignore', '.php-cs-fixer.dist.php', 'composer.lock', 'examples', 'phpstan.neon.dist', 'phpunit.xml.dist', 'smoke', 'tests'];
         $kept = ['LICENSE', 'composer.json', 'src'];
         $process = proc_open(['git', '-C', self::PHP_DIR, 'check-attr', 'export-ignore', '--', ...$ignored, ...$kept], [1 => ['pipe', 'w']], $pipes);
         self::assertIsResource($process);
@@ -51,6 +52,21 @@ final class ScaffoldTest extends TestCase
             array_map(static fn(string $path): string => "{$path}: export-ignore: unspecified", $kept),
         );
         self::assertSame($expected, explode("\n", trim((string) $output)));
+    }
+
+    public function test_the_api_reference_lists_every_method(): void
+    {
+        $reference = (string) file_get_contents(self::PHP_DIR . '/api.md');
+        foreach (Harness::phpPaths() as $path) {
+            self::assertStringContainsString("### `{$path}(", $reference, $path);
+        }
+    }
+
+    public function test_the_examples_are_the_eight_every_sdk_ships(): void
+    {
+        $examples = array_map(basename(...), glob(self::PHP_DIR . '/examples/*.php') ?: []);
+        sort($examples);
+        self::assertSame(['api-keys.php', 'async-job.php', 'clone-voice.php', 'dialogue.php', 'embeddings-rerank.php', 'stream-chat.php', 'synthesize.php', 'transcribe.php'], $examples);
     }
 
     /** @return array<string, mixed> */
