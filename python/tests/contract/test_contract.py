@@ -7,6 +7,7 @@ import pytest
 from naiuz import NeuronAI, NeuronAIError
 from naiuz._errors import make_api_error
 from naiuz._models import WithRequestId
+from naiuz._uploads import Form, encode_form
 from naiuz.types import SpeechAudio
 
 from .harness import (
@@ -181,3 +182,62 @@ def test_expect_request_compares_the_body_exactly_null_for_null(
     """A null in a request body is an instruction, such as clearing a key's expiry, so it never matches absence."""
     with pytest.raises(AssertionError):
         expect_request([patched(body)], {**BODY_EXPECTED, "body": {"json": expected_body}})
+
+
+UPLOAD_EXPECTED: dict[str, Any] = {
+    "method": "POST",
+    "path": "/stt/transcribe",
+    "headers": {"authorization": f"Bearer {FIXTURE_KEY}", "content-type": "multipart/form-data"},
+    "body": {
+        "multipart": {
+            "fields": {"language": "uz", "tags": ["a", "b"]},
+            "files": {"file": {"filename": "clip.wav", "content_type": "audio/wav", "base64": "UklGRg=="}},
+        }
+    },
+}
+
+
+def uploaded(fields: dict[str, object]) -> httpx.Request:
+    body, content_type = encode_form(Form(fields, ("file",)))
+    return posted(body, content_type)
+
+
+def posted(body: bytes, content_type: str) -> httpx.Request:
+    url = "https://my.neuronai.uz/api/v1/stt/transcribe"
+    headers = {"authorization": f"Bearer {FIXTURE_KEY}", "content-type": content_type}
+    return httpx.Request("POST", url, headers=headers, content=body)
+
+
+def test_expect_request_passes_the_form_the_fixture_describes() -> None:
+    expect_request([uploaded({"language": "uz", "tags": ["a", "b"], "file": ("clip.wav", b"RIFF")})], UPLOAD_EXPECTED)
+
+
+@pytest.mark.parametrize(
+    "request_",
+    [
+        uploaded({"language": "uz", "tags": ["a", "b"], "file": ("clip.wav", b"RIFF"), "extra": "x"}),
+        uploaded({"language": "uz", "tags": ["a"], "file": ("clip.wav", b"RIFF")}),
+        uploaded({"language": "uz", "tags": "a", "file": ("clip.wav", b"RIFF")}),
+        uploaded({"language": "uz", "tags": ["a", "b"], "file": ("clip.wav", b"RIFF", "audio/x-wav")}),
+        uploaded({"language": "uz", "tags": ["a", "b"], "file": ("take.wav", b"RIFF")}),
+        uploaded({"language": "uz", "tags": ["a", "b"], "file": ("clip.wav", b"RIFX")}),
+        posted(
+            b'--b\r\nContent-Disposition: form-data; name="language"\r\n\r\nuz\r\n' * 2 + b"--b--\r\n",
+            "multipart/form-data; boundary=b",
+        ),
+        posted(b'{"language": "uz"}', "application/json"),
+    ],
+    ids=[
+        "a field more",
+        "a list item fewer",
+        "a list sent as one field",
+        "another content type",
+        "another filename",
+        "other bytes",
+        "a field sent twice",
+        "JSON for a form",
+    ],
+)
+def test_expect_request_compares_a_form_exactly(request_: httpx.Request) -> None:
+    with pytest.raises(AssertionError):
+        expect_request([request_], UPLOAD_EXPECTED)

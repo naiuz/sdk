@@ -6,6 +6,7 @@ from collections.abc import Sequence
 from typing import Literal, TypedDict
 
 from .._models import WithRequestId
+from .._uploads import Uploadable
 from .shared import SpeechLanguage
 
 VoiceCategory = Literal["conversational", "narration", "characters", "social_media", "educational"]
@@ -49,3 +50,36 @@ class UpdateVoiceRequest(TypedDict, total=False):
     """The new transcript, up to 1000 characters. None or "" clears it. Changing it re-creates the voice."""
     tags: Sequence[str] | None
     """The new tags, up to 32 characters each. None or [] clears them, and blank tags are dropped."""
+
+
+class _CreateVoiceFields(TypedDict):
+    name: str
+    """The voice's name, up to 120 characters."""
+    language: SpeechLanguage
+    """The language the voice speaks."""
+    ref_audio: Uploadable
+    """A 10-15 second reference clip: WAV, MP3, OGG or FLAC, at most 10 MB."""
+
+
+class CreateVoiceRequest(_CreateVoiceFields, total=False):
+    """A voice clone to create, sent as multipart/form-data: the keyword arguments of `voices.create`."""
+
+    ref_text: str | None
+    """What the clip says, up to 1000 characters."""
+    category: VoiceCategory
+    """What the voice is for."""
+    tags: Sequence[str] | None
+    """Tags, up to 32 characters each, each sent as its own `tags[]` field. Blank tags are dropped."""
+
+
+class _ReplaceVoiceAudioFields(TypedDict):
+    ref_audio: Uploadable
+    """The new reference clip, in the formats and size a new clone takes: WAV, MP3, OGG or FLAC, at most 10 MB."""
+
+
+class ReplaceVoiceAudioRequest(_ReplaceVoiceAudioFields, total=False):
+    """A voice clone's new reference clip, sent as multipart/form-data: the keyword arguments of
+    `voices.replace_audio`."""
+
+    ref_text: str | None
+    """What the new clip says, up to 1000 characters."""

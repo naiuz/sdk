@@ -18,6 +18,7 @@ from .resources.chat import AsyncChat
 from .resources.embeddings import AsyncEmbeddings
 from .resources.models import AsyncModels
 from .resources.rerank import AsyncRerank
+from .resources.stt import AsyncStt
 from .resources.tts import AsyncTts
 from .resources.voices import AsyncVoices
 
@@ -45,6 +46,8 @@ class AsyncNeuronAI:
     """Stock voices and your organization's voice clones."""
     tts: AsyncTts
     """Text to speech."""
+    stt: AsyncStt
+    """Speech to text."""
     api_keys: AsyncApiKeys
     """Your organization's API keys."""
     models: AsyncModels
@@ -100,6 +103,7 @@ class AsyncNeuronAI:
         self.account = AsyncAccount(http)
         self.voices = AsyncVoices(http)
         self.tts = AsyncTts(http)
+        self.stt = AsyncStt(http)
         self.api_keys = AsyncApiKeys(http)
         self.models = AsyncModels(http)
         self.embeddings = AsyncEmbeddings(http)

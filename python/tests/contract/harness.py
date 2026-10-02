@@ -13,6 +13,7 @@ import httpx
 from naiuz import APIError, AsyncNeuronAI, AsyncPage, BaseModel, NeuronAI, Page, RateLimitError
 from naiuz._models import WithCost, WithRequestId
 from naiuz.types import DialogueAudio, SpeechAudio
+from tests.helpers import form_of
 from tests.spec import SPEC_DIR, read_spec
 
 FIXTURE_KEY = "nai_test_fixture_key"
@@ -31,18 +32,11 @@ AUDIO_OPERATIONS = {"synthesizeSpeech", "synthesizeDialogue", "downloadTtsJobAud
 DEFERRED_FIXTURES = [
     "createChatCompletion/stream-error.json",
     "createChatCompletion/streamed.json",
-    "createTranscription/uzbek.json",
-    "createVoice/created.json",
-    "replaceVoiceAudio/replaced.json",
 ]
 """Fixtures this version of the SDK can't replay yet: speech audio, uploads and streamed chat come in a later version.
 When one starts to replay, a test fails until it leaves this list."""
 
-DEFERRED_METHODS = [
-    "voices.create",
-    "voices.replace_audio",
-    "stt.transcribe",
-]
+DEFERRED_METHODS: list[str] = []
 """Methods from spec/operations.json that the clients don't have yet. When one appears, a test fails until it leaves
 this list."""
 
@@ -81,11 +75,14 @@ def resolve_method(client: object, path: str) -> Any:
 
 
 def arguments_for(fixture: dict[str, Any]) -> tuple[list[str], dict[str, Any]]:
-    """A fixture's call as the method's arguments: the path parameters in path order, then the params and options."""
+    """A fixture's call as the method's arguments: the path parameters in path order, then the params, each upload
+    as a `(filename, bytes, content_type)` tuple, and the options."""
     route: str = OPERATIONS["operations"][fixture["operationId"]]["http"]
     call: dict[str, Any] = fixture["call"]
     names = [part[1:-1] for part in route.split("/") if part.startswith("{")]
     keywords: dict[str, Any] = dict(call.get("params", {}))
+    for name, file in call.get("files", {}).items():
+        keywords[name] = (file["filename"], base64.b64decode(file["base64"]), file["content_type"])
     if "idempotency_key" in call.get("options", {}):
         keywords["idempotency_key"] = call["options"]["idempotency_key"]
     return [call["path_params"][name] for name in names], keywords
@@ -247,9 +244,12 @@ def exact(value: object) -> object:
 
 def expect_request(requests: list[httpx.Request], expected: dict[str, Any]) -> None:
     """Asserts that exactly one request went out, and that it is the fixture's: the method, the raw request target
-    as sent, the query with every key once, every fixture header with its value, and the body, null for null."""
+    as sent, the query with every key once, every fixture header with its value, and the body. A JSON body compares
+    null for null. A multipart body's content type only has to start with the fixture's, since it goes on with the
+    boundary, and its form compares exactly: every field and file, each once, and nothing more."""
     assert len(requests) == 1, f"the call sends exactly one request, not {len(requests)}"
     [sent] = requests
+    multipart = expected["body"] is not None and "multipart" in expected["body"]
     assert sent.method == expected["method"]
     assert (sent.url.scheme, sent.url.host) == ("https", "my.neuronai.uz")
     # The raw target, as sent: a URL parser could re-encode the path, which is what the fixture pins.
@@ -257,8 +257,13 @@ def expect_request(requests: list[httpx.Request], expected: dict[str, Any]) -> N
     # Every pair, sorted, so a key sent twice can't pass for one sent once.
     assert sorted(sent.url.params.multi_items()) == sorted(expected.get("query", {}).items())
     for name, value in expected["headers"].items():
-        assert sent.headers.get(name) == value, name
+        if multipart and name == "content-type":
+            assert sent.headers.get(name, "").startswith(value), name
+        else:
+            assert sent.headers.get(name) == value, name
     if expected["body"] is None:
         assert sent.content == b""
+    elif multipart:
+        assert exact(form_of(sent)) == exact(expected["body"]["multipart"])
     else:
         assert exact(json.loads(sent.content)) == exact(expected["body"]["json"])

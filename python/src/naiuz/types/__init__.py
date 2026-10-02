@@ -1,5 +1,6 @@
 """The objects the API returns, and the types of what calls take."""
 
+from .._uploads import FileContent, Uploadable
 from .account import Balance, Usage, UsageByKey, UsageByService, UsagePeriod, UsageTotal
 from .api_keys import (
     ApiKey,
@@ -32,8 +33,16 @@ from .rerank import (
     RerankUsage,
 )
 from .shared import SpeechLanguage, SpeechQuality
+from .stt import CreateTranscriptionRequest, Transcription, TranscriptionLanguage, TranscriptionSegment
 from .tts import DialogueTurn, SynthesizeDialogueRequest, SynthesizeSpeechRequest, TtsJob, TtsJobError, TtsJobStatus
-from .voices import UpdateVoiceRequest, Voice, VoiceCategory, VoiceType
+from .voices import (
+    CreateVoiceRequest,
+    ReplaceVoiceAudioRequest,
+    UpdateVoiceRequest,
+    Voice,
+    VoiceCategory,
+    VoiceType,
+)
 
 __all__ = [
     "ApiKey",
@@ -50,6 +59,8 @@ __all__ = [
     "CreateApiKeyRequest",
     "CreateChatCompletionRequest",
     "CreateEmbeddingRequest",
+    "CreateTranscriptionRequest",
+    "CreateVoiceRequest",
     "DialogueAudio",
     "DialogueTurn",
     "DialogueTurnTiming",
@@ -59,8 +70,10 @@ __all__ = [
     "ErrorDetail",
     "ErrorEnvelope",
     "ErrorType",
+    "FileContent",
     "Model",
     "ModelList",
+    "ReplaceVoiceAudioRequest",
     "RerankBilledUnits",
     "RerankDocument",
     "RerankMeta",
@@ -73,11 +86,15 @@ __all__ = [
     "SpeechQuality",
     "SynthesizeDialogueRequest",
     "SynthesizeSpeechRequest",
+    "Transcription",
+    "TranscriptionLanguage",
+    "TranscriptionSegment",
     "TtsJob",
     "TtsJobError",
     "TtsJobStatus",
     "UpdateApiKeyRequest",
     "UpdateVoiceRequest",
+    "Uploadable",
     "Usage",
     "UsageByKey",
     "UsageByService",

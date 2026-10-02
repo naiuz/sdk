@@ -13,6 +13,7 @@ RESOURCES = {
     "voices": "Voices",
     "tts": "Tts",
     "tts.jobs": "TtsJobs",
+    "stt": "Stt",
     "api_keys": "ApiKeys",
     "models": "Models",
     "embeddings": "Embeddings",

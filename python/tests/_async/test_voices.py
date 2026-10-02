@@ -1,11 +1,21 @@
+import base64
+from pathlib import Path
+
 import httpx
 import pytest
 
 from naiuz import NOT_GIVEN, NeuronAIError, NotFoundError, UnprocessableEntityError
-from naiuz.types import UpdateVoiceRequest, Voice
-from tests.helpers import MockAPI, api_error, body_of, envelope, json_response, no_content
+from naiuz.types import CreateVoiceRequest, ReplaceVoiceAudioRequest, UpdateVoiceRequest, Voice
+from tests.helpers import UUID_V4, MockAPI, api_error, body_of, envelope, form_of, json_response, no_content
 
 from .clients import client_for, retry_classes
+
+CLIP = b"RIFF\x24\x00\x00\x00WAVEfmt "
+
+
+def clip(filename: str, content_type: str) -> dict[str, str]:
+    """A file part as `form_of` gives it: the clip under `filename`, declared as `content_type`."""
+    return {"filename": filename, "content_type": content_type, "base64": base64.b64encode(CLIP).decode()}
 
 
 def voice(id: str) -> dict[str, object]:
@@ -124,3 +134,85 @@ async def test_update_sends_every_field_it_is_given() -> None:
         "ref_text": None,
         "tags": ["support"],
     }
+
+
+async def test_create_sends_the_clip_and_its_fields_as_multipart_the_tags_as_repeated_tags_with_a_key() -> None:
+    api = MockAPI(envelope(voice("v-new"), "req-clone", 201))
+    created = await client_for(api).voices.create(
+        name="Office voice",
+        language="uz",
+        ref_audio=("sample.wav", CLIP),
+        ref_text="Salom",
+        category="conversational",
+        tags=["support", "calm"],
+        idempotency_key="clone-1",
+    )
+    assert (created.id, created.request_id) == ("v-new", "req-clone")
+    sent = api.requests[0]
+    assert (sent.method, sent.url.raw_path) == ("POST", b"/api/v1/tts/voices")
+    assert sent.headers["idempotency-key"] == "clone-1"
+    assert sent.headers["content-type"].startswith("multipart/form-data; boundary=")
+    assert form_of(sent) == {
+        "fields": {
+            "name": "Office voice",
+            "language": "uz",
+            "ref_text": "Salom",
+            "category": "conversational",
+            "tags": ["support", "calm"],
+        },
+        "files": {"ref_audio": clip("sample.wav", "audio/wav")},
+    }
+
+
+async def test_create_takes_a_create_voice_request_with_a_path_as_keyword_arguments(tmp_path: Path) -> None:
+    path = tmp_path / "sample.flac"
+    path.write_bytes(CLIP)
+    api = MockAPI(envelope(voice("v-new"), status=201))
+    request: CreateVoiceRequest = {"name": "V", "language": "uz", "ref_audio": path, "ref_text": None, "tags": []}
+    await client_for(api).voices.create(**request)
+    assert form_of(api.requests[0]) == {
+        "fields": {"name": "V", "language": "uz"},
+        "files": {"ref_audio": clip("sample.flac", "audio/flac")},
+    }
+    assert UUID_V4.fullmatch(api.requests[0].headers["idempotency-key"])
+
+
+async def test_create_returns_the_voice_for_a_200_replay_of_its_key_as_for_a_201() -> None:
+    replay = json_response(200, {"data": voice("v-new"), "request_id": "r"}, {"idempotency-replayed": "1"})
+    raw = await client_for(MockAPI(replay)).voices.with_raw_response.create(
+        name="Office voice", language="uz", ref_audio=("sample.wav", CLIP), idempotency_key="clone-1"
+    )
+    assert (raw.data.id, raw.status, raw.headers["idempotency-replayed"]) == ("v-new", 200, "1")
+
+
+async def test_create_refuses_bytes_without_a_filename_sending_nothing() -> None:
+    api = MockAPI()
+    with pytest.raises(NeuronAIError, match=r'^ref_audio needs a filename: pass \("clip\.wav", data\)'):
+        await client_for(api).voices.create(
+            name="V",
+            language="uz",
+            ref_audio=CLIP,  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
+        )
+    assert api.requests == []
+
+
+async def test_replace_audio_sends_the_new_clip_and_its_transcript_as_multipart_with_no_key() -> None:
+    api = MockAPI(envelope(voice("v1"), "req-replace"), envelope(voice("v1")))
+    client = client_for(api)
+    replaced = await client.voices.replace_audio("v1", ref_audio=("new.mp3", CLIP), ref_text="Yangi")
+    change: ReplaceVoiceAudioRequest = {"ref_audio": ("new.m4a", CLIP, "audio/x-m4a"), "ref_text": None}
+    await client.voices.replace_audio("v1", **change)
+    assert replaced.request_id == "req-replace"
+    first, second = api.requests
+    assert (first.method, first.url.raw_path) == ("POST", b"/api/v1/tts/voices/v1/audio")
+    assert "idempotency-key" not in first.headers
+    assert form_of(first) == {"fields": {"ref_text": "Yangi"}, "files": {"ref_audio": clip("new.mp3", "audio/mpeg")}}
+    assert form_of(second) == {"fields": {}, "files": {"ref_audio": clip("new.m4a", "audio/x-m4a")}}
+
+
+async def test_create_is_an_idempotent_call_and_replace_audio_a_re_create(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen = retry_classes(monkeypatch)
+    client = client_for(MockAPI(envelope(voice("v1"), status=201), envelope(voice("v1"))))
+    await client.voices.create(name="V", language="uz", ref_audio=("a.wav", CLIP))
+    await client.voices.replace_audio("v1", ref_audio=("a.wav", CLIP))
+    assert seen == ["idempotent", "recreate"]

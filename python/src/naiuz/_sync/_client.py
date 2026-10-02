@@ -19,6 +19,7 @@ from .resources.chat import Chat
 from .resources.embeddings import Embeddings
 from .resources.models import Models
 from .resources.rerank import Rerank
+from .resources.stt import Stt
 from .resources.tts import Tts
 from .resources.voices import Voices
 
@@ -46,6 +47,8 @@ class NeuronAI:
     """Stock voices and your organization's voice clones."""
     tts: Tts
     """Text to speech."""
+    stt: Stt
+    """Speech to text."""
     api_keys: ApiKeys
     """Your organization's API keys."""
     models: Models
@@ -101,6 +104,7 @@ class NeuronAI:
         self.account = Account(http)
         self.voices = Voices(http)
         self.tts = Tts(http)
+        self.stt = Stt(http)
         self.api_keys = ApiKeys(http)
         self.models = Models(http)
         self.embeddings = Embeddings(http)
