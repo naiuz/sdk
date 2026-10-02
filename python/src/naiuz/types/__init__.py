@@ -32,7 +32,7 @@ from .rerank import (
     RerankUsage,
 )
 from .shared import SpeechLanguage, SpeechQuality
-from .tts import SynthesizeSpeechRequest, TtsJob, TtsJobError, TtsJobStatus
+from .tts import DialogueTurn, SynthesizeDialogueRequest, SynthesizeSpeechRequest, TtsJob, TtsJobError, TtsJobStatus
 from .voices import UpdateVoiceRequest, Voice, VoiceCategory, VoiceType
 
 __all__ = [
@@ -51,6 +51,7 @@ __all__ = [
     "CreateChatCompletionRequest",
     "CreateEmbeddingRequest",
     "DialogueAudio",
+    "DialogueTurn",
     "DialogueTurnTiming",
     "Embedding",
     "EmbeddingResponse",
@@ -70,6 +71,7 @@ __all__ = [
     "SpeechAudio",
     "SpeechLanguage",
     "SpeechQuality",
+    "SynthesizeDialogueRequest",
     "SynthesizeSpeechRequest",
     "TtsJob",
     "TtsJobError",

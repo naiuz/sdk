@@ -7,6 +7,7 @@ import pytest
 from naiuz import NeuronAI, NeuronAIError
 from naiuz._errors import make_api_error
 from naiuz._models import WithRequestId
+from naiuz.types import SpeechAudio
 
 from .harness import (
     DEFERRED_FIXTURES,
@@ -125,6 +126,16 @@ def test_project_result_decides_the_shape_from_the_operation_not_from_the_value(
         project_result("retrieveApiKey", client.api_keys.list())
     with pytest.raises(AssertionError, match="listApiKeys"):
         project_result("listApiKeys", WithRequestId())
+
+
+def test_project_result_wants_audio_from_an_audio_operation_and_from_no_other() -> None:
+    audio = SpeechAudio(b"RIFF", "audio/wav", None, None, None, False, None, False, None)
+    with pytest.raises(AssertionError, match="synthesizeSpeech should return audio"):
+        project_result("synthesizeSpeech", WithRequestId())
+    with pytest.raises(AssertionError, match="retrieveVoice should not return audio"):
+        project_result("retrieveVoice", audio)
+    with pytest.raises(AssertionError, match="synthesizeDialogue should return a DialogueAudio"):
+        project_result("synthesizeDialogue", audio)
 
 
 def test_comparable_drops_nulls_and_tells_a_boolean_from_a_number() -> None:

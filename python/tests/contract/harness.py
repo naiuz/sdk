@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import inspect
 import json
 from dataclasses import dataclass
@@ -11,6 +12,7 @@ import httpx
 
 from naiuz import APIError, AsyncNeuronAI, AsyncPage, BaseModel, NeuronAI, Page, RateLimitError
 from naiuz._models import WithCost, WithRequestId
+from naiuz.types import DialogueAudio, SpeechAudio
 from tests.spec import SPEC_DIR, read_spec
 
 FIXTURE_KEY = "nai_test_fixture_key"
@@ -24,28 +26,19 @@ KINDS: list[Kind] = ["sync", "async"]
 
 COMPATIBLE_OPERATIONS = {"createChatCompletion", "listModels", "createEmbedding", "rerank"}
 PAGE_OPERATIONS = {"listVoices", "listApiKeys"}
+AUDIO_OPERATIONS = {"synthesizeSpeech", "synthesizeDialogue", "downloadTtsJobAudio"}
 
 DEFERRED_FIXTURES = [
     "createChatCompletion/stream-error.json",
     "createChatCompletion/streamed.json",
     "createTranscription/uzbek.json",
     "createVoice/created.json",
-    "downloadTtsJobAudio/wav.json",
     "replaceVoiceAudio/replaced.json",
-    "synthesizeDialogue/two-turns.json",
-    "synthesizeSpeech/insufficient-balance.json",
-    "synthesizeSpeech/rate-limited.json",
-    "synthesizeSpeech/stock-voice.json",
-    "synthesizeSpeech/unauthenticated.json",
-    "synthesizeSpeech/validation-error.json",
 ]
 """Fixtures this version of the SDK can't replay yet: speech audio, uploads and streamed chat come in a later version.
 When one starts to replay, a test fails until it leaves this list."""
 
 DEFERRED_METHODS = [
-    "tts.synthesize",
-    "tts.dialogue",
-    "tts.jobs.audio",
     "tts.jobs.create_and_wait",
     "voices.create",
     "voices.replace_audio",
@@ -100,10 +93,14 @@ def arguments_for(fixture: dict[str, Any]) -> tuple[list[str], dict[str, Any]]:
 
 
 def response_for(fixture: dict[str, Any]) -> httpx.Response:
-    """The fixture's canned answer."""
+    """The fixture's canned answer: no body, a JSON body, or audio bytes given in base64."""
     response: dict[str, Any] = fixture["response"]
     body: dict[str, Any] | None = response["body"]
-    content = b"" if body is None else json.dumps(body["json"]).encode()
+    content = b""
+    if body is not None and "json" in body:
+        content = json.dumps(body["json"]).encode()
+    if body is not None and "base64" in body:
+        content = base64.b64decode(body["base64"])
     return httpx.Response(response["status"], headers=response["headers"], content=content)
 
 
@@ -124,12 +121,36 @@ def project_error(error: APIError) -> dict[str, Any]:
     }
 
 
+def project_audio(operation_id: str, audio: SpeechAudio) -> dict[str, object]:
+    """Audio in the README's shape: its bytes in base64 and each header's field, plus a dialogue's turns and count."""
+    fields: dict[str, object] = {
+        "audio_base64": base64.b64encode(audio.audio).decode(),
+        "content_type": audio.content_type,
+        "cost": audio.cost,
+        "character_count": audio.character_count,
+        "balance": audio.balance,
+        "voice_custom": audio.voice_custom,
+        "latency_ms": audio.latency_ms,
+        "replayed": audio.replayed,
+        "request_id": audio.request_id,
+    }
+    if operation_id != "synthesizeDialogue":
+        return fields
+    if not isinstance(audio, DialogueAudio):
+        raise AssertionError("synthesizeDialogue should return a DialogueAudio, but didn't.")
+    return {**fields, "turns": [turn.model_dump() for turn in audio.turns], "turn_count": audio.turn_count}
+
+
 def project_result(operation_id: str, value: object) -> object:
-    """What the SDK returned, in the README's `result` shape as the operation decides it: a page, a compatible
-    endpoint's `{body, cost}`, any other object's `{data, request_id}`, or null for nothing. A value of another shape
-    raises."""
+    """What the SDK returned, in the README's `result` shape as the operation decides it: a page, audio, a
+    compatible endpoint's `{body, cost}`, any other object's `{data, request_id}`, or null for nothing. A value of
+    another shape raises."""
     if value is None:
         return None
+    if (operation_id in AUDIO_OPERATIONS) != isinstance(value, SpeechAudio):
+        raise AssertionError(f"{operation_id} should {'' if operation_id in AUDIO_OPERATIONS else 'not '}return audio.")
+    if isinstance(value, SpeechAudio):
+        return project_audio(operation_id, value)
     if operation_id in PAGE_OPERATIONS:
         if not isinstance(value, Page | AsyncPage):
             raise AssertionError(f"{operation_id} should return a page, but returned {type(value).__name__}.")

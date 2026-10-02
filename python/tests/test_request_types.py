@@ -11,6 +11,7 @@ from naiuz.types import (
     CreateChatCompletionRequest,
     CreateEmbeddingRequest,
     RerankRequest,
+    SynthesizeDialogueRequest,
     SynthesizeSpeechRequest,
     UpdateApiKeyRequest,
     UpdateVoiceRequest,
@@ -20,6 +21,8 @@ from tests.helpers import KEY
 OPTIONS = {"timeout", "max_retries", "extra_headers", "idempotency_key"}
 
 REQUEST_TYPES: list[tuple[Any, str]] = [
+    (SynthesizeSpeechRequest, "tts.synthesize"),
+    (SynthesizeDialogueRequest, "tts.dialogue"),
     (SynthesizeSpeechRequest, "tts.jobs.create"),
     (UpdateVoiceRequest, "voices.update"),
     (CreateApiKeyRequest, "api_keys.create"),
