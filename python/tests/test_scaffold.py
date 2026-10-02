@@ -1,5 +1,5 @@
 import re
-from importlib.metadata import requires, version
+from importlib.metadata import metadata, requires, version
 from pathlib import Path
 
 import naiuz
@@ -24,3 +24,9 @@ def test_the_package_is_typed() -> None:
 
 def test_the_license_is_the_repository_s() -> None:
     assert (PYTHON_DIR / "LICENSE").read_text() == (PYTHON_DIR.parent / "LICENSE").read_text()
+
+
+def test_the_package_s_long_description_is_its_readme() -> None:
+    assert re.search(r'^readme = "README\.md"$', (PYTHON_DIR / "pyproject.toml").read_text(), re.MULTILINE)
+    assert metadata("naiuz")["Description-Content-Type"] == "text/markdown"
+    assert (PYTHON_DIR / "README.md").read_text().startswith("# NeuronAI Python SDK\n")
