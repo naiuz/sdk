@@ -87,6 +87,13 @@ test("the PHP SDK's checks also run on Symfony HttpClient 5.4, whose PSR-18 clie
     assert.match(php, /run: composer require --dev "symfony\/http-client:\^5\.4" --update-with-all-dependencies --no-interaction --no-progress\n\s+- run: vendor\/bin\/phpunit\n/);
 });
 
+test("the PHP SDK's checks also run on the lowest versions its composer.json allows", async () => {
+    const php = await read("php.yml");
+    assert.match(php, /name: PHP 8\.2 on the lowest dependencies\n\s+runs-on: ubuntu-latest\n\s+timeout-minutes: 15\n/);
+    assert.match(php, /php-version: "8\.2"\n\s+coverage: none\n\s+tools: composer:v2\n\s+# composer\.json's floors/);
+    assert.match(php, /run: composer update --prefer-lowest --prefer-stable --no-interaction --no-progress\n\s+- run: vendor\/bin\/phpunit\n/);
+});
+
 test("the live smoke tests run nightly and on demand, never on a pull request, with the key from the Actions secret", async () => {
     const smoke = await read("smoke.yml");
     assert.match(smoke, /schedule:\n\s+- cron: /);

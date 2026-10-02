@@ -78,3 +78,21 @@ jobs:
       # The lock holds Symfony 7; apps still on Symfony 5.4 LTS have a PSR-18 client without withOptions().
       - run: composer require --dev "symfony/http-client:^5.4" --update-with-all-dependencies --no-interaction --no-progress
       - run: vendor/bin/phpunit
+
+  lowest:
+    name: PHP 8.2 on the lowest dependencies
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: php
+    steps:
+      - uses: actions/checkout@v7
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          coverage: none
+          tools: composer:v2
+      # composer.json's floors are a promise to every app: run the tests on the oldest versions it allows.
+      - run: composer update --prefer-lowest --prefer-stable --no-interaction --no-progress
+      - run: vendor/bin/phpunit
