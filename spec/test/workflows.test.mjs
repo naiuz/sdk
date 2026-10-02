@@ -13,11 +13,12 @@ test("CI checks the contract on every pull request and every push to main", asyn
 });
 
 test("no workflow runs an action major built for Node 20", async () => {
-    for (const name of ["ci.yml", "drift.yml", "js.yml", "python.yml", "smoke.yml"]) {
+    for (const name of ["ci.yml", "drift.yml", "js.yml", "python.yml", "php.yml", "smoke.yml"]) {
         const text = await read(name);
         assert.doesNotMatch(text, /actions\/(checkout|setup-node)@v[1-4]\b/);
         assert.doesNotMatch(text, /(oven-sh\/setup-bun|denoland\/setup-deno)@v1\b/);
         assert.doesNotMatch(text, /astral-sh\/setup-uv@v[1-6]\b/);
+        assert.doesNotMatch(text, /shivammathur\/setup-php@v1\b/);
     }
 });
 
@@ -53,6 +54,20 @@ test("the Python SDK's checks run on Python 3.10 to 3.14 when python/ or spec/ c
     // A test that hangs instead of failing must not hold a runner for GitHub's six hours.
     assert.match(python, /runs-on: ubuntu-latest\n\s+timeout-minutes: 15\n/);
     const steps = ["uv sync --locked", "uv run ruff check", "uv run ruff format --check", "uv run pyright", "uv run mypy", "uv run pytest", "uv build"].map((command) => python.indexOf(`run: ${command}\n`));
+    assert.ok(steps.every((index) => index > 0), "every step is there");
+    assert.deepEqual([...steps].sort((a, b) => a - b), steps, "in this order");
+});
+
+test("the PHP SDK's checks run on PHP 8.2 to 8.5 when php/ or spec/ changes", async () => {
+    const php = await read("php.yml");
+    assert.match(php, /pull_request:\n\s+paths:\n\s+- "php\/\*\*"\n\s+- "spec\/\*\*"\n\s+- "\.github\/workflows\/php\.yml"\n/);
+    assert.match(php, /push:\n\s+branches: \[main\]\n\s+paths:\n\s+- "php\/\*\*"\n\s+- "spec\/\*\*"\n\s+- "\.github\/workflows\/php\.yml"\n/);
+    assert.match(php, /php: \["8\.2", "8\.3", "8\.4", "8\.5"\]/);
+    assert.match(php, /php-version: \$\{\{ matrix\.php \}\}\n\s+coverage: none\n/);
+    assert.match(php, /working-directory: php\n/);
+    // A test that hangs instead of failing must not hold a runner for GitHub's six hours.
+    assert.match(php, /runs-on: ubuntu-latest\n\s+timeout-minutes: 15\n/);
+    const steps = ["composer validate --strict", "composer install --no-interaction --no-progress", "vendor/bin/phpstan analyse --no-progress", "vendor/bin/php-cs-fixer check --diff", "vendor/bin/phpunit"].map((command) => php.indexOf(`run: ${command}\n`));
     assert.ok(steps.every((index) => index > 0), "every step is there");
     assert.deepEqual([...steps].sort((a, b) => a - b), steps, "in this order");
 });
