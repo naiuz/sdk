@@ -10,7 +10,7 @@ from typing import Any, Literal, cast
 
 import httpx
 
-from naiuz import APIError, AsyncNeuronAI, AsyncPage, BaseModel, NeuronAI, Page, RateLimitError
+from naiuz import APIError, AsyncNeuronAI, AsyncPage, AsyncStream, BaseModel, NeuronAI, Page, RateLimitError, Stream
 from naiuz._models import WithCost, WithRequestId
 from naiuz.types import DialogueAudio, SpeechAudio
 from tests.helpers import form_of
@@ -28,17 +28,6 @@ KINDS: list[Kind] = ["sync", "async"]
 COMPATIBLE_OPERATIONS = {"createChatCompletion", "listModels", "createEmbedding", "rerank"}
 PAGE_OPERATIONS = {"listVoices", "listApiKeys"}
 AUDIO_OPERATIONS = {"synthesizeSpeech", "synthesizeDialogue", "downloadTtsJobAudio"}
-
-DEFERRED_FIXTURES = [
-    "createChatCompletion/stream-error.json",
-    "createChatCompletion/streamed.json",
-]
-"""Fixtures this version of the SDK can't replay yet: speech audio, uploads and streamed chat come in a later version.
-When one starts to replay, a test fails until it leaves this list."""
-
-DEFERRED_METHODS: list[str] = []
-"""Methods from spec/operations.json that the clients don't have yet. When one appears, a test fails until it leaves
-this list."""
 
 
 def list_fixtures() -> list[str]:
@@ -89,7 +78,8 @@ def arguments_for(fixture: dict[str, Any]) -> tuple[list[str], dict[str, Any]]:
 
 
 def response_for(fixture: dict[str, Any]) -> httpx.Response:
-    """The fixture's canned answer: no body, a JSON body, or audio bytes given in base64."""
+    """The fixture's canned answer: no body, a JSON body, audio bytes given in base64, or an event stream with one
+    event for each `sse` entry."""
     response: dict[str, Any] = fixture["response"]
     body: dict[str, Any] | None = response["body"]
     content = b""
@@ -97,6 +87,8 @@ def response_for(fixture: dict[str, Any]) -> httpx.Response:
         content = json.dumps(body["json"]).encode()
     if body is not None and "base64" in body:
         content = base64.b64decode(body["base64"])
+    if body is not None and "sse" in body:
+        content = "".join(f"data: {data}\n\n" for data in body["sse"]).encode()
     return httpx.Response(response["status"], headers=response["headers"], content=content)
 
 
@@ -164,6 +156,23 @@ def project_result(operation_id: str, value: object) -> object:
     return {"data": value.model_dump(), "request_id": value.request_id}
 
 
+async def project_stream(value: object) -> dict[str, object]:
+    """A stream in the README's shape: `{chunks}`, every chunk before `[DONE]` as the stream gives it, and, when the
+    stream fails part-way, `error` beside the chunks before it. A value that isn't a stream raises."""
+    chunks: list[object] = []
+    try:
+        if isinstance(value, AsyncStream):
+            async for chunk in cast("AsyncStream[BaseModel]", value):
+                chunks.append(chunk.model_dump())
+        elif isinstance(value, Stream):
+            chunks.extend(chunk.model_dump() for chunk in cast("Stream[BaseModel]", value))
+        else:
+            raise AssertionError(f"A call with stream=True should return a stream, not {type(value).__name__}.")
+    except APIError as error:
+        return {"chunks": chunks, **project_error(error)}
+    return {"chunks": chunks}
+
+
 @dataclass
 class Replayed:
     """What replaying a fixture gave: every request sent, and the result in the README's shape."""
@@ -174,7 +183,8 @@ class Replayed:
 
 async def replay(fixture: dict[str, Any], kind: Kind) -> Replayed:
     """Replays a fixture through a client of `kind`, whose transport answers each request with the fixture's
-    response. Raises LookupError when the client has no method for the operation."""
+    response; a call with `stream=True` is read to its end. Raises LookupError when the client has no method for the
+    operation."""
     requests: list[httpx.Request] = []
 
     def answer(request: httpx.Request) -> httpx.Response:
@@ -191,7 +201,10 @@ async def replay(fixture: dict[str, Any], kind: Kind) -> Replayed:
         value = method(*args, **keywords)
         if inspect.isawaitable(value):
             value = await value
-        result = project_result(fixture["operationId"], value)
+        if keywords.get("stream") is True:
+            result: object = await project_stream(value)
+        else:
+            result = project_result(fixture["operationId"], value)
     except APIError as error:
         result = project_error(error)
     return Replayed(requests, result)

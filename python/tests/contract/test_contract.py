@@ -4,15 +4,13 @@ from typing import Any
 import httpx
 import pytest
 
-from naiuz import NeuronAI, NeuronAIError
+from naiuz import NeuronAI
 from naiuz._errors import make_api_error
 from naiuz._models import WithRequestId
 from naiuz._uploads import Form, encode_form
 from naiuz.types import SpeechAudio
 
 from .harness import (
-    DEFERRED_FIXTURES,
-    DEFERRED_METHODS,
     FIXTURE_KEY,
     KINDS,
     OPERATIONS,
@@ -24,19 +22,19 @@ from .harness import (
     load_fixture,
     project_error,
     project_result,
+    project_stream,
     replay,
     resolve_method,
     without_unknown_fields,
 )
 
 FIXTURES = list_fixtures()
-REPLAYABLE = [file for file in FIXTURES if file not in DEFERRED_FIXTURES]
 ERRORS = [file for file in FIXTURES if load_fixture(file)["response"]["status"] >= 400]
 PYTHON_PATHS = [entry["python"] for entry in [*OPERATIONS["operations"].values(), *OPERATIONS["helpers"].values()]]
 
 
 @pytest.mark.parametrize("kind", KINDS)
-@pytest.mark.parametrize("file", REPLAYABLE)
+@pytest.mark.parametrize("file", FIXTURES)
 async def test_a_fixture_sends_its_request_and_returns_its_result(file: str, kind: Kind) -> None:
     fixture = load_fixture(file)
     replayed = await replay(fixture, kind)
@@ -52,33 +50,17 @@ def test_an_error_fixture_s_answer_maps_to_its_error_deferred_or_not(file: str) 
     assert comparable(project_error(error)) == comparable(load_fixture(file)["result"])
 
 
-def test_the_deferred_lists_name_only_real_fixtures_and_methods() -> None:
-    assert set(DEFERRED_FIXTURES) <= set(FIXTURES)
-    assert set(DEFERRED_METHODS) <= set(PYTHON_PATHS)
-
-
-@pytest.mark.parametrize("kind", KINDS)
-@pytest.mark.parametrize("file", DEFERRED_FIXTURES)
-async def test_a_deferred_fixture_can_t_replay_yet(file: str, kind: Kind) -> None:
-    with pytest.raises((LookupError, NeuronAIError), match=r"is not on the client|later version"):
-        await replay(load_fixture(file), kind)
-
-
 @pytest.mark.parametrize("kind", KINDS)
 @pytest.mark.parametrize("path", PYTHON_PATHS)
-def test_every_method_exists_unless_it_is_deferred(path: str, kind: Kind) -> None:
+def test_every_method_exists(path: str, kind: Kind) -> None:
     method = resolve_method(client_of(kind, httpx.MockTransport(lambda request: httpx.Response(500))), path)
-    if path in DEFERRED_METHODS:
-        assert method is None, f"client.{path} exists now: take it off DEFERRED_METHODS"
-    else:
-        assert method is not None, f"client.{path} is missing"
+    assert method is not None, f"client.{path} is missing"
 
 
-def test_a_fixture_replays_for_every_operation_whose_method_exists() -> None:
-    replayed = {file.split("/")[0] for file in REPLAYABLE}
-    for operation_id, entry in OPERATIONS["operations"].items():
-        if entry["python"] not in DEFERRED_METHODS:
-            assert operation_id in replayed, operation_id
+def test_a_fixture_replays_for_every_operation() -> None:
+    replayed = {file.split("/")[0] for file in FIXTURES}
+    for operation_id in OPERATIONS["operations"]:
+        assert operation_id in replayed, operation_id
 
 
 def sent(target: str) -> httpx.Request:
@@ -137,6 +119,11 @@ def test_project_result_wants_audio_from_an_audio_operation_and_from_no_other() 
         project_result("retrieveVoice", audio)
     with pytest.raises(AssertionError, match="synthesizeDialogue should return a DialogueAudio"):
         project_result("synthesizeDialogue", audio)
+
+
+async def test_project_stream_wants_a_stream() -> None:
+    with pytest.raises(AssertionError, match="A call with stream=True should return a stream, not WithRequestId"):
+        await project_stream(WithRequestId())
 
 
 def test_comparable_drops_nulls_and_tells_a_boolean_from_a_number() -> None:

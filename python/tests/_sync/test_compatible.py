@@ -1,9 +1,13 @@
 # Written by scripts/unasync.py from tests/_async/test_compatible.py. Edit that file, then run the script.
+import json
+
+import httpx
 import pytest
 
-from naiuz import NeuronAIError
+from naiuz import APIConnectionError, Stream
 from naiuz.types import (
     ChatCompletion,
+    ChatCompletionChunk,
     CreateChatCompletionRequest,
     CreateEmbeddingRequest,
     EmbeddingResponse,
@@ -13,6 +17,7 @@ from naiuz.types import (
 )
 from tests.helpers import MockAPI, api_error, body_of, json_response
 
+from ._io import Body, events
 from .clients import client_for, retry_classes
 
 MODELS = {
@@ -41,6 +46,34 @@ COMPLETION = {
     "usage": {"prompt_tokens": 9, "completion_tokens": 2, "total_tokens": 11},
 }
 HELLO: CreateChatCompletionRequest = {"model": "gemma-4-26b-a4b", "messages": [{"role": "user", "content": "Salom!"}]}
+CHUNKS: list[dict[str, object]] = [
+    {
+        "id": "chatcmpl-1",
+        "object": "chat.completion.chunk",
+        "created": 1790000000,
+        "model": "gemma-4-26b-a4b",
+        "choices": [{"index": 0, "delta": {"role": "assistant", "content": "Salom"}, "finish_reason": None}],
+    },
+    {
+        "id": "chatcmpl-1",
+        "object": "chat.completion.chunk",
+        "created": 1790000000,
+        "model": "gemma-4-26b-a4b",
+        "choices": [],
+        "usage": {"prompt_tokens": 9, "completion_tokens": 2, "total_tokens": 11},
+    },
+]
+
+
+def sse(*data: str) -> bytes:
+    """An event stream's body: one event for each data."""
+    return "".join(f"data: {each}\n\n" for each in data).encode()
+
+
+def read_into(chunks: list[ChatCompletionChunk], stream: Stream[ChatCompletionChunk]) -> None:
+    """Reads the stream, keeping each chunk, until it ends or fails."""
+    for chunk in stream:
+        chunks.append(chunk)
 
 
 def test_models_list_returns_the_body_as_it_is_without_a_cost() -> None:
@@ -84,15 +117,47 @@ def test_chat_completions_create_returns_the_completion_with_the_cost() -> None:
     assert body_of(api.requests[0]) == HELLO
 
 
-def test_chat_completions_create_refuses_stream_true_before_sending_anything() -> None:
-    api = MockAPI()
-    with pytest.raises(NeuronAIError, match=r"^Streamed chat completions arrive in a later version of this SDK"):
-        client_for(api).chat.completions.create(
-            model="gemma-4-26b-a4b",
-            messages=[{"role": "user", "content": "Salom!"}],
-            stream=True,  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
-        )
-    assert api.requests == []
+def test_chat_completions_create_with_stream_true_returns_a_stream_of_chunks_asking_for_events() -> None:
+    api = MockAPI(events(Body(sse(*(json.dumps(chunk) for chunk in CHUNKS), "[DONE]"))))
+    stream = client_for(api).chat.completions.create(model="m", messages=HELLO["messages"], stream=True)
+    assert isinstance(stream, Stream)
+    chunks = [chunk for chunk in stream]
+    assert [chunk.model_dump() for chunk in chunks] == CHUNKS
+    assert (chunks[0].choices[0].delta.content, chunks[0].usage) == ("Salom", None)
+    assert chunks[1].usage is not None
+    assert chunks[1].usage.total_tokens == 11
+    sent = api.requests[0]
+    assert sent.headers["accept"] == "text/event-stream, application/json"
+    assert body_of(sent) == {"model": "m", "messages": HELLO["messages"], "stream": True}
+
+
+def test_a_stream_is_retried_like_any_completion_before_it_starts_and_never_once_it_has() -> None:
+    dropped = httpx.RemoteProtocolError("peer closed connection without sending complete message body")
+    started = events(Body(sse(json.dumps(CHUNKS[0])), error=dropped))
+    api = MockAPI(api_error(503, "service_unavailable", {"retry-after": "0"}), started)
+    stream = client_for(api, max_retries=2).chat.completions.create(
+        model="m", messages=HELLO["messages"], stream=True
+    )
+    chunks: list[ChatCompletionChunk] = []
+    with pytest.raises(APIConnectionError):
+        read_into(chunks, stream)
+    assert (len(chunks), len(api.requests)) == (1, 2)
+
+
+def test_chat_completions_create_types_its_result_by_stream() -> None:
+    api = MockAPI(json_response(200, COMPLETION), events(Body(sse("[DONE]"))), json_response(200, COMPLETION))
+    completions = client_for(api).chat.completions
+    completion: ChatCompletion = completions.create(model="m", messages=HELLO["messages"])
+    stream: Stream[ChatCompletionChunk] = completions.create(
+        model="m", messages=HELLO["messages"], stream=True
+    )
+    known_later = len(api.requests) > 9
+    either: ChatCompletion | Stream[ChatCompletionChunk] = completions.create(
+        model="m", messages=HELLO["messages"], stream=known_later
+    )
+    assert isinstance(completion, ChatCompletion)
+    assert isinstance(stream, Stream)
+    assert isinstance(either, ChatCompletion)
 
 
 def test_the_compatible_calls_take_their_request_types_as_keyword_arguments() -> None:
@@ -108,6 +173,7 @@ def test_the_compatible_calls_take_their_request_types_as_keyword_arguments() ->
 def test_a_body_field_named_cost_stays_in_the_body_and_apart_from_the_price() -> None:
     api = MockAPI(json_response(200, {**COMPLETION, "cost": 111}, {"x-cost": "999"}))
     answer = client_for(api).chat.completions.create(**HELLO)
+    assert isinstance(answer, ChatCompletion)
     assert answer.cost == 999
     assert answer.model_dump()["cost"] == 111
 
@@ -138,6 +204,7 @@ def test_models_is_a_safe_call_and_the_rest_are_paid(monkeypatch: pytest.MonkeyP
 def test_with_raw_response_gives_a_compatible_result_with_its_status_and_headers() -> None:
     api = MockAPI(json_response(200, COMPLETION, {"x-cost": "0.34", "x-request-id": "req-chat"}))
     raw = client_for(api).chat.completions.with_raw_response.create(**HELLO)
+    assert isinstance(raw.data, ChatCompletion)
     assert (raw.data.cost, raw.status, raw.headers["x-request-id"]) == (0.34, 200, "req-chat")
 
 
