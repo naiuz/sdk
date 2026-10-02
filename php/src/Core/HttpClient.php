@@ -137,6 +137,8 @@ final class HttpClient
         if ($received instanceof ResponseInterface) {
             return $this->handOver($received, $reader, $attempt);
         }
+        // From here on, no exception, frame or result holds a key the answer echoes back.
+        $received = $attempt->redactAnswer($received);
         if (!$received->isSuccess()) {
             return $this->refused($received, $attempt);
         }
@@ -184,7 +186,7 @@ final class HttpClient
             throw $error;
         }
 
-        return new Answered($value, $response->getStatusCode(), Body::headers($response));
+        return new Answered($value, $response->getStatusCode(), $attempt->redactHeaders(Body::headers($response)));
     }
 
     /** An error answer, as the exception to throw, why, and the seconds its Retry-After asks for. */

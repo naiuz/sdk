@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace Naiuz\Core;
 
 use Naiuz\Exceptions\APIException;
+use Naiuz\Types\DialogueAudio;
+use Naiuz\Types\DialogueTurnTiming;
+use Naiuz\Types\SpeechAudio;
 
 /**
  * How a success answer becomes a call's result. A reader throws APIException, with the answer's status and the key
@@ -14,6 +17,9 @@ use Naiuz\Exceptions\APIException;
  */
 final class Readers
 {
+    /** What the audio calls take back: the WAV, or an error in the API's JSON envelope. */
+    public const AUDIO = 'audio/wav, application/json';
+
     /**
      * Reads a `{data, request_id}` answer: its `data` object, made into the call's result with the request's ID.
      *
@@ -86,6 +92,30 @@ final class Readers
     }
 
     /**
+     * Reads a speech answer: the WAV, and what its headers say about it.
+     *
+     * @return \Closure(Answer, Attempt): SpeechAudio
+     */
+    public static function speech(): \Closure
+    {
+        return static fn(Answer $answer, Attempt $attempt): SpeechAudio => new SpeechAudio(...self::audio($answer, $attempt));
+    }
+
+    /**
+     * Reads a dialogue answer: the WAV, what its headers say about it, and where each turn sits in it.
+     *
+     * @return \Closure(Answer, Attempt): DialogueAudio
+     */
+    public static function dialogue(): \Closure
+    {
+        return static fn(Answer $answer, Attempt $attempt): DialogueAudio => new DialogueAudio(
+            ...self::audio($answer, $attempt),
+            turns: self::turns($answer->headers['x-turns'] ?? null),
+            turn_count: self::countHeader($answer->headers, 'x-turn-count'),
+        );
+    }
+
+    /**
      * Reads a 204 answer: nothing.
      *
      * @return \Closure(Answer, Attempt): null
@@ -115,6 +145,73 @@ final class Readers
         $value = (float) $text;
 
         return is_finite($value) ? $value : null;
+    }
+
+    /**
+     * An audio answer's bytes and what its headers say, in SpeechAudio's order. A success that isn't audio, such as a
+     * proxy's or a captive portal's page, throws APIException with its status and the key redacted.
+     *
+     * @return array{string, string, float|null, int|null, float|null, bool, float|null, bool, string|null}
+     */
+    private static function audio(Answer $answer, Attempt $attempt): array
+    {
+        $headers = $answer->headers;
+        $type = trim($headers['content-type'] ?? '');
+        if (!str_starts_with(strtolower($type), 'audio/')) {
+            throw self::unusable($answer, $attempt);
+        }
+
+        return [
+            $answer->body,
+            $type,
+            self::numberHeader($headers, 'x-cost'),
+            self::countHeader($headers, 'x-character-count'),
+            self::numberHeader($headers, 'x-balance'),
+            self::flagHeader($headers, 'x-voice-custom'),
+            self::numberHeader($headers, 'x-latency-ms'),
+            self::flagHeader($headers, 'idempotency-replayed'),
+            $headers['x-request-id'] ?? null,
+        ];
+    }
+
+    /**
+     * A header that counts something, read from its digits alone, or null when it is absent or anything else.
+     *
+     * @param array<string, string> $headers
+     */
+    private static function countHeader(array $headers, string $name): ?int
+    {
+        $text = trim($headers[$name] ?? '');
+
+        return preg_match('/^\d{1,18}$/', $text) === 1 ? (int) $text : null;
+    }
+
+    /**
+     * A header that is a flag: true only for `1`.
+     *
+     * @param array<string, string> $headers
+     */
+    private static function flagHeader(array $headers, string $name): bool
+    {
+        return trim($headers[$name] ?? '') === '1';
+    }
+
+    /**
+     * The turns an `X-Turns` header lists: none unless the whole header is a JSON list of turn timings.
+     *
+     * @return list<DialogueTurnTiming>
+     */
+    private static function turns(?string $header): array
+    {
+        $turns = $header === null ? null : Json::decode($header);
+        if (!is_array($turns) || !array_is_list($turns)) {
+            return [];
+        }
+        try {
+            return array_map(static fn(mixed $turn): DialogueTurnTiming => $turn instanceof \stdClass ? DialogueTurnTiming::from($turn) : throw new \UnexpectedValueException('A turn is not an object.'), $turns);
+        } catch (\UnexpectedValueException) {
+            return [];
+        }
     }
 
     /** The request's ID: the body's `request_id`, else the `X-Request-Id` header, else null. */

@@ -500,6 +500,22 @@ final class HttpClientTest extends TestCase
         }
     }
 
+    public function test_no_exception_frame_or_result_holds_a_key_an_answer_echoes_back(): void
+    {
+        $echo = ['x-echo' => 'Bearer ' . TestHttp::KEY];
+        $page = '<pre>Authorization: Bearer ' . TestHttp::KEY . '</pre>';
+        foreach ([new Response(502, $echo, $page), new Response(200, $echo, $page)] as $reply) {
+            $error = self::failure((new TestHttp(new MockClient($reply), maxRetries: 0))->http, self::balance());
+            self::assertInstanceOf(APIException::class, $error);
+            self::assertSame('Bearer [redacted]', $error->headers['x-echo'] ?? null);
+            self::assertNotSame([], Frames::sdk($error));
+            self::assertStringNotContainsString(TestHttp::KEY, Frames::printed($error));
+        }
+        $captured = new Captured();
+        self::item((new TestHttp(new MockClient(Replies::envelope(['id' => 'b'])->withHeader('x-echo', 'Bearer ' . TestHttp::KEY))))->http->capturingInto($captured), self::balance());
+        self::assertSame('Bearer [redacted]', $captured->headers['x-echo'] ?? null);
+    }
+
     #[DataProvider('whereAHeaderIsRefused')]
     public function test_no_frame_of_the_sdk_holds_the_key_when_a_header_is_refused(string $where): void
     {

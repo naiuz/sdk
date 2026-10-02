@@ -24,4 +24,26 @@ final readonly class Attempt
 
         return is_string($key) && $key !== '' ? str_replace($key, '[redacted]', $text) : $text;
     }
+
+    /**
+     * Headers with every occurrence of the API key in their values replaced.
+     *
+     * @param array<string, string> $headers
+     *
+     * @return array<string, string>
+     */
+    public function redactHeaders(array $headers): array
+    {
+        return array_map($this->redact(...), $headers);
+    }
+
+    /**
+     * The answer with every occurrence of the API key replaced, in its reason, its headers and its body, so nothing
+     * built from it can hold the key: not an exception, a frame's arguments or a result. A proxy's debugging page may
+     * echo the request's Authorization header back.
+     */
+    public function redactAnswer(Answer $answer): Answer
+    {
+        return new Answer($answer->status, $this->redact($answer->reason), $this->redactHeaders($answer->headers), $this->redact($answer->body));
+    }
 }
