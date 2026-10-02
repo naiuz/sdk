@@ -11,6 +11,7 @@ use Naiuz\Resources\ChatWithRawResponse;
 use Naiuz\Resources\EmbeddingsWithRawResponse;
 use Naiuz\Resources\ModelsWithRawResponse;
 use Naiuz\Resources\RerankWithRawResponse;
+use Naiuz\Resources\SttWithRawResponse;
 use Naiuz\Resources\TtsWithRawResponse;
 use Naiuz\Resources\VoicesWithRawResponse;
 
@@ -28,6 +29,9 @@ final readonly class NeuronAIWithRawResponse
 
     /** Text to speech. */
     public TtsWithRawResponse $tts;
+
+    /** Speech to text. */
+    public SttWithRawResponse $stt;
 
     /** Your organization's API keys. */
     public ApiKeysWithRawResponse $apiKeys;
@@ -50,6 +54,7 @@ final readonly class NeuronAIWithRawResponse
         $this->account = new AccountWithRawResponse($http);
         $this->voices = new VoicesWithRawResponse($http);
         $this->tts = new TtsWithRawResponse($http);
+        $this->stt = new SttWithRawResponse($http);
         $this->apiKeys = new ApiKeysWithRawResponse($http);
         $this->models = new ModelsWithRawResponse($http);
         $this->embeddings = new EmbeddingsWithRawResponse($http);

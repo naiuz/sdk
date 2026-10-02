@@ -35,6 +35,24 @@ final class ContractTest extends TestCase
         'body' => ['json' => ['name' => 'Ops', 'limit' => 1, 'enabled' => true]],
     ];
 
+    private const FORM_EXPECTED = [
+        'method' => 'POST',
+        'path' => '/stt/transcribe',
+        'headers' => ['authorization' => 'Bearer ' . Harness::FIXTURE_KEY, 'content-type' => 'multipart/form-data'],
+        'body' => ['multipart' => [
+            'fields' => ['language' => 'uz', 'tags' => ['a', 'b']],
+            'files' => ['file' => ['filename' => 'clip.wav', 'content_type' => 'audio/wav', 'base64' => 'UklGRg==']],
+        ]],
+    ];
+
+    private const LANGUAGE = "Content-Disposition: form-data; name=\"language\"\r\n\r\nuz";
+
+    private const TAG_A = "Content-Disposition: form-data; name=\"tags[]\"\r\n\r\na";
+
+    private const TAG_B = "Content-Disposition: form-data; name=\"tags[]\"\r\n\r\nb";
+
+    private const FILE = "Content-Disposition: form-data; name=\"file\"; filename=\"clip.wav\"\r\nContent-Type: audio/wav\r\n\r\nRIFF";
+
     /** @return iterable<string, array{string}> */
     public static function replayable(): iterable
     {
@@ -91,10 +109,9 @@ final class ContractTest extends TestCase
         self::assertSame(Harness::comparable(Harness::phpResult(Spec::at($fixture, 'result'))), Harness::comparable(Harness::projectError($error)));
     }
 
-    public function test_the_deferred_lists_name_only_real_fixtures_and_methods(): void
+    public function test_the_deferred_list_names_only_real_fixtures(): void
     {
         self::assertSame([], array_diff(Harness::DEFERRED_FIXTURES, Harness::fixtures()));
-        self::assertSame([], array_diff(Harness::DEFERRED_METHODS, Harness::phpPaths()));
     }
 
     #[DataProvider('deferred')]
@@ -109,23 +126,16 @@ final class ContractTest extends TestCase
     }
 
     #[DataProvider('phpPaths')]
-    public function test_every_method_exists_unless_it_is_deferred(string $path): void
+    public function test_every_method_exists(string $path): void
     {
-        $method = Harness::method(Harness::client(new MockClient()), $path);
-        if (in_array($path, Harness::DEFERRED_METHODS, true)) {
-            self::assertNull($method, "client->{$path} exists now: take it off DEFERRED_METHODS.");
-        } else {
-            self::assertNotNull($method, "client->{$path} is missing.");
-        }
+        self::assertNotNull(Harness::method(Harness::client(new MockClient()), $path), "client->{$path} is missing.");
     }
 
-    public function test_a_fixture_replays_for_every_operation_whose_method_exists(): void
+    public function test_a_fixture_replays_for_every_operation(): void
     {
         $replayed = array_unique(array_map(static fn(string $file): string => explode('/', $file)[0], array_diff(Harness::fixtures(), Harness::DEFERRED_FIXTURES)));
-        foreach ((array) Spec::at(Spec::read('operations.json'), 'operations') as $operationId => $entry) {
-            if (!in_array(Spec::at($entry, 'php'), Harness::DEFERRED_METHODS, true)) {
-                self::assertContains((string) $operationId, $replayed);
-            }
+        foreach (array_keys((array) Spec::at(Spec::read('operations.json'), 'operations')) as $operationId) {
+            self::assertContains((string) $operationId, $replayed);
         }
     }
 
@@ -212,6 +222,35 @@ final class ContractTest extends TestCase
         yield 'a null the fixture doesn\'t hold' => ['{"name":"Ops","limit":1,"enabled":true,"expires_at":null}'];
         yield 'a field left out' => ['{"name":"Ops","limit":1}'];
         yield 'a number for a boolean' => ['{"name":"Ops","limit":1,"enabled":1}'];
+    }
+
+    public function test_expect_request_passes_the_form_the_fixture_describes_in_any_order(): void
+    {
+        Harness::expectRequest([self::form(self::FILE, self::TAG_A, self::LANGUAGE, self::TAG_B)], self::FORM_EXPECTED);
+    }
+
+    #[DataProvider('formsThatDiffer')]
+    public function test_expect_request_compares_a_form_exactly(string $body): void
+    {
+        $this->expectException(AssertionFailedError::class);
+        Harness::expectRequest([new Request('POST', 'https://my.neuronai.uz/api/v1/stt/transcribe', ['authorization' => 'Bearer ' . Harness::FIXTURE_KEY, 'content-type' => 'multipart/form-data; boundary=b0undary'], $body)], self::FORM_EXPECTED);
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function formsThatDiffer(): iterable
+    {
+        yield 'a field the fixture doesn\'t hold' => [(string) self::form(self::LANGUAGE, self::TAG_A, self::TAG_B, self::FILE, "Content-Disposition: form-data; name=\"ref_text\"\r\n\r\nx")->getBody()];
+        yield 'a field sent twice' => [(string) self::form(self::LANGUAGE, self::LANGUAGE, self::TAG_A, self::TAG_B, self::FILE)->getBody()];
+        yield 'a file with other bytes' => [(string) self::form(self::LANGUAGE, self::TAG_A, self::TAG_B, str_replace('RIFF', 'RIFX', self::FILE))->getBody()];
+        yield 'a list as one field' => [(string) self::form(self::LANGUAGE, "Content-Disposition: form-data; name=\"tags\"\r\n\r\na", self::FILE)->getBody()];
+        yield 'no closing boundary' => [substr((string) self::form(self::LANGUAGE, self::TAG_A, self::TAG_B, self::FILE)->getBody(), 0, -strlen("--b0undary--\r\n"))];
+    }
+
+    private static function form(string ...$parts): RequestInterface
+    {
+        $body = implode('', array_map(static fn(string $part): string => "--b0undary\r\n{$part}\r\n", $parts)) . "--b0undary--\r\n";
+
+        return new Request('POST', 'https://my.neuronai.uz/api/v1/stt/transcribe', ['authorization' => 'Bearer ' . Harness::FIXTURE_KEY, 'content-type' => 'multipart/form-data; boundary=b0undary'], $body);
     }
 
     private static function sent(string $target): RequestInterface

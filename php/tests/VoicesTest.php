@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace Naiuz\Tests;
 
 use GuzzleHttp\Psr7\Response;
+use Naiuz\Exceptions\APIConnectionException;
 use Naiuz\Exceptions\InternalServerException;
 use Naiuz\Exceptions\NeuronAIException;
 use Naiuz\Exceptions\NotFoundException;
 use Naiuz\Exceptions\UnprocessableEntityException;
 use Naiuz\Resources\Voices;
 use Naiuz\Tests\Support\Clients;
+use Naiuz\Tests\Support\FormParser;
 use Naiuz\Tests\Support\MockClient;
 use Naiuz\Tests\Support\NetworkError;
 use Naiuz\Tests\Support\Replies;
@@ -22,6 +24,18 @@ use Psr\Http\Message\ResponseInterface;
 
 final class VoicesTest extends TestCase
 {
+    private const WAV = "RIFF\x24\x00\x00\x00WAVEfmt ";
+
+    private ?string $path = null;
+
+    protected function tearDown(): void
+    {
+        if ($this->path !== null && is_file($this->path)) {
+            unlink($this->path);
+        }
+        parent::tearDown();
+    }
+
     public function test_list_sends_no_query_when_given_none_and_the_query_it_is_given(): void
     {
         $api = new MockClient(self::page(['a'], null), self::page(['b'], null));
@@ -170,6 +184,75 @@ final class VoicesTest extends TestCase
         self::assertSame(['id' => 'v', 'name' => 'V', 'language' => 'uz', 'tags' => [], 'type' => 'shared'], $found->toArray());
     }
 
+    public function test_create_sends_a_clip_from_a_path_in_a_multipart_form_with_an_idempotency_key(): void
+    {
+        $api = new MockClient(Replies::envelope(self::voice('v-new'), 'req-voice', 201));
+        $path = $this->sample();
+        $voice = Clients::on($api)->voices->create(['name' => 'Office voice', 'language' => 'uz', 'ref_audio' => $path, 'ref_text' => "Salom.\nRahmat.", 'category' => VoiceCategory::Conversational, 'tags' => ['support', 'calm']], ['idempotency_key' => 'voice-1']);
+        self::assertSame(['v-new', 'req-voice'], [$voice->id, $voice->request_id]);
+        [$sent] = $api->requests;
+        self::assertSame(['POST', '/api/v1/tts/voices', 'voice-1'], [$sent->getMethod(), $sent->getRequestTarget(), $sent->getHeaderLine('idempotency-key')]);
+        self::assertSame([
+            'fields' => ['name' => 'Office voice', 'language' => 'uz', 'ref_text' => "Salom.\r\nRahmat.", 'category' => 'conversational', 'tags' => ['support', 'calm']],
+            'files' => ['ref_audio' => ['filename' => basename($path), 'content_type' => 'audio/wav', 'base64' => base64_encode(self::WAV)]],
+        ], FormParser::parse($sent));
+    }
+
+    public function test_create_refuses_a_stream_without_its_filename_sending_nothing(): void
+    {
+        $api = new MockClient();
+        $stream = fopen('php://temp', 'w+b');
+        self::assertIsResource($stream);
+        try {
+            // @phpstan-ignore argument.type (an untyped caller's mistake, which the SDK refuses)
+            Clients::on($api)->voices->create(['name' => 'Office voice', 'language' => 'uz', 'ref_audio' => $stream]);
+            self::fail('The stream should have been refused.');
+        } catch (NeuronAIException $error) {
+            self::assertSame("ref_audio needs a filename: pass ['stream' => \$stream, 'filename' => 'clip.wav'] rather than the stream alone.", $error->getMessage());
+        }
+        self::assertCount(0, $api);
+    }
+
+    public function test_create_retries_a_bare_502_and_a_reset_with_the_same_form_and_key(): void
+    {
+        $api = new MockClient(new Response(502, [], '<html>Bad Gateway</html>'), NetworkError::reset(), Replies::envelope(self::voice('v-new'), status: 201));
+        (new Voices((new TestHttp($api))->http))->create(['name' => 'Office voice', 'language' => 'uz', 'ref_audio' => $this->sample()]);
+        self::assertCount(3, $api);
+        [$first] = $api->requests;
+        foreach ($api->requests as $sent) {
+            self::assertSame([$first->getHeaderLine('idempotency-key'), (string) $first->getBody()], [$sent->getHeaderLine('idempotency-key'), (string) $sent->getBody()]);
+        }
+    }
+
+    public function test_replace_audio_sends_the_new_clip_and_retries_only_a_5xx_in_the_api_s_envelope(): void
+    {
+        $api = new MockClient(NetworkError::reset(), new Response(502, [], '<html>Bad Gateway</html>'), Replies::apiError(503, 'service_unavailable'), Replies::envelope(self::voice('v1')));
+        $voices = new Voices((new TestHttp($api, maxRetries: 1))->http);
+        $stream = fopen('php://temp', 'w+b');
+        self::assertIsResource($stream);
+        fwrite($stream, self::WAV);
+        $replace = static fn(): Voice => $voices->replaceAudio('v1', ['ref_audio' => ['stream' => $stream, 'filename' => 'take.ogg'], 'ref_text' => 'Yangi namuna.']);
+        foreach ([APIConnectionException::class, InternalServerException::class] as $class) {
+            try {
+                $replace();
+                self::fail('The failure should not have been retried.');
+            } catch (NeuronAIException $error) {
+                self::assertSame($class, $error::class);
+            }
+        }
+        self::assertSame('v1', $replace()->id);
+        self::assertCount(4, $api);
+        [$sent] = $api->requests;
+        self::assertSame(['POST', '/api/v1/tts/voices/v1/audio', false], [$sent->getMethod(), $sent->getRequestTarget(), $sent->hasHeader('idempotency-key')]);
+        self::assertSame(['fields' => ['ref_text' => 'Yangi namuna.'], 'files' => ['ref_audio' => ['filename' => 'take.ogg', 'content_type' => 'audio/ogg', 'base64' => base64_encode(self::WAV)]]], FormParser::parse($sent));
+    }
+
+    public function test_with_raw_response_gives_a_created_voice_with_its_201(): void
+    {
+        $raw = Clients::on(new MockClient(Replies::envelope(self::voice('v-new'), status: 201)))->withRawResponse()->voices->create(['name' => 'Office voice', 'language' => 'uz', 'ref_audio' => $this->sample()]);
+        self::assertSame(['v-new', 201], [$raw->data->id, $raw->status]);
+    }
+
     /** @return array<string, mixed> */
     private static function voice(string $id): array
     {
@@ -180,5 +263,14 @@ final class VoicesTest extends TestCase
     private static function page(array $ids, ?string $nextCursor): ResponseInterface
     {
         return Replies::json(200, ['data' => array_map(self::voice(...), $ids), 'next_cursor' => $nextCursor, 'request_id' => 'req-page']);
+    }
+
+    /** A short WAV file on disk, removed after the test. */
+    private function sample(): string
+    {
+        $this->path = sys_get_temp_dir() . '/naiuz-sample-' . bin2hex(random_bytes(4)) . '.wav';
+        file_put_contents($this->path, self::WAV);
+
+        return $this->path;
     }
 }

@@ -11,6 +11,7 @@ use Naiuz\Resources\ApiKeys;
 use Naiuz\Resources\Completions;
 use Naiuz\Resources\Embeddings;
 use Naiuz\Resources\Rerank;
+use Naiuz\Resources\Stt;
 use Naiuz\Resources\Tts;
 use Naiuz\Resources\TtsJobs;
 use Naiuz\Resources\Voices;
@@ -29,7 +30,10 @@ final class RequestTypesTest extends TestCase
     {
         yield 'UsageParams' => [Account::class, 'UsageParams'];
         yield 'ListVoicesParams' => [Voices::class, 'ListVoicesParams'];
+        yield 'CreateVoiceRequest' => [Voices::class, 'CreateVoiceRequest'];
         yield 'UpdateVoiceRequest' => [Voices::class, 'UpdateVoiceRequest'];
+        yield 'ReplaceVoiceAudioRequest' => [Voices::class, 'ReplaceVoiceAudioRequest'];
+        yield 'CreateTranscriptionRequest' => [Stt::class, 'CreateTranscriptionRequest'];
         yield 'SynthesizeSpeechRequest' => [TtsJobs::class, 'SynthesizeSpeechRequest'];
         yield 'SynthesizeDialogueRequest' => [Tts::class, 'SynthesizeDialogueRequest'];
         yield 'ListApiKeysParams' => [ApiKeys::class, 'ListApiKeysParams'];
@@ -83,7 +87,10 @@ final class RequestTypesTest extends TestCase
         // they don't name through, so the calls below pass what the types refuse, as an untyped caller would.
         yield 'account->usage' => ['account->usage', 'lastDays', static fn(NeuronAI $client, array $params): mixed => $client->account->usage($params)]; // @phpstan-ignore argument.type
         yield 'voices->list' => ['voices->list', 'voiceType', static fn(NeuronAI $client, array $params): mixed => $client->voices->list($params)]; // @phpstan-ignore argument.type
+        yield 'voices->create' => ['voices->create', 'refAudio', static fn(NeuronAI $client, array $params): mixed => $client->voices->create($params)]; // @phpstan-ignore argument.type
         yield 'voices->update' => ['voices->update', 'refText', static fn(NeuronAI $client, array $params): mixed => $client->voices->update('v1', $params)]; // @phpstan-ignore argument.type
+        yield 'voices->replaceAudio' => ['voices->replaceAudio', 'refText', static fn(NeuronAI $client, array $params): mixed => $client->voices->replaceAudio('v1', $params)]; // @phpstan-ignore argument.type
+        yield 'stt->transcribe' => ['stt->transcribe', 'audioFile', static fn(NeuronAI $client, array $params): mixed => $client->stt->transcribe($params)]; // @phpstan-ignore argument.type
         yield 'tts->synthesize' => ['tts->synthesize', 'voiceId', static fn(NeuronAI $client, array $params): mixed => $client->tts->synthesize($params)]; // @phpstan-ignore argument.type
         yield 'tts->dialogue' => ['tts->dialogue', 'gapMs', static fn(NeuronAI $client, array $params): mixed => $client->tts->dialogue($params)]; // @phpstan-ignore argument.type
         yield 'tts->jobs->create' => ['tts->jobs->create', 'voiceId', static fn(NeuronAI $client, array $params): mixed => $client->tts->jobs->create($params)]; // @phpstan-ignore argument.type

@@ -9,6 +9,7 @@ use Naiuz\Exceptions\APIException;
 use Naiuz\Exceptions\RateLimitException;
 use Naiuz\NeuronAI;
 use Naiuz\Page;
+use Naiuz\Tests\Support\FormParser;
 use Naiuz\Tests\Support\MockClient;
 use Naiuz\Tests\Support\Spec;
 use Naiuz\Types\ApiObject;
@@ -34,23 +35,12 @@ final class Harness
     public const AUDIO_OPERATIONS = ['synthesizeSpeech', 'synthesizeDialogue', 'downloadTtsJobAudio'];
 
     /**
-     * Fixtures this version of the SDK can't replay yet: uploads and streamed chat come in a later version. When one
-     * starts to replay, a test fails until it leaves this list.
+     * Fixtures this version of the SDK can't replay yet: streamed chat comes in a later version. When one starts to
+     * replay, a test fails until it leaves this list.
      */
     public const DEFERRED_FIXTURES = [
         'createChatCompletion/stream-error.json',
         'createChatCompletion/streamed.json',
-        'createTranscription/uzbek.json',
-        'createVoice/created.json',
-        'createVoice/multiline-ref-text.json',
-        'replaceVoiceAudio/replaced.json',
-    ];
-
-    /** Methods from spec/operations.json that the client doesn't have yet. When one appears, a test fails until it leaves this list. */
-    public const DEFERRED_METHODS = [
-        'voices->create',
-        'voices->replaceAudio',
-        'stt->transcribe',
     ];
 
     /**
@@ -124,7 +114,8 @@ final class Harness
 
     /**
      * A fixture's call as the method's arguments: the path parameters in the path's order, then the fields or the
-     * query when the operation takes either, then the options.
+     * query when the operation takes either, each upload as a stream with its filename and content type, then the
+     * options.
      *
      * @param array<mixed> $fixture
      *
@@ -139,7 +130,17 @@ final class Harness
         $described = Spec::at(Spec::read('openapi.json'), 'paths', "/v1{$route}", strtolower($method));
         $takesQuery = array_filter((array) Spec::at($described, 'parameters'), static fn(mixed $parameter): bool => Spec::at($parameter, 'in') === 'query') !== [];
         if (Spec::at($described, 'requestBody') !== null || $takesQuery) {
-            $arguments[] = (array) Spec::at($fixture, 'call', 'params');
+            $params = (array) Spec::at($fixture, 'call', 'params');
+            foreach ((array) Spec::at($fixture, 'call', 'files') as $field => $file) {
+                // Left at its end, as a caller who just wrote the bytes leaves it: the SDK reads it from its start.
+                $stream = fopen('php://memory', 'w+b');
+                if ($stream === false) {
+                    throw new \RuntimeException('A memory stream couldn\'t be opened.');
+                }
+                fwrite($stream, (string) base64_decode(Spec::text(Spec::at($file, 'base64')), true));
+                $params[$field] = ['stream' => $stream, 'filename' => Spec::text(Spec::at($file, 'filename')), 'content_type' => Spec::text(Spec::at($file, 'content_type'))];
+            }
+            $arguments[] = $params;
         }
         $key = Spec::at($fixture, 'call', 'options', 'idempotency_key');
         if ($key !== null) {
@@ -319,7 +320,9 @@ final class Harness
 
     /**
      * Asserts that exactly one request went out, and that it is the fixture's: the method, the raw request target as
-     * sent, the query with every key once, every fixture header with its value, and the body, null for null.
+     * sent, the query with every key once, every fixture header with its value, and the body. A JSON body compares null
+     * for null. A multipart body's content type only has to start with the fixture's, since the boundary follows it,
+     * and its form compares exactly: every field and file, each once, and nothing more.
      *
      * @param list<RequestInterface> $requests
      * @param array<mixed> $expected
@@ -339,12 +342,21 @@ final class Harness
         }
         sort($query);
         Assert::assertSame($query, self::pairs($sent->getUri()->getQuery()));
-        foreach ((array) Spec::at($expected, 'headers') as $name => $value) {
-            Assert::assertSame($value, $sent->getHeaderLine((string) $name), (string) $name);
-        }
         $body = Spec::at($expected, 'body');
+        $multipart = is_array($body) && array_key_exists('multipart', $body);
+        foreach ((array) Spec::at($expected, 'headers') as $name => $value) {
+            if ($multipart && $name === 'content-type') {
+                $type = Spec::text($value);
+                Assert::assertNotSame('', $type);
+                Assert::assertStringStartsWith($type, $sent->getHeaderLine('content-type'));
+            } else {
+                Assert::assertSame($value, $sent->getHeaderLine((string) $name), (string) $name);
+            }
+        }
         if ($body === null) {
             Assert::assertSame('', (string) $sent->getBody());
+        } elseif ($multipart) {
+            Assert::assertSame(self::exact($body['multipart']), self::exact(FormParser::parse($sent)));
         } else {
             Assert::assertSame(self::exact(Spec::at($body, 'json')), self::exact(json_decode((string) $sent->getBody(), true, flags: JSON_THROW_ON_ERROR)));
         }

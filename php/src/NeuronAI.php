@@ -16,6 +16,7 @@ use Naiuz\Resources\Chat;
 use Naiuz\Resources\Embeddings;
 use Naiuz\Resources\Models;
 use Naiuz\Resources\Rerank;
+use Naiuz\Resources\Stt;
 use Naiuz\Resources\Tts;
 use Naiuz\Resources\Voices;
 use Psr\Http\Client\ClientInterface;
@@ -61,6 +62,9 @@ final readonly class NeuronAI
 
     /** Text to speech. */
     public Tts $tts;
+
+    /** Speech to text. */
+    public Stt $stt;
 
     /** Your organization's API keys. */
     public ApiKeys $apiKeys;
@@ -118,6 +122,7 @@ final readonly class NeuronAI
         $this->account = new Account($this->http);
         $this->voices = new Voices($this->http);
         $this->tts = new Tts($this->http);
+        $this->stt = new Stt($this->http);
         $this->apiKeys = new ApiKeys($this->http);
         $this->models = new Models($this->http);
         $this->embeddings = new Embeddings($this->http);

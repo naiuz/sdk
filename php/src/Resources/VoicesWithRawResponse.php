@@ -15,8 +15,11 @@ use Naiuz\Types\Voice;
  * The voices' methods, each returning a RawResponse: the result with its answer's status and headers.
  *
  * @phpstan-import-type ListVoicesParams from Voices
+ * @phpstan-import-type CreateVoiceRequest from Voices
  * @phpstan-import-type UpdateVoiceRequest from Voices
+ * @phpstan-import-type ReplaceVoiceAudioRequest from Voices
  * @phpstan-import-type CallOptions from RequestOptions
+ * @phpstan-import-type IdempotentCallOptions from RequestOptions
  */
 readonly class VoicesWithRawResponse
 {
@@ -45,6 +48,17 @@ readonly class VoicesWithRawResponse
     }
 
     /**
+     * @param CreateVoiceRequest $params
+     * @param IdempotentCallOptions $options
+     *
+     * @return RawResponse<Voice>
+     */
+    public function create(array $params, array $options = []): RawResponse
+    {
+        return Raw::capture($this->http, static fn(HttpClient $http): Voice => (new Voices($http))->create($params, $options));
+    }
+
+    /**
      * @param UpdateVoiceRequest $params
      * @param CallOptions $options
      *
@@ -53,6 +67,17 @@ readonly class VoicesWithRawResponse
     public function update(string $id, array $params, array $options = []): RawResponse
     {
         return Raw::capture($this->http, static fn(HttpClient $http): Voice => (new Voices($http))->update($id, $params, $options));
+    }
+
+    /**
+     * @param ReplaceVoiceAudioRequest $params
+     * @param CallOptions $options
+     *
+     * @return RawResponse<Voice>
+     */
+    public function replaceAudio(string $id, array $params, array $options = []): RawResponse
+    {
+        return Raw::capture($this->http, static fn(HttpClient $http): Voice => (new Voices($http))->replaceAudio($id, $params, $options));
     }
 
     /**
