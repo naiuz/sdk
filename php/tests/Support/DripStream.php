@@ -7,8 +7,8 @@ namespace Naiuz\Tests\Support;
 use Psr\Http\Message\StreamInterface;
 
 /**
- * A body that arrives over time: each piece after `gap` seconds, then it ends, fails with `error`, or goes on with
- * `forever`. It records whether it was closed and whether it was read to its end.
+ * A body that arrives over time: each piece after `gap` seconds, then it ends, fails with `error` a gap later, or goes
+ * on with `forever`. It records whether it was closed and whether it was read to its end.
  */
 final class DripStream implements StreamInterface
 {
@@ -49,6 +49,7 @@ final class DripStream implements StreamInterface
         if ($this->error !== null) {
             $error = $this->error;
             $this->error = null;
+            usleep((int) ($this->gap * 1_000_000));
 
             throw $error;
         }

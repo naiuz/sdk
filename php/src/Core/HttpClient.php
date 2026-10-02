@@ -145,7 +145,7 @@ final class HttpClient
             $received = $reader instanceof TakeOver ? $this->open($request, $reader, $attempt) : $this->transport->fetch($request, $attempt->timeout);
         } catch (TransportFailure $failure) {
             $error = $failure->timedOut
-                ? new APITimeoutException(sprintf('Request timed out after %s s.', self::seconds($attempt->timeout)))
+                ? new APITimeoutException(sprintf('Request timed out after %s s.', Clock::text($attempt->timeout)))
                 : ErrorFactory::connection($attempt->redact($failure->getMessage()), $failure->reading);
             // A connection that was never made sent nothing, even when it timed out, so every class may retry it.
             $why = $failure->beforeSend ? new ConnectionFailure(true) : ($failure->timedOut ? new TimeoutFailure() : new ConnectionFailure(false));
@@ -228,11 +228,5 @@ final class HttpClient
         }
 
         return $request->body === null ? [null, null] : [Json::encode((object) $request->body), 'application/json'];
-    }
-
-    /** Seconds as the shortest text that says them: 0.2, 300 or 2147483.647. */
-    private static function seconds(float $seconds): string
-    {
-        return rtrim(rtrim(sprintf('%.3f', $seconds), '0'), '.');
     }
 }

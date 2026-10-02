@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Naiuz\Core;
 
 use Naiuz\Exceptions\APIException;
+use Naiuz\Stream;
 use Naiuz\Types\DialogueAudio;
 use Naiuz\Types\DialogueTurnTiming;
 use Naiuz\Types\SpeechAudio;
+use Psr\Http\Message\ResponseInterface;
 
 /**
  * How a success answer becomes a call's result. A reader throws APIException, with the answer's status and the key
@@ -113,6 +115,21 @@ final class Readers
             turns: self::turns($answer->headers['x-turns'] ?? null),
             turn_count: self::countHeader($answer->headers, 'x-turn-count'),
         );
+    }
+
+    /**
+     * Reads a stream of server-sent events, each made by $make: the core hands the answer over open, and the stream
+     * reads it. A success that isn't an event stream throws APIException, its body read within the call's timeout.
+     *
+     * @template T
+     *
+     * @param \Closure(\stdClass): T $make
+     *
+     * @return TakeOver<Stream<T>>
+     */
+    public static function stream(\Closure $make): TakeOver
+    {
+        return new TakeOver(static fn(ResponseInterface $response, Attempt $attempt): Stream => new Stream($response, $attempt, $make), 'text/event-stream');
     }
 
     /**

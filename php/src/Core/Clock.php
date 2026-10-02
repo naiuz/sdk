@@ -22,4 +22,10 @@ final class Clock
     {
         return ceil($seconds * 1000) / 1000;
     }
+
+    /** Seconds as the shortest text that says them, for a message: 0.2, 300 or 2147483.647. */
+    public static function text(float $seconds): string
+    {
+        return rtrim(rtrim(sprintf('%.3f', $seconds), '0'), '.');
+    }
 }
