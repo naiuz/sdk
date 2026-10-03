@@ -236,7 +236,7 @@ test("release-please runs on the release app's token, so that CI runs on the rel
 
 test("each SDK's publish takes only a release-please tag of that SDK on main, once its environment's reviewer approves", async () => {
     const release = await read("release.yml");
-    for (const [job, component] of [["npm", "js"], ["pypi-build", "python"], ["packagist", "php"]]) {
+    for (const [job, component] of [["npm-build", "js"], ["pypi-build", "python"], ["packagist", "php"]]) {
         const text = jobText(release, job);
         assert.match(text, new RegExp(`!cancelled\\(\\) && github\\.repository == 'naiuz/sdk' && github\\.ref == 'refs/heads/main' &&\\n\\s+\\(needs\\.release-please\\.outputs\\.${component} != '' \\|\\| startsWith\\(inputs\\.tag, '${component}-v'\\)\\)\\n`), job);
         assert.match(text, new RegExp(`TAG: \\$\\{\\{ needs\\.release-please\\.outputs\\.${component} \\|\\| inputs\\.tag \\}\\}\\n`), job);
@@ -257,13 +257,22 @@ test("no run script of the release workflow expands an expression, so a tag type
 
 test("npm gets @naiuz/sdk once, with provenance, through trusted publishing or the first publish's token", async () => {
     const release = await read("release.yml");
+    // Built where no publishing credential is: no install script runs, and no step can mint an OIDC token or read the token.
+    const build = jobText(release, "npm-build");
+    assert.doesNotMatch(build, /id-token|secrets\./);
+    assert.match(build, /outputs:\n\s+version: \$\{\{ steps\.check\.outputs\.version \}\}\n/);
+    assert.match(build, /id: check\n[\s\S]*run: npm ci --ignore-scripts\n[\s\S]*run: npm run build\n[\s\S]*run: node smoke\/runtimes\.mjs\n[\s\S]*run: npm pack\n/);
+    assert.match(build, /name: npm-package\n\s+path: js\/naiuz-sdk-\*\.tgz\n\s+if-no-files-found: error\n/);
+    // Published from that tarball alone, once the npm environment's reviewer approves: no dependency's code runs here.
     const npm = jobText(release, "npm");
-    assert.match(npm, /permissions:\n\s+contents: read\n\s+id-token: write\n/);
+    assert.match(npm, /needs: npm-build\n\s+if: \$\{\{ !cancelled\(\) && needs\.npm-build\.result == 'success' \}\}\n/);
+    assert.match(npm, /permissions:\n\s+id-token: write\n\s+steps:\n/);
+    assert.doesNotMatch(npm, /actions\/checkout|npm ci|npm run|smoke/);
+    assert.match(npm, /name: npm-package\n/);
     assert.match(npm, /node-version: 24\n\s+registry-url: https:\/\/registry\.npmjs\.org\n/);
     assert.match(npm, /printf '%s\\n' 11\.5\.1 "\$version" \| sort -V \| head -n 1/);
-    assert.match(npm, /run: npm ci\n[\s\S]*run: npm run build\n[\s\S]*run: node smoke\/runtimes\.mjs\n/);
-    assert.match(npm, /NODE_AUTH_TOKEN: \$\{\{ secrets\.NPM_TOKEN \}\}\n/);
-    assert.match(npm, /if \[ "\$\(npm view "@naiuz\/sdk@\$VERSION" version 2>\/dev\/null\)" = "\$VERSION" \]; then\n[\s\S]*else\n\s+npm publish\n/);
+    assert.match(npm, /NODE_AUTH_TOKEN: \$\{\{ secrets\.NPM_TOKEN \}\}\n\s+VERSION: \$\{\{ needs\.npm-build\.outputs\.version \}\}\n/);
+    assert.match(npm, /if \[ "\$\(npm view "@naiuz\/sdk@\$VERSION" version 2>\/dev\/null\)" = "\$VERSION" \]; then\n[\s\S]*else\n\s+npm publish "\.\/naiuz-sdk-\$VERSION\.tgz"\n/);
     assert.equal(release.match(/secrets\.NPM_TOKEN/g)?.length, 1);
 });
 
