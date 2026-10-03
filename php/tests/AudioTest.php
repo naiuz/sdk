@@ -101,6 +101,7 @@ final class AudioTest extends TestCase
         yield 'an object' => ['{"index":0}'];
         yield 'a turn without its voice' => ['[{"index":0,"start_s":0,"end_s":0.8,"duration_s":0.8}]'];
         yield 'a turn that isn\'t an object' => ['[1]'];
+        yield 'a good turn beside one without its voice' => ['[{"index":0,"voice_id":"uz-sardor","start_s":0,"end_s":0.8,"duration_s":0.8},{"index":1,"start_s":1.1,"end_s":2.4,"duration_s":1.3}]'];
     }
 
     public function test_a_turn_keeps_a_field_the_sdk_doesn_t_know_yet(): void

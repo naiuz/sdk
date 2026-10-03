@@ -137,6 +137,21 @@ final class UploadsTest extends TestCase
         }
     }
 
+    #[DataProvider('stringsThatCantBePaths')]
+    public function test_a_string_too_long_or_not_utf8_to_be_a_path_is_refused_as_no_path(string $bytes): void
+    {
+        $this->expectException(NeuronAIException::class);
+        $this->expectExceptionMessage("file must be a path, or ['stream' => \$stream, 'filename' => 'clip.wav']: this string isn't a path.");
+        Upload::read('file', $bytes);
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function stringsThatCantBePaths(): iterable
+    {
+        yield 'longer than the longest path' => [str_repeat('a', PHP_MAXPATHLEN + 1)];
+        yield 'not UTF-8' => ["\xff\xfeclip.wav"];
+    }
+
     public function test_a_path_that_can_t_be_read_is_refused_naming_it_and_why(): void
     {
         $this->directory = $this->temporaryDirectory();

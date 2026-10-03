@@ -107,6 +107,15 @@ final class ChatStreamTest extends TestCase
         self::assertSame(['Salom!'], array_map(static fn(ChatCompletionChunk $chunk): ?string => $chunk->choices[0]?->delta->content, iterator_to_array($raw->data)));
     }
 
+    public function test_with_raw_response_redacts_a_key_the_stream_s_answer_echoes_in_its_headers(): void
+    {
+        $echoing = self::events(self::TEXT, '[DONE]')->withHeader('x-echo', 'Bearer ' . TestHttp::KEY);
+        $raw = Clients::on(new MockClient($echoing))->withRawResponse()->chat->completions->create([...self::HELLO, 'stream' => true]);
+        self::assertSame('Bearer [redacted]', $raw->headers['x-echo'] ?? null);
+        self::assertInstanceOf(Stream::class, $raw->data);
+        $raw->data->close();
+    }
+
     public function test_a_chunk_keeps_a_field_the_sdk_doesn_t_know_yet_and_may_leave_out_usage(): void
     {
         $sent = json_decode(self::STOP, flags: JSON_THROW_ON_ERROR);
