@@ -81,6 +81,14 @@ test("the Python SDK's checks run on Python 3.10 to 3.14 when python/ or spec/ c
     assert.deepEqual([...steps].sort((a, b) => a - b), steps, "in this order");
 });
 
+test("the Python SDK's tests also run on the oldest httpx and pydantic its pyproject.toml allows", async () => {
+    const python = await read("python.yml");
+    assert.match(python, /name: Python 3\.10 on the lowest dependencies\n\s+runs-on: ubuntu-24\.04\n\s+timeout-minutes: 15\n/);
+    assert.match(python, /python-version: "3\.10"\n\s+# pyproject\.toml's floors/);
+    // Quoted, since ": " would end a plain YAML value.
+    assert.match(python, /run: uv venv\n\s+- run: 'uv pip install --only-binary=:all: --resolution lowest-direct -e \. "pytest==9\.1\.1" "pytest-asyncio==1\.4\.0"'\n\s+- run: \.venv\/bin\/python -m pytest -q\n/);
+});
+
 test("the PHP SDK's checks run on PHP 8.2 to 8.5 when php/ or spec/ changes", async () => {
     const php = await read("php.yml");
     assert.match(php, /pull_request:\n\s+paths:\n\s+- "php\/\*\*"\n\s+- "spec\/\*\*"\n\s+- "\.github\/workflows\/php\.yml"\n/);
