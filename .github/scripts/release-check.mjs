@@ -36,6 +36,9 @@ if (git("rev-parse", "HEAD") !== tagged) refuse(`The checkout isn't ${tag}.`);
 if (git("merge-base", "--is-ancestor", tagged, "refs/remotes/origin/main") === null) refuse(`${tag} isn't on main.`);
 const released = JSON.parse(readFileSync(".release-please-manifest.json", "utf8"))[component];
 if (released !== version) refuse(`At ${tag}, .release-please-manifest.json gives ${component} ${released}, not ${version}.`);
+// The release is the commit that moved the manifest to this version: a later commit tagged by hand gives it too.
+const before = git("show", `${tagged}^:.release-please-manifest.json`);
+if (before !== null && JSON.parse(before)[component] === version) refuse(`${tag} isn't the commit that released ${component} ${version}: its parent gives that version already.`);
 const own = OWN_VERSION[component]();
 if (own !== version) refuse(`At ${tag}, ${component}'s own version is ${own}, not ${version}.`);
 console.log(version);

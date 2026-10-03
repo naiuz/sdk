@@ -92,6 +92,11 @@ test("the release check refuses anything else, before anything is published", as
         await commit(origin, versions({manifest: {js: "0.2.0", python: "0.0.0", php: "0.1.0"}}), "chore(elsewhere): release js 0.2.0");
         git(origin, "tag", "js-v0.2.0");
         git(origin, "checkout", "--quiet", "main");
+        // A release commit, then a later one tagged by hand with its version, as a release made in GitHub's UI from
+        // the head of main would be: the version matches everywhere, but the commit isn't the release.
+        await commit(origin, versions({manifest: {js: "0.4.0", python: "0.0.0", php: "0.1.0"}}), "chore(main): release js 0.4.0");
+        await commit(origin, {...versions({manifest: {js: "0.4.0", python: "0.0.0", php: "0.1.0"}}), "js/src/fix.ts": "// a fix\n"}, "fix: a later commit tagged by hand with the release's version");
+        git(origin, "tag", "js-v0.4.0");
         const clone = join(directory, "clone");
         git(directory, "clone", "--quiet", origin, clone);
         const refusals = [
@@ -104,6 +109,7 @@ test("the release check refuses anything else, before anything is published", as
             ["js-v0.2.0", "js", "js-v0.2.0", "js-v0.2.0 isn't on main."],
             ["js-v0.3.0", "js", "js-v0.3.0", "At js-v0.3.0, .release-please-manifest.json gives js 0.1.0, not 0.3.0."],
             ["php-v0.1.0", "php", "php-v0.1.0", "At php-v0.1.0, php's own version is 0.0.0, not 0.1.0."],
+            ["js-v0.4.0", "js", "js-v0.4.0", "js-v0.4.0 isn't the commit that released js 0.4.0: its parent gives that version already."],
         ];
         for (const [checkout, component, tag, why] of refusals) {
             git(clone, "checkout", "--quiet", checkout);
