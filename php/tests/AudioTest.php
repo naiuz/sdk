@@ -9,6 +9,7 @@ use Naiuz\Core\Attempt;
 use Naiuz\Core\Readers;
 use Naiuz\Exceptions\APIException;
 use Naiuz\Exceptions\NeuronAIException;
+use Naiuz\Tests\Support\DeniedStream;
 use Naiuz\Tests\Support\TestHttp;
 use Naiuz\Types\DialogueAudio;
 use Naiuz\Types\DialogueTurnTiming;
@@ -140,6 +141,22 @@ final class AudioTest extends TestCase
             self::assertSame("The audio couldn't be written to /nonexistent/speech.wav: Failed to open stream: No such file or directory", $error->getMessage());
         } finally {
             restore_error_handler();
+        }
+    }
+
+    public function test_save_gives_a_stream_wrapper_s_own_reason_and_its_warning_reaches_no_other_handler(): void
+    {
+        // A userland stream wrapper, such as an S3 client's, says why it can't open a file with E_USER_WARNING.
+        stream_wrapper_register(DeniedStream::PROTOCOL, DeniedStream::class);
+        error_clear_last();
+        try {
+            self::speech(self::HEADERS)->save('naiuz-denied://bucket/speech.wav');
+            self::fail('The audio should not have been written.');
+        } catch (NeuronAIException $error) {
+            self::assertSame("The audio couldn't be written to naiuz-denied://bucket/speech.wav: Access denied to bucket/speech.wav", $error->getMessage());
+            self::assertNull(error_get_last());
+        } finally {
+            stream_wrapper_unregister(DeniedStream::PROTOCOL);
         }
     }
 

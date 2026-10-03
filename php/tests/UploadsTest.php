@@ -11,6 +11,7 @@ use Naiuz\Core\Form;
 use Naiuz\Core\Multipart;
 use Naiuz\Core\Upload;
 use Naiuz\Exceptions\NeuronAIException;
+use Naiuz\Tests\Support\DeniedStream;
 use Naiuz\Tests\Support\FormParser;
 use Naiuz\Tests\Support\LocalServer;
 use Naiuz\Types\VoiceCategory;
@@ -175,6 +176,23 @@ final class UploadsTest extends TestCase
             Upload::read('file', '/nonexistent/clip.wav');
         } finally {
             restore_error_handler();
+        }
+    }
+
+    public function test_a_stream_wrapper_s_own_warning_is_the_reason_and_reaches_no_other_handler(): void
+    {
+        // A userland stream wrapper, such as an S3 client's, says why it can't open a file with E_USER_WARNING.
+        stream_wrapper_register(DeniedStream::PROTOCOL, DeniedStream::class);
+        error_clear_last();
+        try {
+            Upload::read('file', 'naiuz-denied://bucket/clip.wav');
+            self::fail('The file should have been refused.');
+        } catch (NeuronAIException $error) {
+            self::assertSame("file couldn't be read from naiuz-denied://bucket/clip.wav: Access denied to bucket/clip.wav", $error->getMessage());
+            // PHP's own handler records each warning left to it: none was.
+            self::assertNull(error_get_last());
+        } finally {
+            stream_wrapper_unregister(DeniedStream::PROTOCOL);
         }
     }
 

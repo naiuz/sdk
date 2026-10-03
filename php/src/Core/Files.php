@@ -63,7 +63,8 @@ final class Files
     /**
      * Runs a file call, and returns what it returns unless that is false: then it throws with PHP's reason. A warning
      * the call raises is caught, so no error handler sees it, and a path PHP refuses outright, such as one holding a
-     * NUL byte, throws the same way.
+     * NUL byte, throws the same way. A userland stream wrapper, such as an S3 client's, says why with E_USER_WARNING,
+     * and the first warning is the reason, so its own words win over PHP's "call failed".
      *
      * @template T
      *
@@ -80,7 +81,7 @@ final class Files
             $warning ??= $message;
 
             return true;
-        }, E_WARNING | E_NOTICE);
+        }, E_WARNING | E_USER_WARNING | E_NOTICE | E_USER_NOTICE);
         try {
             $result = $call();
         } catch (\ValueError $error) {
