@@ -1,0 +1,207 @@
+name: Release
+
+# On each push to main, release-please keeps a release pull request open for each SDK. Merging one tags the release,
+# such as js-v0.1.0, and the jobs below publish what it released, each once a reviewer of its environment approves.
+# A publish that stopped part-way is finished by re-running its failed jobs, or by running this workflow by hand with
+# the release's tag.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "The release tag to publish, such as js-v0.1.0, when its publish didn't finish"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    name: Release pull requests and tags
+    if: github.event_name == 'push' && github.repository == 'naiuz/sdk'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      js: ${{ steps.release.outputs['js--tag_name'] }}
+      python: ${{ steps.release.outputs['python--tag_name'] }}
+      php: ${{ steps.release.outputs['php--tag_name'] }}
+    steps:
+      # The release app's token, not GITHUB_TOKEN, whose pull requests CI never runs on.
+      - name: Get a token from the release app
+        id: app
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-issues: write
+          permission-pull-requests: write
+      - name: Open or update the release pull requests, and tag what was merged
+        id: release
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          token: ${{ steps.app.outputs.token }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  npm:
+    name: Publish @naiuz/sdk to npm
+    needs: release-please
+    if: >-
+      !cancelled() && github.repository == 'naiuz/sdk' && github.ref == 'refs/heads/main' &&
+      (needs.release-please.outputs.js != '' || startsWith(inputs.tag, 'js-v'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment:
+      name: npm
+      url: https://www.npmjs.com/package/@naiuz/sdk
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      TAG: ${{ needs.release-please.outputs.js || inputs.tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: refs/tags/${{ env.TAG }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check that the tag is a release of js
+        id: check
+        run: node .github/scripts/release-check.mjs js "$TAG"
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - name: Check for npm 11.5.1 or later, which trusted publishing needs
+        run: |
+          version="$(npm --version)"
+          if [ "$(printf '%s\n' 11.5.1 "$version" | sort -V | head -n 1)" != 11.5.1 ]; then
+            echo "::error title=npm too old::Trusted publishing needs npm 11.5.1 or later, and this runner has $version."
+            exit 1
+          fi
+      - run: npm ci
+        working-directory: js
+      - run: npm run build
+        working-directory: js
+      - run: node smoke/runtimes.mjs
+        working-directory: js
+      # Through trusted publishing once npm names this workflow as @naiuz/sdk's publisher; before that, for the first
+      # publish only, with the npm environment's NPM_TOKEN secret. Either way with provenance, as publishConfig says.
+      - name: Publish, unless npm has this version already
+        working-directory: js
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          VERSION: ${{ steps.check.outputs.version }}
+        run: |
+          if [ "$(npm view "@naiuz/sdk@$VERSION" version 2>/dev/null)" = "$VERSION" ]; then
+            echo "npm has @naiuz/sdk $VERSION already."
+          else
+            npm publish
+          fi
+
+  pypi-build:
+    name: Build naiuz for PyPI
+    needs: release-please
+    if: >-
+      !cancelled() && github.repository == 'naiuz/sdk' && github.ref == 'refs/heads/main' &&
+      (needs.release-please.outputs.python != '' || startsWith(inputs.tag, 'python-v'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      TAG: ${{ needs.release-please.outputs.python || inputs.tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: refs/tags/${{ env.TAG }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check that the tag is a release of python
+        id: check
+        run: node .github/scripts/release-check.mjs python "$TAG"
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: false
+      - run: uv build
+        working-directory: python
+      - run: uvx twine@7.0.0 check --strict dist/*
+        working-directory: python
+      - name: Check that the wheel installs and gives the tag's version
+        working-directory: python
+        env:
+          VERSION: ${{ steps.check.outputs.version }}
+        run: |
+          installed="$(uv run --isolated --no-project --with "dist/naiuz-$VERSION-py3-none-any.whl" python -c 'import naiuz; print(naiuz.__version__)')"
+          if [ "$installed" != "$VERSION" ]; then
+            echo "::error title=Wrong version::The wheel gives $installed, not $VERSION."
+            exit 1
+          fi
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: python-dist
+          path: python/dist/
+          if-no-files-found: error
+
+  pypi:
+    name: Publish naiuz to PyPI
+    needs: pypi-build
+    if: ${{ !cancelled() && needs.pypi-build.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment:
+      name: pypi
+      url: https://pypi.org/project/naiuz/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: python-dist
+          path: dist/
+      # Through trusted publishing: PyPI's publisher for naiuz names this workflow and the pypi environment. A re-run
+      # uploads only the files PyPI doesn't have yet, so a publish that stopped part-way can finish.
+      - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+        with:
+          skip-existing: true
+
+  packagist:
+    name: Tag naiuz/sdk-php for Packagist
+    needs: release-please
+    if: >-
+      !cancelled() && github.repository == 'naiuz/sdk' && github.ref == 'refs/heads/main' &&
+      (needs.release-please.outputs.php != '' || startsWith(inputs.tag, 'php-v'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment:
+      name: packagist
+      url: https://packagist.org/packages/naiuz/sdk
+    env:
+      TAG: ${{ needs.release-please.outputs.php || inputs.tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: refs/tags/${{ env.TAG }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check that the tag is a release of php
+        id: check
+        run: node .github/scripts/release-check.mjs php "$TAG"
+      # Packagist reads the mirror's tags through its GitHub hook: v0.1.0 there is version 0.1.0 of naiuz/sdk.
+      - name: Push php/ at the tag to naiuz/sdk-php as its version tag
+        env:
+          SDK_PHP_DEPLOY_KEY: ${{ secrets.SDK_PHP_DEPLOY_KEY }}
+          VERSION: ${{ steps.check.outputs.version }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SDK_PHP_DEPLOY_KEY" > ~/.ssh/sdk-php
+          chmod 600 ~/.ssh/sdk-php
+          echo "github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl" > ~/.ssh/known_hosts
+          export GIT_SSH_COMMAND="ssh -i ~/.ssh/sdk-php -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes"
+          bash .github/scripts/tag-php-mirror.sh git@github.com:naiuz/sdk-php.git "$TAG" "v$VERSION"

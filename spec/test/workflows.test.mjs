@@ -13,12 +13,25 @@ const workflows = async () => (await readdir(new URL("../../.github/workflows/",
 // commit and change it here and in every workflow at once.
 const ACTIONS = {
     "actions/checkout": "3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+    "actions/create-github-app-token": "bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0",
+    "actions/download-artifact": "3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1",
     "actions/setup-node": "820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+    "actions/upload-artifact": "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
     "astral-sh/setup-uv": "c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0",
     "denoland/setup-deno": "22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5",
+    "googleapis/release-please-action": "45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0",
     "oven-sh/setup-bun": "0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0",
+    "pypa/gh-action-pypi-publish": "dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2",
     "shivammathur/setup-php": "f3e473d116dcccaddc5834248c87452386958240 # v2, at 2.37.2",
 };
+
+/** One job of a workflow: its lines from its name to the next job's. */
+function jobText(workflow, job) {
+    const start = workflow.indexOf(`\n  ${job}:\n`);
+    assert.ok(start >= 0, `the job ${job}`);
+    const next = workflow.slice(start + 1).search(/\n {2}[\w-]+:\n/);
+    return next < 0 ? workflow.slice(start) : workflow.slice(start, start + 1 + next);
+}
 
 test("CI checks the contract on every pull request and every push to main", async () => {
     const ci = await read("ci.yml");
@@ -198,6 +211,85 @@ test("the PHP SDK's mirror warns without its deploy key, and fails without it on
     } finally {
         await rm(directory, {recursive: true, force: true});
     }
+});
+
+test("the release workflow runs on each push to main and by hand, never for a pull request, and one run at a time", async () => {
+    const release = await read("release.yml");
+    assert.match(release, /^on:\n {2}push:\n {4}branches: \[main\]\n {2}workflow_dispatch:\n {4}inputs:\n {6}tag:\n/m);
+    assert.doesNotMatch(release, /pull_request|workflow_run|schedule:/);
+    assert.match(release, /^permissions:\n {2}contents: read\n/m);
+    assert.match(release, /^concurrency:\n {2}group: release\n {2}cancel-in-progress: false\n/m);
+    // Only naiuz/sdk runs it, not a fork, and no job can hold the concurrency group for GitHub's six hours.
+    assert.equal(release.match(/github\.repository == 'naiuz\/sdk'/g)?.length, 4);
+    assert.equal(release.match(/timeout-minutes:/g)?.length, release.match(/runs-on:/g)?.length);
+});
+
+test("release-please runs on the release app's token, so that CI runs on the release pull requests it opens", async () => {
+    const job = jobText(await read("release.yml"), "release-please");
+    assert.match(job, /if: github\.event_name == 'push' && github\.repository == 'naiuz\/sdk'\n/);
+    assert.match(job, /client-id: \$\{\{ vars\.RELEASE_APP_CLIENT_ID \}\}\n\s+private-key: \$\{\{ secrets\.RELEASE_APP_PRIVATE_KEY \}\}\n\s+permission-contents: write\n\s+permission-issues: write\n\s+permission-pull-requests: write\n/);
+    assert.match(job, /token: \$\{\{ steps\.app\.outputs\.token \}\}\n\s+config-file: release-please-config\.json\n\s+manifest-file: \.release-please-manifest\.json\n/);
+    for (const component of ["js", "python", "php"]) {
+        assert.match(job, new RegExp(`${component}: \\$\\{\\{ steps\\.release\\.outputs\\['${component}--tag_name'\\] \\}\\}\\n`));
+    }
+});
+
+test("each SDK's publish takes only a release-please tag of that SDK on main, once its environment's reviewer approves", async () => {
+    const release = await read("release.yml");
+    for (const [job, component] of [["npm", "js"], ["pypi-build", "python"], ["packagist", "php"]]) {
+        const text = jobText(release, job);
+        assert.match(text, new RegExp(`!cancelled\\(\\) && github\\.repository == 'naiuz/sdk' && github\\.ref == 'refs/heads/main' &&\\n\\s+\\(needs\\.release-please\\.outputs\\.${component} != '' \\|\\| startsWith\\(inputs\\.tag, '${component}-v'\\)\\)\\n`), job);
+        assert.match(text, new RegExp(`TAG: \\$\\{\\{ needs\\.release-please\\.outputs\\.${component} \\|\\| inputs\\.tag \\}\\}\\n`), job);
+        assert.match(text, /ref: refs\/tags\/\$\{\{ env\.TAG \}\}\n\s+fetch-depth: 0\n\s+persist-credentials: false\n/, job);
+        assert.match(text, new RegExp(`id: check\\n\\s+run: node \\.github/scripts/release-check\\.mjs ${component} "\\$TAG"\\n`), job);
+    }
+    for (const [job, environment] of [["npm", "npm"], ["pypi", "pypi"], ["packagist", "packagist"]]) {
+        assert.match(jobText(release, job), new RegExp(`environment:\\n\\s+name: ${environment}\\n`), job);
+    }
+});
+
+test("no run script of the release workflow expands an expression, so a tag typed in by hand stays data", async () => {
+    const release = await read("release.yml");
+    const scripts = [...release.matchAll(/run: (\|\n(?: {10}.*\n|\n)+|.*\n)/g)].map((match) => match[1]);
+    assert.ok(scripts.length >= 10);
+    for (const script of scripts) assert.doesNotMatch(script, /\$\{\{/, script);
+});
+
+test("npm gets @naiuz/sdk once, with provenance, through trusted publishing or the first publish's token", async () => {
+    const release = await read("release.yml");
+    const npm = jobText(release, "npm");
+    assert.match(npm, /permissions:\n\s+contents: read\n\s+id-token: write\n/);
+    assert.match(npm, /node-version: 24\n\s+registry-url: https:\/\/registry\.npmjs\.org\n/);
+    assert.match(npm, /printf '%s\\n' 11\.5\.1 "\$version" \| sort -V \| head -n 1/);
+    assert.match(npm, /run: npm ci\n[\s\S]*run: npm run build\n[\s\S]*run: node smoke\/runtimes\.mjs\n/);
+    assert.match(npm, /NODE_AUTH_TOKEN: \$\{\{ secrets\.NPM_TOKEN \}\}\n/);
+    assert.match(npm, /if \[ "\$\(npm view "@naiuz\/sdk@\$VERSION" version 2>\/dev\/null\)" = "\$VERSION" \]; then\n[\s\S]*else\n\s+npm publish\n/);
+    assert.equal(release.match(/secrets\.NPM_TOKEN/g)?.length, 1);
+});
+
+test("PyPI gets naiuz built and checked before the approval, then through trusted publishing from the pypi environment", async () => {
+    const release = await read("release.yml");
+    const build = jobText(release, "pypi-build");
+    assert.match(build, /enable-cache: false\n/);
+    assert.match(build, /run: uv build\n[\s\S]*run: uvx twine@7\.0\.0 check --strict dist\/\*\n/);
+    assert.match(build, /uv run --isolated --no-project --with "dist\/naiuz-\$VERSION-py3-none-any\.whl" python -c 'import naiuz; print\(naiuz\.__version__\)'/);
+    assert.match(build, /name: python-dist\n\s+path: python\/dist\/\n\s+if-no-files-found: error\n/);
+    const pypi = jobText(release, "pypi");
+    assert.match(pypi, /needs: pypi-build\n\s+if: \$\{\{ !cancelled\(\) && needs\.pypi-build\.result == 'success' \}\}\n/);
+    assert.match(pypi, /permissions:\n\s+id-token: write\n\s+steps:\n/);
+    assert.match(pypi, /name: python-dist\n\s+path: dist\/\n/);
+    assert.match(pypi, /skip-existing: true\n/);
+    assert.doesNotMatch(pypi, /password:|PYPI/);
+});
+
+test("Packagist gets naiuz/sdk through a tag on the mirror, pushed with its deploy key and never forced", async () => {
+    const release = await read("release.yml");
+    const packagist = jobText(release, "packagist");
+    assert.match(packagist, /echo "github\.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl" > ~\/\.ssh\/known_hosts\n/);
+    assert.match(packagist, /StrictHostKeyChecking=yes/);
+    assert.match(packagist, /bash \.github\/scripts\/tag-php-mirror\.sh git@github\.com:naiuz\/sdk-php\.git "\$TAG" "v\$VERSION"\n/);
+    assert.doesNotMatch(release, /--force|--tags|--mirror/);
+    assert.equal(release.match(/secrets\.SDK_PHP_DEPLOY_KEY/g)?.length, 1);
 });
 
 test("a weekly run keeps every scheduled workflow enabled, which GitHub turns off after 60 days without activity", async () => {

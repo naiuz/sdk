@@ -2,7 +2,7 @@ name: PHP SDK mirror
 
 # Mirrors php/, with its history, to the read-only naiuz/sdk-php, the repository Packagist reads naiuz/sdk from.
 # It pushes with a deploy key of naiuz/sdk-php, kept as the SDK_PHP_DEPLOY_KEY secret. Until that secret is set, it
-# only warns; once the SDK_PHP_MIRROR variable is "on", a missing key fails the run. Tags come with the releases.
+# only warns; once the SDK_PHP_MIRROR variable is "on", a missing key fails the run. Tags come from release.yml.
 
 on:
   push:

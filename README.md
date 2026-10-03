@@ -2,11 +2,11 @@
 
 Official client libraries for the NeuronAI API: speech synthesis, voices, transcription, chat completions, embeddings and rerank.
 
-| Language | Package | Status |
+| Language | Package | Source |
 |---|---|---|
-| TypeScript and JavaScript | `@naiuz/sdk` | in development |
-| Python | `naiuz` | in development |
-| PHP | `naiuz/sdk` | in development |
+| TypeScript and JavaScript | [`@naiuz/sdk`](https://www.npmjs.com/package/@naiuz/sdk) on npm | [`js/`](js) |
+| Python | [`naiuz`](https://pypi.org/project/naiuz/) on PyPI | [`python/`](python) |
+| PHP | [`naiuz/sdk`](https://packagist.org/packages/naiuz/sdk) on Packagist | [`php/`](php), mirrored to `naiuz/sdk-php` |
 
 ## The contract
 
@@ -27,6 +27,10 @@ npm run refresh   # pin the live document again
 ```
 
 A daily workflow runs the drift check and opens an issue when the live API changes.
+
+## Releases
+
+Each SDK has its own version, changelog and release. release-please keeps a release pull request open for each, built from the conventional commits that touch its folder, and merging one tags the release, such as `js-v0.1.0`. The `Release` workflow then publishes it, once a maintainer approves: to npm with provenance, to PyPI through trusted publishing, and to Packagist as a tag of `naiuz/sdk-php`, such as `v0.1.0`.
 
 ## License
 
