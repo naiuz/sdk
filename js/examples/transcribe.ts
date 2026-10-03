@@ -11,4 +11,4 @@ const client = new NeuronAI();
 
 const transcription = await client.stt.transcribe({file: {data: await readFile(path), filename: basename(path)}, language: "uz"});
 for (const segment of transcription.segments) console.log(`[${segment.start.toFixed(1)}-${segment.end.toFixed(1)} s] ${segment.text}`);
-console.log(`${String(transcription.duration_seconds)} s of audio, ${String(transcription.cost)} UZS.`);
+console.log(`${transcription.duration_seconds.toFixed(1)} s of audio, ${String(transcription.cost)} UZS.`);

@@ -2,6 +2,27 @@
   "name": "@naiuz/sdk",
   "version": "0.0.0",
   "description": "The official TypeScript and JavaScript client for the NeuronAI API.",
+  "keywords": [
+    "neuronai",
+    "sdk",
+    "api-client",
+    "text-to-speech",
+    "speech-to-text",
+    "voice-cloning",
+    "transcription",
+    "chat-completions",
+    "embeddings",
+    "uzbek"
+  ],
+  "homepage": "https://github.com/naiuz/sdk/tree/main/js#readme",
+  "bugs": {
+    "url": "https://github.com/naiuz/sdk/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/naiuz/sdk.git",
+    "directory": "js"
+  },
   "license": "MIT",
   "private": false,
   "type": "module",
@@ -28,6 +49,10 @@
     "dist"
   ],
   "sideEffects": false,
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.build.json",

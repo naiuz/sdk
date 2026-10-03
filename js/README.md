@@ -64,7 +64,7 @@ const client = new NeuronAI({
 | `client.account` | `balance`, `usage` |
 | `client.apiKeys` | `list`, `create`, `retrieve`, `update`, `revoke` |
 
-[api.md](api.md) lists every method with its parameters and what it returns. Request and response fields keep the API's own snake_case names, such as `voice_id` and `next_cursor`; methods are camelCase.
+[api.md](https://github.com/naiuz/sdk/blob/main/js/api.md) lists every method with its parameters and what it returns. Request and response fields keep the API's own snake_case names, such as `voice_id` and `next_cursor`; methods are camelCase.
 
 ## Speech
 
@@ -286,7 +286,7 @@ Every request parameter and response field is typed, with its description from t
 
 ## Examples
 
-[examples/](examples) holds eight programs: synthesizing to a file, a dialogue, an async job with waiting, cloning a voice, a transcription, streaming chat, embeddings with rerank, and managing API keys. Each reads its key from `NEURONAI_API_KEY`. To run one from this folder, build the package with `npm run build`, then run the file with a runtime that runs TypeScript, such as `node examples/synthesize.ts` on Node 23.6 or newer, or `bun examples/synthesize.ts`.
+[examples/](https://github.com/naiuz/sdk/tree/main/js/examples) holds eight programs: synthesizing to a file, a dialogue, an async job with waiting, cloning a voice, a transcription, streaming chat, embeddings with rerank, and managing API keys. Each reads its key from `NEURONAI_API_KEY`. To run one from this folder, build the package with `npm run build`, then run the file with a runtime that runs TypeScript, such as `node examples/synthesize.ts` on Node 23.6 or newer, or `bun examples/synthesize.ts`.
 
 ## License
 

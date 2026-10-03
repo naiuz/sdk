@@ -190,7 +190,7 @@ Creates a job, polls it until it has `succeeded` or `failed`, and resolves with 
 
 ### `apiKeys.list(params?: ListApiKeysParams, options?: RequestOptions): PagePromise<ApiKey>`
 
-`GET /api-keys`. Your organization's keys, newest first, revoked ones included. Takes `limit` (1 to 100) and `cursor`.
+`GET /api-keys`. Your organization's keys, newest first, revoked ones included: `limit` from 1 to 100 (50 by default), and a page's `next_cursor` as `cursor`.
 
 ### `apiKeys.create(params: CreateApiKeyRequest, options?: RequestOptions): APIPromise<WithRequestId<ApiKey>>`
 
