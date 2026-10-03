@@ -2,7 +2,25 @@
     "name": "naiuz/sdk",
     "description": "The official PHP client for the NeuronAI API.",
     "type": "library",
+    "keywords": [
+        "neuronai",
+        "sdk",
+        "api-client",
+        "text-to-speech",
+        "speech-to-text",
+        "voice-cloning",
+        "transcription",
+        "chat-completions",
+        "embeddings",
+        "uzbek"
+    ],
+    "homepage": "https://github.com/naiuz/sdk/tree/main/php",
     "license": "MIT",
+    "support": {
+        "issues": "https://github.com/naiuz/sdk/issues",
+        "source": "https://github.com/naiuz/sdk/tree/main/php",
+        "docs": "https://github.com/naiuz/sdk/blob/main/php/api.md"
+    },
     "require": {
         "php": "^8.2",
         "php-http/discovery": "^1.20",

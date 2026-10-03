@@ -41,7 +41,7 @@ final class ScaffoldTest extends TestCase
     public function test_a_packagist_download_holds_the_library_and_leaves_out_the_tests_and_tools(): void
     {
         $ignored = ['.gitattributes', '.gitignore', '.php-cs-fixer.dist.php', 'composer.lock', 'examples', 'phpstan.neon.dist', 'phpunit.xml.dist', 'smoke', 'tests'];
-        $kept = ['LICENSE', 'README.md', 'api.md', 'composer.json', 'src'];
+        $kept = ['CHANGELOG.md', 'LICENSE', 'README.md', 'api.md', 'composer.json', 'src'];
         $process = proc_open(['git', '-C', self::PHP_DIR, 'check-attr', 'export-ignore', '--', ...$ignored, ...$kept], [1 => ['pipe', 'w']], $pipes);
         self::assertIsResource($process);
         $output = stream_get_contents($pipes[1]);
@@ -61,8 +61,23 @@ final class ScaffoldTest extends TestCase
         foreach (['tts', 'tts->jobs', 'voices', 'stt', 'chat->completions', 'models', 'embeddings', 'rerank', 'account', 'apiKeys'] as $resource) {
             self::assertStringContainsString("| `\$client->{$resource}` |", $readme);
         }
-        self::assertStringContainsString('[api.md](api.md)', $readme);
-        self::assertStringContainsString('[examples/](examples)', $readme);
+        // Packagist's page shows this README away from the repository, where a relative link leads nowhere.
+        self::assertStringContainsString('[api.md](https://github.com/naiuz/sdk/blob/main/php/api.md)', $readme);
+        self::assertStringContainsString('[examples/](https://github.com/naiuz/sdk/tree/main/php/examples)', $readme);
+        preg_match_all('/\]\(([^)]*)\)/', $readme, $links);
+        self::assertSame([], array_values(array_filter($links[1], static fn(string $target): bool => !str_starts_with($target, 'https://'))));
+    }
+
+    public function test_packagist_s_page_links_the_sdk_s_folder_of_the_github_repository(): void
+    {
+        $composer = self::composer();
+        self::assertSame('https://github.com/naiuz/sdk/tree/main/php', $composer['homepage'] ?? null);
+        self::assertSame(
+            ['issues' => 'https://github.com/naiuz/sdk/issues', 'source' => 'https://github.com/naiuz/sdk/tree/main/php', 'docs' => 'https://github.com/naiuz/sdk/blob/main/php/api.md'],
+            $composer['support'] ?? null,
+        );
+        self::assertIsArray($composer['keywords'] ?? null);
+        self::assertContains('neuronai', $composer['keywords']);
     }
 
     public function test_the_api_reference_lists_every_method(): void

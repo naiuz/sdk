@@ -64,7 +64,7 @@ $client = new NeuronAI([
 | `$client->account` | `balance`, `usage` |
 | `$client->apiKeys` | `list`, `create`, `retrieve`, `update`, `revoke` |
 
-[api.md](api.md) lists every method with its parameters and what it returns. Methods are camelCase. Request fields are array keys, and result fields are properties, under the API's own names, such as `voice_id` and `next_cursor`.
+[api.md](https://github.com/naiuz/sdk/blob/main/php/api.md) lists every method with its parameters and what it returns. Methods are camelCase. Request fields are array keys, and result fields are properties, under the API's own names, such as `voice_id` and `next_cursor`.
 
 ## Speech
 
@@ -162,7 +162,7 @@ echo "{$transcription->text} ({$transcription->duration_seconds} s)\n";
 - **A stream needs a filename**, since the filename's extension names the file's format: the SDK refuses a stream alone, or one with an empty filename, before anything is sent.
 - **A string is a path.** To upload bytes you hold, such as a synthesized clip's `audio`, write them to a stream first, and pass it with a filename: `$stream = fopen('php://temp', 'w+b'); fwrite($stream, $speech->audio);`. A stream is read from its start, so there's no need to rewind it, and one that can't seek must not have been read from.
 - The file's content type is the one you give as `'content_type' => 'audio/wav'` beside a stream, else the one its extension names: `wav` → `audio/wav`, `mp3` → `audio/mpeg`, `ogg` → `audio/ogg`, `flac` → `audio/flac`, `m4a` → `audio/mp4`, `webm` → `audio/webm`, and anything else `application/octet-stream`. The server checks the file itself, so the declared type never decides whether it is accepted.
-- The file is read whole before the first attempt, so a retry sends the same bytes: an upload holds about its own size in memory, and twice that while the form is built. The API takes at most 25 MB.
+- The file is read whole before the first attempt, so a retry sends the same bytes: an upload holds about its own size in memory, and twice that while the form is built. The API takes a transcription's file up to 25 MB, and a voice's clip up to 10 MB.
 - A list such as `tags` goes as repeated `tags[]` fields, and each line break in a text field, such as a multi-line `ref_text`, goes as CRLF, as an HTML form sends it.
 
 ## Chat completions and streaming
@@ -190,7 +190,7 @@ foreach ($stream as $chunk) {
 - If the model fails once the stream has started, the loop throws an `APIException` with status 200 and code `upstream_error`. A stream that ends without `[DONE]` throws `APIConnectionException`: the answer may be cut short.
 - A stream can be read once: a second loop over it throws `NeuronAIException`.
 - A streamed call is billed when it ends, so it has no `cost`. It is retried like any chat completion before it starts, and never once it has.
-- **Guzzle streams only with PHP's `allow_url_fopen` on**, as it is by default. Without it, Guzzle would read the whole answer before handing it over, so the SDK refuses the stream before anything is sent; pass Symfony HttpClient's `Psr18Client` as `http_client` instead.
+- **Guzzle streams through its default handler stack, and only with PHP's `allow_url_fopen` on**, as it is by default. Without it, Guzzle would read the whole answer before handing it over, so the SDK refuses the stream before anything is sent. A Guzzle client you build on `CurlHandler` alone reads the whole answer too, which the SDK can't see, and its timeout then bounds the whole stream. For either, pass Symfony HttpClient's `Psr18Client` as `http_client` instead.
 - PHP has no overloads, so `create` declares its result as `ChatCompletion|Stream`. PHPStan reads its conditional type: `'stream' => true` gives `Stream<ChatCompletionChunk>`, and no `stream`, or `false` or null, gives `ChatCompletion`.
 
 Without `stream`, the result is the `ChatCompletion` body, with `cost` from the `X-Cost` header.
@@ -318,7 +318,7 @@ Every request field and every result property is typed. Each request is an array
 
 ## Examples
 
-[examples/](examples) holds eight programs: synthesizing to a file, a dialogue, an async job with waiting, cloning a voice, a transcription, streaming chat, embeddings with rerank, and managing API keys. Each reads its key from `NEURONAI_API_KEY`. To run one from this folder, run `php examples/synthesize.php`.
+[examples/](https://github.com/naiuz/sdk/tree/main/php/examples) holds eight programs: synthesizing to a file, a dialogue, an async job with waiting, cloning a voice, a transcription, streaming chat, embeddings with rerank, and managing API keys. Each reads its key from `NEURONAI_API_KEY`. To run one from this folder, run `php examples/synthesize.php`.
 
 ## License
 
