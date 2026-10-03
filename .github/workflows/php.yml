@@ -19,7 +19,7 @@ permissions:
 jobs:
   test:
     name: PHP ${{ matrix.php }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     strategy:
       fail-fast: false
@@ -29,8 +29,8 @@ jobs:
       run:
         working-directory: php
     steps:
-      - uses: actions/checkout@v7
-      - uses: shivammathur/setup-php@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2, at 2.37.2
         with:
           php-version: ${{ matrix.php }}
           coverage: none
@@ -43,14 +43,14 @@ jobs:
 
   guzzle7:
     name: PHP 8.2 on Guzzle 7
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     defaults:
       run:
         working-directory: php
     steps:
-      - uses: actions/checkout@v7
-      - uses: shivammathur/setup-php@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2, at 2.37.2
         with:
           php-version: "8.2"
           coverage: none
@@ -62,14 +62,14 @@ jobs:
 
   symfony54:
     name: PHP 8.2 on Symfony HttpClient 5.4
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     defaults:
       run:
         working-directory: php
     steps:
-      - uses: actions/checkout@v7
-      - uses: shivammathur/setup-php@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2, at 2.37.2
         with:
           php-version: "8.2"
           coverage: none
@@ -81,14 +81,14 @@ jobs:
 
   lowest:
     name: PHP 8.2 on the lowest dependencies
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     defaults:
       run:
         working-directory: php
     steps:
-      - uses: actions/checkout@v7
-      - uses: shivammathur/setup-php@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2, at 2.37.2
         with:
           php-version: "8.2"
           coverage: none

@@ -1,11 +1,24 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
 import {spawnSync} from "node:child_process";
-import {mkdtemp, readFile, rm} from "node:fs/promises";
+import {mkdtemp, readdir, readFile, rm} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
 
 const read = (name) => readFile(new URL(`../../.github/workflows/${name}`, import.meta.url), "utf8");
+const workflows = async () => (await readdir(new URL("../../.github/workflows/", import.meta.url))).filter((name) => name.endsWith(".yml")).sort();
+
+// Every action the workflows use, pinned to the commit its release tag named when it was looked up with git ls-remote:
+// a tag that moves changes nothing here. Each of these releases runs on Node 24. To update one, look up the new tag's
+// commit and change it here and in every workflow at once.
+const ACTIONS = {
+    "actions/checkout": "3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+    "actions/setup-node": "820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
+    "astral-sh/setup-uv": "c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0",
+    "denoland/setup-deno": "22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5",
+    "oven-sh/setup-bun": "0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0",
+    "shivammathur/setup-php": "f3e473d116dcccaddc5834248c87452386958240 # v2, at 2.37.2",
+};
 
 test("CI checks the contract on every pull request and every push to main", async () => {
     const ci = await read("ci.yml");
@@ -15,13 +28,20 @@ test("CI checks the contract on every pull request and every push to main", asyn
     for (const command of ["npm ci", "npm test", "npm run validate"]) assert.match(ci, new RegExp(`run: ${command}\\n`), command);
 });
 
-test("no workflow runs an action major built for Node 20", async () => {
-    for (const name of ["ci.yml", "drift.yml", "js.yml", "python.yml", "php.yml", "smoke.yml", "split-php.yml"]) {
+test("every action a workflow uses is pinned to a commit, with the release it was as a comment", async () => {
+    for (const name of await workflows()) {
         const text = await read(name);
-        assert.doesNotMatch(text, /actions\/(checkout|setup-node)@v[1-4]\b/);
-        assert.doesNotMatch(text, /(oven-sh\/setup-bun|denoland\/setup-deno)@v1\b/);
-        assert.doesNotMatch(text, /astral-sh\/setup-uv@v[1-6]\b/);
-        assert.doesNotMatch(text, /shivammathur\/setup-php@v1\b/);
+        const uses = [...text.matchAll(/uses: ([\w.-]+\/[\w.-]+)@(.+)\n/g)];
+        assert.equal(uses.length, text.match(/uses:/g)?.length ?? 0, `${name}: every uses: names an action and a ref`);
+        for (const [, action, ref] of uses) assert.equal(ref, ACTIONS[action], `${name}: ${action}`);
+    }
+});
+
+test("every job runs on Ubuntu 24.04, whatever ubuntu-latest moves to", async () => {
+    for (const name of await workflows()) {
+        const text = await read(name);
+        assert.match(text, /runs-on: ubuntu-24\.04\n/, name);
+        assert.doesNotMatch(text, /runs-on: (?!ubuntu-24\.04\n)/, name);
     }
 });
 
@@ -41,9 +61,9 @@ test("the JavaScript SDK's checks run on Node 20, 22 and 24 when js/ or spec/ ch
 test("the JavaScript SDK's built package runs mocked calls on Node, Bun and Deno", async () => {
     const js = await read("js.yml");
     assert.match(js, /run: npm run build\n\s+- run: node smoke\/runtimes\.mjs\n/);
-    assert.match(js, /uses: oven-sh\/setup-bun@v2\n/);
+    assert.match(js, /uses: oven-sh\/setup-bun@/);
     assert.match(js, /run: bun smoke\/runtimes\.mjs\n/);
-    assert.match(js, /uses: denoland\/setup-deno@v2\n/);
+    assert.match(js, /uses: denoland\/setup-deno@/);
     assert.match(js, /run: deno run --no-prompt --allow-read --allow-write --allow-net=127\.0\.0\.1 --allow-env=TMPDIR,TMP,TEMP smoke\/runtimes\.mjs\n/);
 });
 
@@ -55,7 +75,7 @@ test("the Python SDK's checks run on Python 3.10 to 3.14 when python/ or spec/ c
     assert.match(python, /python-version: \$\{\{ matrix\.python \}\}/);
     assert.match(python, /working-directory: python\n/);
     // A test that hangs instead of failing must not hold a runner for GitHub's six hours.
-    assert.match(python, /runs-on: ubuntu-latest\n\s+timeout-minutes: 15\n/);
+    assert.match(python, /runs-on: ubuntu-24\.04\n\s+timeout-minutes: 15\n/);
     const steps = ["uv sync --locked", "uv run ruff check", "uv run ruff format --check", "uv run pyright", "uv run mypy", "uv run pytest", "uv build"].map((command) => python.indexOf(`run: ${command}\n`));
     assert.ok(steps.every((index) => index > 0), "every step is there");
     assert.deepEqual([...steps].sort((a, b) => a - b), steps, "in this order");
@@ -69,7 +89,7 @@ test("the PHP SDK's checks run on PHP 8.2 to 8.5 when php/ or spec/ changes", as
     assert.match(php, /php-version: \$\{\{ matrix\.php \}\}\n\s+coverage: none\n/);
     assert.match(php, /working-directory: php\n/);
     // A test that hangs instead of failing must not hold a runner for GitHub's six hours.
-    assert.match(php, /runs-on: ubuntu-latest\n\s+timeout-minutes: 15\n/);
+    assert.match(php, /runs-on: ubuntu-24\.04\n\s+timeout-minutes: 15\n/);
     const steps = ["composer validate --strict", "composer install --no-interaction --no-progress", "vendor/bin/phpstan analyse --no-progress", "vendor/bin/php-cs-fixer check --diff", "vendor/bin/phpunit"].map((command) => php.indexOf(`run: ${command}\n`));
     assert.ok(steps.every((index) => index > 0), "every step is there");
     assert.deepEqual([...steps].sort((a, b) => a - b), steps, "in this order");
@@ -77,19 +97,19 @@ test("the PHP SDK's checks run on PHP 8.2 to 8.5 when php/ or spec/ changes", as
 
 test("the PHP SDK's checks also run on Guzzle 7, which many apps still use", async () => {
     const php = await read("php.yml");
-    assert.match(php, /name: PHP 8\.2 on Guzzle 7\n\s+runs-on: ubuntu-latest\n\s+timeout-minutes: 15\n/);
+    assert.match(php, /name: PHP 8\.2 on Guzzle 7\n\s+runs-on: ubuntu-24\.04\n\s+timeout-minutes: 15\n/);
     assert.match(php, /run: composer update "guzzlehttp\/guzzle:\^7\.9" --with-all-dependencies --no-interaction --no-progress\n\s+- run: vendor\/bin\/phpunit\n/);
 });
 
 test("the PHP SDK's checks also run on Symfony HttpClient 5.4, whose PSR-18 client takes no options", async () => {
     const php = await read("php.yml");
-    assert.match(php, /name: PHP 8\.2 on Symfony HttpClient 5\.4\n\s+runs-on: ubuntu-latest\n\s+timeout-minutes: 15\n/);
+    assert.match(php, /name: PHP 8\.2 on Symfony HttpClient 5\.4\n\s+runs-on: ubuntu-24\.04\n\s+timeout-minutes: 15\n/);
     assert.match(php, /run: composer require --dev "symfony\/http-client:\^5\.4" --update-with-all-dependencies --no-interaction --no-progress\n\s+- run: vendor\/bin\/phpunit\n/);
 });
 
 test("the PHP SDK's checks also run on the lowest versions its composer.json allows", async () => {
     const php = await read("php.yml");
-    assert.match(php, /name: PHP 8\.2 on the lowest dependencies\n\s+runs-on: ubuntu-latest\n\s+timeout-minutes: 15\n/);
+    assert.match(php, /name: PHP 8\.2 on the lowest dependencies\n\s+runs-on: ubuntu-24\.04\n\s+timeout-minutes: 15\n/);
     assert.match(php, /php-version: "8\.2"\n\s+coverage: none\n\s+tools: composer:v2\n\s+# composer\.json's floors/);
     assert.match(php, /run: composer update --prefer-lowest --prefer-stable --no-interaction --no-progress\n\s+- run: vendor\/bin\/phpunit\n/);
 });
@@ -105,7 +125,7 @@ test("the live smoke tests run nightly and on demand, never on a pull request, w
 
 test("the Python SDK's smoke tests run on their own, with the key in their step's env alone", async () => {
     const smoke = await read("smoke.yml");
-    assert.match(smoke, /name: Python SDK\n\s+runs-on: ubuntu-latest\n\s+timeout-minutes: 15\n/);
+    assert.match(smoke, /name: Python SDK\n\s+runs-on: ubuntu-24\.04\n\s+timeout-minutes: 15\n/);
     assert.match(smoke, /working-directory: python\n/);
     assert.match(smoke, /run: uv sync --locked\n/);
     assert.match(smoke, /run: uv run pytest smoke\n\s+env:\n\s+NEURONAI_SMOKE_API_KEY: \$\{\{ secrets\.NEURONAI_SMOKE_API_KEY \}\}\n/);
@@ -113,7 +133,7 @@ test("the Python SDK's smoke tests run on their own, with the key in their step'
 
 test("the PHP SDK's smoke tests run on their own, apart from its unit tests, with the key in their step's env alone", async () => {
     const smoke = await read("smoke.yml");
-    assert.match(smoke, /name: PHP SDK\n\s+runs-on: ubuntu-latest\n\s+timeout-minutes: 15\n/);
+    assert.match(smoke, /name: PHP SDK\n\s+runs-on: ubuntu-24\.04\n\s+timeout-minutes: 15\n/);
     assert.match(smoke, /working-directory: php\n/);
     assert.match(smoke, /php-version: "8\.5"\n\s+coverage: none\n/);
     assert.match(smoke, /run: composer install --no-interaction --no-progress\n/);
@@ -132,8 +152,10 @@ test("the PHP SDK's mirror pushes php/, with its history, to naiuz/sdk-php when 
     assert.doesNotMatch(split, /pull_request/);
     assert.match(split, /permissions:\n\s+contents: read\n/);
     assert.match(split, /concurrency:\n\s+group: split-php\n\s+cancel-in-progress: false\n/);
-    assert.match(split, /runs-on: ubuntu-latest\n\s+timeout-minutes: 10\n/);
-    assert.match(split, /uses: actions\/checkout@v7\n\s+if: steps\.key\.outputs\.present == 'true'\n\s+with:\n\s+fetch-depth: 0\n\s+persist-credentials: false\n/);
+    // Run by hand from another branch, it would fast-forward the mirror's main to that branch's commits.
+    assert.match(split, /mirror:\n\s+name: Mirror php\/ to naiuz\/sdk-php\n\s+if: github\.ref == 'refs\/heads\/main'\n/);
+    assert.match(split, /runs-on: ubuntu-24\.04\n\s+timeout-minutes: 10\n/);
+    assert.match(split, /uses: actions\/checkout@.+\n\s+if: steps\.key\.outputs\.present == 'true'\n\s+with:\n\s+fetch-depth: 0\n\s+persist-credentials: false\n/);
     assert.match(split, /run: git subtree split --prefix=php --branch=sdk-php\n/);
     // A fast-forward of main alone: never forced, and no tags until the releases add them.
     assert.match(split, /git push git@github\.com:naiuz\/sdk-php\.git sdk-php:refs\/heads\/main\n/);

@@ -22,7 +22,8 @@ concurrency:
 jobs:
   mirror:
     name: Mirror php/ to naiuz/sdk-php
-    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - name: Check for the deploy key
@@ -40,7 +41,7 @@ jobs:
             echo "::warning title=Mirror skipped::php/ isn't mirrored to naiuz/sdk-php until the SDK_PHP_DEPLOY_KEY secret is set."
             echo "present=false" >> "$GITHUB_OUTPUT"
           fi
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: steps.key.outputs.present == 'true'
         with:
           fetch-depth: 0
