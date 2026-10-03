@@ -1,0 +1,42 @@
+{
+  "bootstrap-sha": "db781c5072bca9f44cd401613f8ebb5b0e7b5b4a",
+  "initial-version": "0.1.0",
+  "separate-pull-requests": true,
+  "include-component-in-tag": true,
+  "include-v-in-tag": true,
+  "bump-minor-pre-major": true,
+  "bump-patch-for-minor-pre-major": true,
+  "changelog-sections": [
+    {"type": "feat", "section": "Features"},
+    {"type": "fix", "section": "Bug Fixes"},
+    {"type": "perf", "section": "Performance Improvements"},
+    {"type": "revert", "section": "Reverts"},
+    {"type": "docs", "section": "Documentation", "hidden": true},
+    {"type": "build", "section": "Build System", "hidden": true},
+    {"type": "chore", "section": "Miscellaneous Chores", "hidden": true},
+    {"type": "ci", "section": "Continuous Integration", "hidden": true},
+    {"type": "refactor", "section": "Code Refactoring", "hidden": true},
+    {"type": "style", "section": "Styles", "hidden": true},
+    {"type": "test", "section": "Tests", "hidden": true}
+  ],
+  "packages": {
+    "js": {
+      "release-type": "node",
+      "component": "js",
+      "extra-files": ["src/version.ts"]
+    },
+    "python": {
+      "release-type": "python",
+      "component": "python",
+      "extra-files": [
+        "src/naiuz/_version.py",
+        {"type": "toml", "path": "uv.lock", "jsonpath": "$.package[?(@.name.value=='naiuz')].version"}
+      ]
+    },
+    "php": {
+      "release-type": "php",
+      "component": "php",
+      "extra-files": ["src/NeuronAI.php"]
+    }
+  }
+}
