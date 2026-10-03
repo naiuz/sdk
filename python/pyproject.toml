@@ -10,6 +10,18 @@ readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 requires-python = ">=3.10"
+keywords = [
+    "neuronai",
+    "sdk",
+    "api-client",
+    "text-to-speech",
+    "speech-to-text",
+    "voice-cloning",
+    "transcription",
+    "chat-completions",
+    "embeddings",
+    "uzbek",
+]
 dependencies = [
     "httpx>=0.23.1,<1",
     "pydantic>=2.0,<3",
@@ -26,6 +38,13 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
     "Typing :: Typed",
 ]
+
+[project.urls]
+Homepage = "https://github.com/naiuz/sdk/tree/main/python"
+Documentation = "https://github.com/naiuz/sdk/blob/main/python/api.md"
+Repository = "https://github.com/naiuz/sdk"
+Issues = "https://github.com/naiuz/sdk/issues"
+Changelog = "https://github.com/naiuz/sdk/blob/main/python/CHANGELOG.md"
 
 [dependency-groups]
 dev = [

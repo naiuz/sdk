@@ -81,7 +81,7 @@ client = NeuronAI(
 | `client.account` | `balance`, `usage` |
 | `client.api_keys` | `list`, `create`, `retrieve`, `update`, `revoke` |
 
-[api.md](api.md) lists every method with its parameters and what it returns. Methods are snake_case, and request and response fields keep the API's own names, such as `voice_id` and `next_cursor`. Every parameter is a keyword argument, except a path's `id`.
+[api.md](https://github.com/naiuz/sdk/blob/main/python/api.md) lists every method with its parameters and what it returns. Methods are snake_case, and request and response fields keep the API's own names, such as `voice_id` and `next_cursor`. Every parameter is a keyword argument, except a path's `id`.
 
 ## Speech
 
@@ -324,7 +324,7 @@ Every request parameter and response field is typed, with its description from t
 
 ## Examples
 
-[examples/](examples) holds eight programs: synthesizing to a file, a dialogue, an async job with waiting, cloning a voice, a transcription, streaming chat (with the async client), embeddings with rerank, and managing API keys. Each reads its key from `NEURONAI_API_KEY`. To run one from this folder, run `uv run python examples/synthesize.py`.
+[examples/](https://github.com/naiuz/sdk/tree/main/python/examples) holds eight programs: synthesizing to a file, a dialogue, an async job with waiting, cloning a voice, a transcription, streaming chat (with the async client), embeddings with rerank, and managing API keys. Each reads its key from `NEURONAI_API_KEY`. To run one from this folder, run `uv run python examples/synthesize.py`.
 
 ## License
 

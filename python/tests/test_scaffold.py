@@ -30,3 +30,23 @@ def test_the_package_s_long_description_is_its_readme() -> None:
     assert re.search(r'^readme = "README\.md"$', (PYTHON_DIR / "pyproject.toml").read_text(), re.MULTILINE)
     assert metadata("naiuz")["Description-Content-Type"] == "text/markdown"
     assert (PYTHON_DIR / "README.md").read_text().startswith("# NeuronAI Python SDK\n")
+
+
+def test_pypi_s_page_links_the_sdk_s_folder_of_the_github_repository() -> None:
+    entries: list[str] = metadata("naiuz").get_all("Project-URL") or []
+    urls = {label: url for label, _, url in (entry.partition(", ") for entry in entries)}
+    assert urls == {
+        "Homepage": "https://github.com/naiuz/sdk/tree/main/python",
+        "Documentation": "https://github.com/naiuz/sdk/blob/main/python/api.md",
+        "Repository": "https://github.com/naiuz/sdk",
+        "Issues": "https://github.com/naiuz/sdk/issues",
+        "Changelog": "https://github.com/naiuz/sdk/blob/main/python/CHANGELOG.md",
+    }
+    assert "neuronai" in (metadata("naiuz")["Keywords"] or "").split(",")
+
+
+def test_the_readme_links_api_md_and_the_examples_by_github_urls_which_pypi_s_page_can_follow() -> None:
+    readme = (PYTHON_DIR / "README.md").read_text()
+    assert "[api.md](https://github.com/naiuz/sdk/blob/main/python/api.md)" in readme
+    assert "[examples/](https://github.com/naiuz/sdk/tree/main/python/examples)" in readme
+    assert [target for target in re.findall(r"\]\(([^)]*)\)", readme) if not target.startswith("https://")] == []
