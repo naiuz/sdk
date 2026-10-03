@@ -200,6 +200,19 @@ test("the PHP SDK's mirror warns without its deploy key, and fails without it on
     }
 });
 
+test("a weekly run keeps every scheduled workflow enabled, which GitHub turns off after 60 days without activity", async () => {
+    const keepalive = await read("keepalive.yml");
+    assert.match(keepalive, /schedule:\n\s+- cron: /);
+    assert.match(keepalive, /workflow_dispatch:/);
+    assert.doesNotMatch(keepalive, /pull_request/);
+    assert.match(keepalive, /^permissions:\n {2}contents: read\n/m);
+    assert.match(keepalive, /if: github\.repository == 'naiuz\/sdk'\n\s+runs-on: ubuntu-24\.04\n\s+timeout-minutes: 5\n\s+permissions:\n\s+actions: write\n/);
+    assert.match(keepalive, /for workflow in drift\.yml smoke\.yml keepalive\.yml; do\n\s+gh api --method PUT "repos\/\$REPOSITORY\/actions\/workflows\/\$workflow\/enable"\n\s+done\n/);
+    for (const name of await workflows()) {
+        if (/^ {2}schedule:/m.test(await read(name))) assert.ok(keepalive.includes(` ${name}`), `${name} is scheduled, so it is kept enabled`);
+    }
+});
+
 test("the drift job runs daily and on demand, and only reports drift as drift", async () => {
     const drift = await read("drift.yml");
     assert.match(drift, /schedule:\n\s+- cron: /);

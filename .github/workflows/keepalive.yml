@@ -1,0 +1,30 @@
+name: Keep the schedules alive
+
+# GitHub turns off a public repository's scheduled workflows after 60 days without activity. Enabling a workflow
+# through the API counts as activity, so this enables each scheduled workflow every week, this one included.
+
+on:
+  schedule:
+    - cron: "23 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  keepalive:
+    name: Enable the scheduled workflows
+    if: github.repository == 'naiuz/sdk'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - name: Enable drift.yml, smoke.yml and this workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          for workflow in drift.yml smoke.yml keepalive.yml; do
+            gh api --method PUT "repos/$REPOSITORY/actions/workflows/$workflow/enable"
+          done
