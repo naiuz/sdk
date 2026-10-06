@@ -34,6 +34,13 @@ test("release-please gives each SDK its own release pull request, changelog and 
     for (const options of Object.values(config.packages)) assert.equal(options["changelog-path"], undefined);
 });
 
+test("every push to main rebuilds each open release pull request on it, so one SDK's release leaves the others mergeable", async () => {
+    // Otherwise a pull request whose release notes didn't change keeps the manifest it was cut from, and conflicts once
+    // another SDK's release changes the line next to its own.
+    const config = await json("release-please-config.json");
+    assert.equal(config["always-update"], true);
+});
+
 test("each SDK's first release is 0.1.0, with a changelog of what came after the last commit before releases", async () => {
     const config = await json("release-please-config.json");
     assert.equal(config["initial-version"], "0.1.0");

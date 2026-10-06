@@ -2,6 +2,7 @@
   "bootstrap-sha": "db781c5072bca9f44cd401613f8ebb5b0e7b5b4a",
   "initial-version": "0.1.0",
   "separate-pull-requests": true,
+  "always-update": true,
   "include-component-in-tag": true,
   "include-v-in-tag": true,
   "bump-minor-pre-major": true,
