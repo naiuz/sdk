@@ -36,9 +36,9 @@ export interface ApiKey {
     expires_at: string | null;
     /** Addresses or CIDR ranges the key may be used from. Empty allows any address. */
     allowed_ips: string[];
-    /** UZS per calendar month (UTC), or `null` for no limit. */
+    /** Credits per calendar month (UTC), or `null` for no limit. */
     monthly_spend_limit: number | null;
-    /** UZS spent this calendar month (UTC). */
+    /** Credits spent this calendar month (UTC). */
     spent_this_month: number;
     /** Whether the key works; a disabled key can be enabled again. */
     enabled: boolean;
@@ -76,7 +76,7 @@ export interface CreateApiKeyRequest {
     permissions?: Partial<ApiKeyPermissions>;
     /** When the key stops working (ISO 8601), or `null` for never. */
     expires_at?: string | null;
-    /** In UZS per calendar month (UTC), from 0 to 999999999999.99 with at most two decimals. Leave it out, or send `null`, for no limit. */
+    /** In credits per calendar month (UTC), from 0 to 999999999999.99 with at most two decimals. Leave it out, or send `null`, for no limit. */
     monthly_spend_limit?: number | null;
     /** Up to 100 addresses or CIDR ranges the key may be used from. */
     allowed_ips?: string[] | null;
@@ -99,7 +99,7 @@ export interface UpdateApiKeyRequest {
     permissions?: Partial<ApiKeyPermissions>;
     /** When the key stops working (ISO 8601); `null` clears the expiry. */
     expires_at?: string | null;
-    /** In UZS per calendar month (UTC), from 0 to 999999999999.99 with at most two decimals. `null` removes the limit. */
+    /** In credits per calendar month (UTC), from 0 to 999999999999.99 with at most two decimals. `null` removes the limit. */
     monthly_spend_limit?: number | null;
     /** Switches the key on or off. */
     enabled?: boolean;

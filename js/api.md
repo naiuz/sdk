@@ -180,7 +180,7 @@ Creates a job, polls it until it has `succeeded` or `failed`, and resolves with 
 
 ### `account.balance(options?: RequestOptions): APIPromise<WithRequestId<Balance>>`
 
-`GET /balance`. Your organization's remaining credit, and its prices.
+`GET /balance`. Your organization's remaining credits, and its prices.
 
 ### `account.usage(params?: UsageParams, options?: RequestOptions): APIPromise<WithRequestId<Usage>>`
 
@@ -203,7 +203,7 @@ Creates a job, polls it until it has `succeeded` or `failed`, and resolves with 
 | `description` | `string \| null` | Up to 500 characters. |
 | `permissions` | `Partial<ApiKeyPermissions>` | Levels by product, such as `{tts: "write"}`. |
 | `expires_at` | `string \| null` | When the key stops working (ISO 8601). |
-| `monthly_spend_limit` | `number \| null` | UZS per calendar month. |
+| `monthly_spend_limit` | `number \| null` | Credits per calendar month. |
 | `allowed_ips` | `string[] \| null` | Up to 100 addresses or CIDR ranges. |
 
 ### `apiKeys.retrieve(id: string, options?: RequestOptions): APIPromise<WithRequestId<ApiKey>>`

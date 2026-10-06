@@ -11,7 +11,7 @@ export class Account {
         this.#http = http;
     }
 
-    /** The remaining credit for the calling key's organization. Use it to surface a low balance before a request fails with 402. */
+    /** The remaining credits for the calling key's organization. Use it to surface a low balance before a request fails with 402. */
     balance(options?: RequestOptions): APIPromise<WithRequestId<Balance>> {
         return this.#http.request({method: "GET", path: "/balance", retry: "safe", options}, readEnvelope<Balance>);
     }

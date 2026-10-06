@@ -10,7 +10,7 @@ try {
         // A finished job's audio is kept for 24 hours: download it now.
         const audio = await client.tts.jobs.audio(job.id);
         await audio.save("story.wav");
-        console.log(`Saved story.wav: ${String(job.cost)} UZS.`);
+        console.log(`Saved story.wav: ${String(job.cost)} credits.`);
     } else {
         console.error(`The job failed: ${job.error?.code ?? "unknown"}.`);
     }

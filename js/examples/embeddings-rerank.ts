@@ -25,4 +25,4 @@ vectors.forEach((vector, index) => {
 
 const ranked = await client.rerank.create({model: "bge-reranker-v2-m3", query: question, documents, top_n: 2});
 for (const result of ranked.results) console.log(`relevance ${result.relevance_score.toFixed(3)}  ${documents[result.index] ?? ""}`);
-console.log(`Embeddings cost ${String(embeddings.cost)} UZS, rerank ${String(ranked.cost)} UZS.`);
+console.log(`Embeddings cost ${String(embeddings.cost)} credits, rerank ${String(ranked.cost)} credits.`);

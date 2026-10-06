@@ -16,9 +16,9 @@ export type WithRequestId<T> = T & {
 /** A compatible endpoint's body, with its price attached when the answer has an `X-Cost` header. */
 export type WithCost<T> = T & {
     /**
-     * The price billed, in UZS, from the `X-Cost` header; absent when the
-     * answer has none. It is not enumerable, so the body serializes exactly
-     * as the API sent it.
+     * The price billed, in credits, from the `X-Cost` header; absent when
+     * the answer has none. It is not enumerable, so the body serializes
+     * exactly as the API sent it.
      */
     readonly cost?: number;
 };

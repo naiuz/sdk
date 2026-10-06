@@ -87,7 +87,7 @@ export interface TtsJob {
     finished_at: string | null;
     /** The text's spoken length, the measure billing uses. */
     character_count: number;
-    /** The price, in UZS, once the job has succeeded; `null` until then. */
+    /** The price, in credits, once the job has succeeded; `null` until then. */
     cost: number | null;
     /** The balance after the charge, once the job has succeeded; `null` until then. */
     balance_after: number | null;

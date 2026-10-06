@@ -21,7 +21,7 @@ const client = new NeuronAI();
 
 const speech = await client.tts.synthesize({text: "Assalomu alaykum!", voice_id: "kamron", language: "uz"});
 await speech.save("salom.wav");
-console.log(`${String(speech.character_count)} characters, ${String(speech.cost)} UZS`);
+console.log(`${String(speech.character_count)} characters, ${String(speech.cost)} credits`);
 
 const answer = await client.chat.completions.create({
     model: "gemma-4-26b-a4b",
@@ -74,7 +74,7 @@ const client = new NeuronAI({
 const speech = await client.tts.synthesize({text: "Xush kelibsiz!", voice_id: "kamron", quality: "high"});
 speech.audio; // Uint8Array: the WAV file
 speech.content_type; // "audio/wav"
-speech.cost; // the price billed, in UZS (X-Cost)
+speech.cost; // the price billed, in credits (X-Cost)
 speech.character_count; // the characters billed (X-Character-Count); an emotion tag counts as one
 speech.balance; // your balance after the charge (X-Balance)
 speech.voice_custom; // whether the voice is one of your clones (X-Voice-Custom)

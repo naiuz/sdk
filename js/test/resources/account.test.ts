@@ -1,13 +1,14 @@
-import {describe, expect, it, vi} from "vitest";
+import {describe, expect, expectTypeOf, it, vi} from "vitest";
 import {HttpClient} from "../../src/core/http";
+import type {UsageTotal} from "../../src/types/account";
 import {testClient} from "../helpers/client";
 import {envelope, mockFetch} from "../helpers/mock-fetch";
 
 describe("account", () => {
     it("balance() reads GET /balance", async () => {
-        const {fetch, requests} = mockFetch(envelope({balance: 10000, currency: "UZS"}, "req-balance"));
+        const {fetch, requests} = mockFetch(envelope({balance: 10000, currency: "credits"}, "req-balance"));
         const balance = await testClient(fetch).account.balance();
-        expect(balance).toEqual({balance: 10000, currency: "UZS"});
+        expect(balance).toEqual({balance: 10000, currency: "credits"});
         expect(balance.request_id).toBe("req-balance");
         expect(requests[0]?.method).toBe("GET");
         expect(requests[0]?.url.pathname).toBe("/api/v1/balance");
@@ -28,5 +29,9 @@ describe("account", () => {
         await client.account.balance();
         await client.account.usage();
         expect(send.mock.calls.map(([request]) => request.retry)).toEqual(["safe", "safe"]);
+    });
+
+    it("types the usage total's currency as credits, an open union, so a unit the API adds later still type-checks", () => {
+        expectTypeOf<UsageTotal["currency"]>().toEqualTypeOf<"credits" | (string & {})>();
     });
 });

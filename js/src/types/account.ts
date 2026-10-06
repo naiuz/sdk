@@ -1,10 +1,10 @@
-/** The organization's remaining credit, and its prices. */
+/** The organization's remaining credits, and its prices. */
 export interface Balance {
-    /** The remaining credit, in `currency`. */
+    /** The remaining balance, in `currency`. */
     balance: number;
-    /** The balance written for people, such as `10 000 UZS`. */
+    /** The balance written for people, such as `10 000 credits`. */
     formatted: string;
-    /** The currency, such as `UZS`. */
+    /** The unit of the balance and the prices: `credits`. */
     currency: string;
     /** The price of one minute of transcription, in `currency`. */
     stt_price_per_minute: number;
@@ -34,12 +34,12 @@ export interface UsagePeriod {
 export interface UsageTotal {
     /** The requests made. */
     requests: number;
-    /** The spend, in UZS. */
+    /** The spend, in credits. */
     cost: number;
-    /** The spend written for people, such as `1 250,50 UZS`. */
+    /** The spend written for people, such as `1 251 credits`. */
     formatted_cost: string;
-    /** Always `UZS`. */
-    currency: "UZS" | (string & {});
+    /** Always `credits`. */
+    currency: "credits" | (string & {});
 }
 
 /** One service's requests and spend in the window. */
@@ -50,7 +50,7 @@ export interface UsageByService {
     label: string;
     /** The requests made. */
     requests: number;
-    /** The spend, in UZS. */
+    /** The spend, in credits. */
     cost: number;
 }
 
@@ -62,7 +62,7 @@ export interface UsageByKey {
     name: string;
     /** The requests made. */
     requests: number;
-    /** The spend, in UZS. */
+    /** The spend, in credits. */
     cost: number;
 }
 
@@ -72,7 +72,7 @@ export interface Usage {
     period: UsagePeriod;
     /** The whole window's requests and spend. */
     total: UsageTotal;
-    /** One row per service used in the window, the costliest first: its code, such as `llm`, its name, and its requests and spend in UZS. */
+    /** One row per service used in the window, the costliest first: its code, such as `llm`, its name, and its requests and spend in credits. */
     by_service: UsageByService[];
     /** One row per API key used in the window, the costliest first. */
     by_key: UsageByKey[];

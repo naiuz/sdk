@@ -31,8 +31,8 @@ export interface Transcription {
     duration_seconds: number;
     /** The text in timed pieces, in order: where each starts and ends in the audio, in seconds, and what was said. */
     segments: TranscriptionSegment[];
-    /** The price billed, in UZS. */
+    /** The price billed, in credits. */
     cost: number;
-    /** Your balance after the charge, in UZS. */
+    /** Your balance after the charge, in credits. */
     balance: number;
 }

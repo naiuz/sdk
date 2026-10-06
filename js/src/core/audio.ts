@@ -18,11 +18,11 @@ export class SpeechAudio {
     readonly audio: Uint8Array;
     /** The media type, `audio/wav`. */
     readonly content_type: string;
-    /** The price billed, in UZS (`X-Cost`); `null` when the answer lacks the header. */
+    /** The price billed, in credits (`X-Cost`); `null` when the answer lacks the header. */
     readonly cost: number | null;
     /** The characters billed (`X-Character-Count`): an emotion tag counts as one. `null` when the answer lacks the header. */
     readonly character_count: number | null;
-    /** Your balance after the charge, in UZS (`X-Balance`); `null` when the answer lacks the header. */
+    /** Your balance after the charge, in credits (`X-Balance`); `null` when the answer lacks the header. */
     readonly balance: number | null;
     /** Whether the voice is one of your clones (`X-Voice-Custom: 1`); for a dialogue, whether any turn's is. */
     readonly voice_custom: boolean;
