@@ -21,7 +21,7 @@ client = NeuronAI()
 
 speech = client.tts.synthesize(text="Assalomu alaykum!", voice_id="kamron", language="uz")
 speech.save("salom.wav")
-print(f"{speech.character_count} characters, {speech.cost} UZS")
+print(f"{speech.character_count} characters, {speech.cost} credits")
 
 answer = client.chat.completions.create(
     model="gemma-4-26b-a4b",
@@ -96,7 +96,7 @@ speech.save("welcome.wav")
 |---|---|
 | `audio` | `bytes`: the WAV file |
 | `content_type` | `"audio/wav"` |
-| `cost` | the price billed, in UZS (`X-Cost`) |
+| `cost` | the price billed, in credits (`X-Cost`) |
 | `character_count` | the characters billed (`X-Character-Count`); an emotion tag counts as one |
 | `balance` | your balance after the charge (`X-Balance`) |
 | `voice_custom` | whether the voice is one of your clones (`X-Voice-Custom`) |

@@ -192,7 +192,7 @@ Creates a job, polls it until it has `succeeded` or `failed`, and returns it. Ra
 
 ### `account.balance() -> Balance`
 
-`GET /balance`. Your organization's remaining credit, and its prices.
+`GET /balance`. Your organization's remaining credits, and its prices.
 
 ### `account.usage(*, days=None) -> Usage`
 
@@ -215,7 +215,7 @@ Creates a job, polls it until it has `succeeded` or `failed`, and returns it. Ra
 | `description` | `str \| None` | Up to 500 characters. |
 | `permissions` | `ApiKeyPermissionsParam` | Levels by product, such as `{"tts": "write"}`. |
 | `expires_at` | `str \| None` | When the key stops working (ISO 8601). |
-| `monthly_spend_limit` | `float \| None` | UZS per calendar month. |
+| `monthly_spend_limit` | `float \| None` | Credits per calendar month. |
 | `allowed_ips` | `Sequence[str] \| None` | Up to 100 addresses or CIDR ranges. |
 
 ### `api_keys.retrieve(id) -> ApiKey`

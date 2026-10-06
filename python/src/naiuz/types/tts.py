@@ -102,7 +102,7 @@ class TtsJob(WithRequestId):
     character_count: int
     """The text's spoken length, the measure billing uses."""
     cost: float | None
-    """The price, in UZS, once the job has succeeded; None until then."""
+    """The price, in credits, once the job has succeeded; None until then."""
     balance_after: float | None
     """The balance after the charge, once the job has succeeded; None until then."""
     voice_custom: bool

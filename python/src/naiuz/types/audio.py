@@ -37,11 +37,11 @@ class SpeechAudio:
     content_type: str
     """The media type, `audio/wav`."""
     cost: float | None
-    """The price billed, in UZS (`X-Cost`)."""
+    """The price billed, in credits (`X-Cost`)."""
     character_count: int | None
     """The characters billed (`X-Character-Count`): an emotion tag counts as one."""
     balance: float | None
-    """Your balance after the charge, in UZS (`X-Balance`)."""
+    """Your balance after the charge, in credits (`X-Balance`)."""
     voice_custom: bool
     """Whether the voice is one of your clones (`X-Voice-Custom: 1`); for a dialogue, whether any turn's is."""
     latency_ms: float | None

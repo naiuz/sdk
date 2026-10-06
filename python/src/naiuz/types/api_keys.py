@@ -66,9 +66,9 @@ class ApiKey(WithRequestId):
     allowed_ips: list[str]
     """Addresses or CIDR ranges the key may be used from. Empty allows any address."""
     monthly_spend_limit: float | None
-    """UZS per calendar month (UTC), or None for no limit."""
+    """Credits per calendar month (UTC), or None for no limit."""
     spent_this_month: float
-    """UZS spent this calendar month (UTC)."""
+    """Credits spent this calendar month (UTC)."""
     enabled: bool
     """Whether the key works; a disabled key can be enabled again."""
     revoked_at: str | None
@@ -98,7 +98,7 @@ class CreateApiKeyRequest(_CreateApiKeyFields, total=False):
     expires_at: str | None
     """When the key stops working (ISO 8601), or None for never."""
     monthly_spend_limit: float | None
-    """In UZS per calendar month (UTC), from 0 to 999999999999.99 with at most two decimals. None for no limit."""
+    """In credits per calendar month (UTC), from 0 to 999999999999.99 with at most two decimals. None for no limit."""
     allowed_ips: Sequence[str] | None
     """Up to 100 addresses or CIDR ranges the key may be used from."""
 
@@ -117,7 +117,7 @@ class UpdateApiKeyRequest(TypedDict, total=False):
     expires_at: str | None
     """When the key stops working (ISO 8601); None clears the expiry."""
     monthly_spend_limit: float | None
-    """In UZS per calendar month (UTC), from 0 to 999999999999.99 with at most two decimals. None removes the
+    """In credits per calendar month (UTC), from 0 to 999999999999.99 with at most two decimals. None removes the
     limit."""
     enabled: bool
     """Switches the key on or off."""

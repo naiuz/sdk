@@ -27,7 +27,7 @@ class AsyncAccount(AsyncAPIResource):
         max_retries: int | None = None,
         extra_headers: Mapping[str, str] | None = None,
     ) -> Balance:
-        """The remaining credit of the calling key's organization, and its prices.
+        """The remaining credits of the calling key's organization, and its prices.
 
         Use it to surface a low balance before a request fails with 402.
         """

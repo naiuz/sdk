@@ -67,7 +67,7 @@ class AsyncApiKeys(AsyncAPIResource):
                 `none`. A `full` key already holds every other product at its highest level, so its map may name
                 only `api_keys`.
             expires_at: When the key stops working (ISO 8601), or None for never.
-            monthly_spend_limit: In UZS per calendar month (UTC), from 0 to 999999999999.99 with at most two
+            monthly_spend_limit: In credits per calendar month (UTC), from 0 to 999999999999.99 with at most two
                 decimals. Leave it out, or pass None, for no limit.
             allowed_ips: Up to 100 addresses or CIDR ranges the key may be used from.
         """
@@ -124,7 +124,7 @@ class AsyncApiKeys(AsyncAPIResource):
             access: `full` or `restricted`.
             permissions: Replaces the whole map. Levels by product, such as `{"tts": "write"}`.
             expires_at: When the key stops working (ISO 8601); None clears the expiry.
-            monthly_spend_limit: In UZS per calendar month (UTC), from 0 to 999999999999.99 with at most two
+            monthly_spend_limit: In credits per calendar month (UTC), from 0 to 999999999999.99 with at most two
                 decimals. None removes the limit.
             enabled: Switches the key on or off.
             allowed_ips: Up to 100 addresses or CIDR ranges; None or [] clears the allowlist.

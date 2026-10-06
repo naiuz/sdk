@@ -1,15 +1,17 @@
 # Written by scripts/unasync.py from tests/_async/test_account.py. Edit that file, then run the script.
+from typing import get_args
+
 import pytest
 
 from naiuz import RawResponse
-from naiuz.types import Balance, Usage
+from naiuz.types import Balance, Usage, UsageTotal
 from tests.helpers import BALANCE, MockAPI, envelope
 
 from .clients import client_for, retry_classes
 
 USAGE = {
     "period": {"days": 7, "start": "2026-09-23", "end": "2026-09-29"},
-    "total": {"requests": 2, "cost": 25, "formatted_cost": "25 UZS", "currency": "UZS"},
+    "total": {"requests": 2, "cost": 25, "formatted_cost": "25 credits", "currency": "credits"},
     "by_service": [{"service": "tts", "label": "Text to speech", "requests": 2, "cost": 25}],
     "by_key": [{"id": None, "name": "Dashboard", "requests": 2, "cost": 25}],
 }
@@ -47,3 +49,10 @@ def test_with_raw_response_gives_the_result_with_its_status_and_headers() -> Non
     assert isinstance(raw, RawResponse)
     assert raw.data.balance == 10000
     assert (raw.status, raw.headers["x-request-id"]) == (200, "req-raw")
+
+
+def test_a_usage_total_names_credits_and_takes_a_unit_the_sdk_doesn_t_know_as_a_string() -> None:
+    literal, other = get_args(UsageTotal.model_fields["currency"].annotation)
+    assert (get_args(literal), other) == (("credits",), str)
+    total = UsageTotal.model_validate({"requests": 1, "cost": 1, "formatted_cost": "1 credit", "currency": "tokens"})
+    assert total.currency == "tokens"

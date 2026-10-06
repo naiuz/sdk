@@ -8,14 +8,14 @@ from .._models import BaseModel, WithRequestId
 
 
 class Balance(WithRequestId):
-    """The organization's remaining credit, and its prices."""
+    """The organization's remaining credits, and its prices."""
 
     balance: float
-    """The remaining credit, in `currency`."""
+    """The remaining balance, in `currency`."""
     formatted: str
-    """The balance written for people, such as `10 000 UZS`."""
+    """The balance written for people, such as `10 000 credits`."""
     currency: str
-    """The currency, such as `UZS`."""
+    """The unit of the balance and the prices: `credits`."""
     stt_price_per_minute: float
     """The price of one minute of transcription, in `currency`."""
     tts_price_per_char: float
@@ -41,11 +41,11 @@ class UsageTotal(BaseModel):
     requests: int
     """The requests made."""
     cost: float
-    """The spend, in UZS."""
+    """The spend, in credits."""
     formatted_cost: str
-    """The spend written for people, such as `1 250,50 UZS`."""
-    currency: Literal["UZS"] | str
-    """Always `UZS`."""
+    """The spend written for people, such as `1 251 credits`."""
+    currency: Literal["credits"] | str
+    """Always `credits`."""
 
 
 class UsageByService(BaseModel):
@@ -58,7 +58,7 @@ class UsageByService(BaseModel):
     requests: int
     """The requests made."""
     cost: float
-    """The spend, in UZS."""
+    """The spend, in credits."""
 
 
 class UsageByKey(BaseModel):
@@ -71,7 +71,7 @@ class UsageByKey(BaseModel):
     requests: int
     """The requests made."""
     cost: float
-    """The spend, in UZS."""
+    """The spend, in credits."""
 
 
 class Usage(WithRequestId):

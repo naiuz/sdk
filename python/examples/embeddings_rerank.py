@@ -22,4 +22,4 @@ for vector, document in zip(vectors, documents, strict=True):
 ranked = client.rerank.create(model="bge-reranker-v2-m3", query=question, documents=documents, top_n=2)
 for result in ranked.results:
     print(f"relevance {result.relevance_score:.3f}  {documents[result.index]}")
-print(f"Embeddings cost {embeddings.cost} UZS, rerank {ranked.cost} UZS.")
+print(f"Embeddings cost {embeddings.cost} credits, rerank {ranked.cost} credits.")

@@ -13,6 +13,6 @@ else:
     if job.status == "succeeded":
         # A finished job's audio is kept for 24 hours: download it now.
         client.tts.jobs.audio(job.id).save("story.wav")
-        print(f"Saved story.wav: {job.cost} UZS.")
+        print(f"Saved story.wav: {job.cost} credits.")
     else:
         print(f"The job failed: {job.error.code if job.error else 'unknown'}.")

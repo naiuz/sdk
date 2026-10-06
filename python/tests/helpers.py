@@ -27,8 +27,8 @@ KEY = "nai_unit_test_key"
 
 BALANCE = {
     "balance": 10000,
-    "formatted": "10 000 UZS",
-    "currency": "UZS",
+    "formatted": "10 000 credits",
+    "currency": "credits",
     "stt_price_per_minute": 500,
     "tts_price_per_char": 2.5,
     "min_topup": 5000,

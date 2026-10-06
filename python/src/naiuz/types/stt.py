@@ -44,6 +44,6 @@ class Transcription(WithRequestId):
     segments: list[TranscriptionSegment]
     """The text in timed pieces, in order: where each starts and ends in the audio, in seconds, and what was said."""
     cost: float
-    """The price billed, in UZS."""
+    """The price billed, in credits."""
     balance: float
-    """Your balance after the charge, in UZS."""
+    """Your balance after the charge, in credits."""

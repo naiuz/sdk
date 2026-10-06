@@ -71,7 +71,7 @@ class WithCost(BaseModel):
 
     @property
     def cost(self) -> float | None:
-        """The price billed, in UZS, from the `X-Cost` header; None when the answer has none.
+        """The price billed, in credits, from the `X-Cost` header; None when the answer has none.
 
         It isn't a field: `model_dump()` leaves it out, and it doesn't count when objects are compared.
         """

@@ -16,4 +16,4 @@ client = NeuronAI()
 transcription = client.stt.transcribe(file=Path(sys.argv[1]), language="uz")
 for segment in transcription.segments:
     print(f"[{segment.start:.1f}-{segment.end:.1f} s] {segment.text}")
-print(f"{transcription.duration_seconds:.1f} s of audio, {transcription.cost} UZS.")
+print(f"{transcription.duration_seconds:.1f} s of audio, {transcription.cost} credits.")
