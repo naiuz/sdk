@@ -34,8 +34,8 @@
           "total": {
             "requests": 42,
             "cost": 1250.5,
-            "formatted_cost": "1 250,50 UZS",
-            "currency": "UZS"
+            "formatted_cost": "1 251 credits",
+            "currency": "credits"
           },
           "by_service": [
             {
@@ -80,8 +80,8 @@
       "total": {
         "requests": 42,
         "cost": 1250.5,
-        "formatted_cost": "1 250,50 UZS",
-        "currency": "UZS"
+        "formatted_cost": "1 251 credits",
+        "currency": "credits"
       },
       "by_service": [
         {

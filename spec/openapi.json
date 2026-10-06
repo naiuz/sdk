@@ -168,7 +168,7 @@
             },
             "headers": {
               "X-Cost": {
-                "description": "The price billed, in UZS. Sent with the JSON completion; a stream is billed when it ends, so it carries none.",
+                "description": "The price billed, in credits. Sent with the JSON completion; a stream is billed when it ends, so it carries none.",
                 "schema": {
                   "type": "number"
                 }
@@ -462,12 +462,12 @@
             {
               "label": "Input",
               "value": 1.5,
-              "currency": "UZS"
+              "currency": "credits"
             },
             {
               "label": "Output",
               "value": 6,
-              "currency": "UZS"
+              "currency": "credits"
             }
           ]
         },
@@ -476,6 +476,21 @@
             "lang": "shell",
             "label": "cURL",
             "source": "curl -X POST \"https://my.neuronai.uz/api/v1/chat/completions\" \\\n  -H \"Content-Type: application/json\" \\\n  -H \"Authorization: Bearer <your-api-key>\" \\\n  -d '{\n    \"model\": \"gemma-4-26b-a4b\",\n    \"messages\": [\n      {\"role\": \"user\", \"content\": \"Salom! Bugun ob-havo qanday?\"}\n    ]\n  }'"
+          },
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nconst completion = await client.chat.completions.create({\n    model: \"gemma-4-26b-a4b\",\n    messages: [{role: \"user\", content: \"Salom! Bugun ob-havo qanday?\"}],\n});\n\nconsole.log(completion.choices[0]?.message.content);"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\ncompletion = client.chat.completions.create(\n    model=\"gemma-4-26b-a4b\",\n    messages=[{\"role\": \"user\", \"content\": \"Salom! Bugun ob-havo qanday?\"}],\n)\n\nprint(completion.choices[0].message.content)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n$completion = $client->chat->completions->create([\n    'model' => 'gemma-4-26b-a4b',\n    'messages' => [\n        ['role' => 'user', 'content' => 'Salom! Bugun ob-havo qanday?'],\n    ],\n]);\n\necho $completion->choices[0]->message->content, PHP_EOL;"
           },
           {
             "lang": "python",
@@ -690,7 +705,24 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nconst models = await client.models.list();\n\nfor (const model of models.data) {\n    console.log(model.id);\n}"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\nmodels = client.models.list()\n\nfor model in models.data:\n    print(model.id)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n$models = $client->models->list();\n\nforeach ($models->data as $model) {\n    echo $model->id, PHP_EOL;\n}"
+          }
+        ]
       }
     },
     "/v1/tts/synthesize": {
@@ -734,13 +766,13 @@
             },
             "headers": {
               "X-Cost": {
-                "description": "The price billed, in UZS.",
+                "description": "The price billed, in credits.",
                 "schema": {
                   "type": "number"
                 }
               },
               "X-Balance": {
-                "description": "Your balance after the charge, in UZS.",
+                "description": "Your balance after the charge, in credits.",
                 "schema": {
                   "type": "number"
                 }
@@ -1123,12 +1155,12 @@
             {
               "label": "Default voice",
               "value": 0.3,
-              "currency": "UZS"
+              "currency": "credits"
             },
             {
               "label": "Voice clone",
               "value": 0.5,
-              "currency": "UZS"
+              "currency": "credits"
             }
           ]
         },
@@ -1137,6 +1169,21 @@
             "lang": "shell",
             "label": "cURL",
             "source": "curl -X POST \"https://my.neuronai.uz/api/v1/tts/synthesize\" \\\n  -H \"Content-Type: application/json\" \\\n  -H \"Authorization: Bearer <your-api-key>\" \\\n  -d '{\n    \"voice_id\": \"kamron\",\n    \"text\": \"Assalomu alaykum! Bu NeuronAI matn-nutq xizmati orqali yaratilgan ovoz.\",\n    \"language\": \"uz\",\n    \"quality\": \"standard\"\n  }' \\\n  --output speech.wav"
+          },
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nconst speech = await client.tts.synthesize({\n    voice_id: \"kamron\",\n    text: \"Assalomu alaykum! Bu NeuronAI matn-nutq xizmati orqali yaratilgan ovoz.\",\n    language: \"uz\",\n    quality: \"standard\",\n});\n\nawait speech.save(\"speech.wav\");"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\nspeech = client.tts.synthesize(\n    voice_id=\"kamron\",\n    text=\"Assalomu alaykum! Bu NeuronAI matn-nutq xizmati orqali yaratilgan ovoz.\",\n    language=\"uz\",\n    quality=\"standard\",\n)\n\nspeech.save(\"speech.wav\")"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n$speech = $client->tts->synthesize([\n    'voice_id' => 'kamron',\n    'text' => 'Assalomu alaykum! Bu NeuronAI matn-nutq xizmati orqali yaratilgan ovoz.',\n    'language' => 'uz',\n    'quality' => 'standard',\n]);\n\n$speech->save('speech.wav');"
           },
           {
             "lang": "javascript",
@@ -1197,13 +1244,13 @@
             },
             "headers": {
               "X-Cost": {
-                "description": "The price billed, in UZS.",
+                "description": "The price billed, in credits.",
                 "schema": {
                   "type": "number"
                 }
               },
               "X-Balance": {
-                "description": "Your balance after the charge, in UZS.",
+                "description": "Your balance after the charge, in credits.",
                 "schema": {
                   "type": "number"
                 }
@@ -1629,12 +1676,12 @@
             {
               "label": "Default voice",
               "value": 0.3,
-              "currency": "UZS"
+              "currency": "credits"
             },
             {
               "label": "Voice clone",
               "value": 0.5,
-              "currency": "UZS"
+              "currency": "credits"
             }
           ]
         },
@@ -1643,6 +1690,21 @@
             "lang": "shell",
             "label": "cURL",
             "source": "curl -X POST \"https://my.neuronai.uz/api/v1/tts/dialogue\" \\\n  -H \"Content-Type: application/json\" \\\n  -H \"Authorization: Bearer <your-api-key>\" \\\n  -d '{\n    \"turns\": [\n      {\"voice_id\": \"<voice-a>\", \"text\": \"Assalomu alaykum! Bugun sizga yangiliklarni yetkazamiz.\"},\n      {\"voice_id\": \"<voice-b>\", \"text\": \"Xush kelibsiz! Birinchi yangilikni tinglaymiz.\"}\n    ],\n    \"gap_ms\": 300\n  }' \\\n  --output dialogue.wav"
+          },
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nconst dialogue = await client.tts.dialogue({\n    turns: [\n        {voice_id: \"kamron\", text: \"Assalomu alaykum! Bugun sizga yangiliklarni yetkazamiz.\"},\n        {voice_id: \"madina\", text: \"Xush kelibsiz! Birinchi yangilikni tinglaymiz.\"},\n    ],\n    gap_ms: 300,\n});\n\nawait dialogue.save(\"dialogue.wav\");\nconsole.log(dialogue.turns);"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\ndialogue = client.tts.dialogue(\n    turns=[\n        {\"voice_id\": \"kamron\", \"text\": \"Assalomu alaykum! Bugun sizga yangiliklarni yetkazamiz.\"},\n        {\"voice_id\": \"madina\", \"text\": \"Xush kelibsiz! Birinchi yangilikni tinglaymiz.\"},\n    ],\n    gap_ms=300,\n)\n\ndialogue.save(\"dialogue.wav\")\nprint(dialogue.turns)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n$dialogue = $client->tts->dialogue([\n    'turns' => [\n        ['voice_id' => 'kamron', 'text' => 'Assalomu alaykum! Bugun sizga yangiliklarni yetkazamiz.'],\n        ['voice_id' => 'madina', 'text' => 'Xush kelibsiz! Birinchi yangilikni tinglaymiz.'],\n    ],\n    'gap_ms' => 300,\n]);\n\n$dialogue->save('dialogue.wav');\nprint_r($dialogue->turns);"
           },
           {
             "lang": "javascript",
@@ -2051,12 +2113,12 @@
             {
               "label": "Default voice",
               "value": 0.3,
-              "currency": "UZS"
+              "currency": "credits"
             },
             {
               "label": "Voice clone",
               "value": 0.5,
-              "currency": "UZS"
+              "currency": "credits"
             }
           ]
         },
@@ -2065,6 +2127,21 @@
             "lang": "shell",
             "label": "cURL",
             "source": "# 1. Submit\ncurl -X POST \"https://my.neuronai.uz/api/v1/tts/jobs\" \\\n  -H \"Content-Type: application/json\" \\\n  -H \"Authorization: Bearer <your-api-key>\" \\\n  -H \"Idempotency-Key: my-unique-key-123\" \\\n  -d '{\"voice_id\": \"kamron\", \"text\": \"Assalomu alaykum! Bu NeuronAI matn-nutq xizmati orqali yaratilgan ovoz.\", \"language\": \"uz\"}'\n\n# 2. Poll until data.status is \"succeeded\" or \"failed\"\ncurl \"https://my.neuronai.uz/api/v1/tts/jobs/<job-id>\" -H \"Authorization: Bearer <your-api-key>\"\n\n# 3. Download\ncurl \"https://my.neuronai.uz/api/v1/tts/jobs/<job-id>/audio\" -H \"Authorization: Bearer <your-api-key>\" --output speech.wav"
+          },
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nconst job = await client.tts.jobs.create({\n    voice_id: \"kamron\",\n    text: \"Assalomu alaykum! Bu NeuronAI matn-nutq xizmati orqali yaratilgan ovoz.\",\n    language: \"uz\",\n});\n\nconsole.log(job.id, job.status);"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\njob = client.tts.jobs.create(\n    voice_id=\"kamron\",\n    text=\"Assalomu alaykum! Bu NeuronAI matn-nutq xizmati orqali yaratilgan ovoz.\",\n    language=\"uz\",\n)\n\nprint(job.id, job.status)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n$job = $client->tts->jobs->create([\n    'voice_id' => 'kamron',\n    'text' => 'Assalomu alaykum! Bu NeuronAI matn-nutq xizmati orqali yaratilgan ovoz.',\n    'language' => 'uz',\n]);\n\necho $job->id, ' ', $job->status, PHP_EOL;"
           },
           {
             "lang": "javascript",
@@ -2297,7 +2374,24 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nconst job = await client.tts.jobs.retrieve(\"<job-id>\");\n\nconsole.log(job.status);"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\njob = client.tts.jobs.retrieve(\"<job-id>\")\n\nprint(job.status)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n$job = $client->tts->jobs->retrieve('<job-id>');\n\necho $job->status, PHP_EOL;"
+          }
+        ]
       }
     },
     "/v1/tts/jobs/{id}/audio": {
@@ -2332,13 +2426,13 @@
             },
             "headers": {
               "X-Cost": {
-                "description": "The price billed, in UZS.",
+                "description": "The price billed, in credits.",
                 "schema": {
                   "type": "number"
                 }
               },
               "X-Balance": {
-                "description": "Your balance after the charge, in UZS.",
+                "description": "Your balance after the charge, in credits.",
                 "schema": {
                   "type": "number"
                 }
@@ -2597,7 +2691,24 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nconst speech = await client.tts.jobs.audio(\"<job-id>\");\n\nawait speech.save(\"speech.wav\");"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\nspeech = client.tts.jobs.audio(\"<job-id>\")\n\nspeech.save(\"speech.wav\")"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n$speech = $client->tts->jobs->audio('<job-id>');\n\n$speech->save('speech.wav');"
+          }
+        ]
       }
     },
     "/v1/tts/voices": {
@@ -2815,6 +2926,21 @@
             "lang": "shell",
             "label": "cURL",
             "source": "curl \"https://my.neuronai.uz/api/v1/tts/voices?type=stock\""
+          },
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nfor await (const voice of client.voices.list({type: \"stock\"})) {\n    console.log(voice.id, voice.name);\n}"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\nfor voice in client.voices.list(type=\"stock\"):\n    print(voice.id, voice.name)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\nforeach ($client->voices->list(['type' => 'stock']) as $voice) {\n    echo $voice->id, ' ', $voice->name, PHP_EOL;\n}"
           },
           {
             "lang": "javascript",
@@ -3078,6 +3204,21 @@
             "source": "curl -X POST \"https://my.neuronai.uz/api/v1/tts/voices\" \\\n  -H \"Authorization: Bearer <your-api-key>\" \\\n  -F \"name=Aziza\" \\\n  -F \"language=uz\" \\\n  -F \"ref_audio=@/path/to/aziza-sample.wav\" \\\n  -F \"ref_text=Mening ismim Aziza, men sizga yordam berishga tayyorman.\""
           },
           {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\nimport {readFile} from \"node:fs/promises\";\n\nconst client = new NeuronAI();\n\nconst voice = await client.voices.create({\n    name: \"Aziza\",\n    language: \"uz\",\n    ref_audio: {data: await readFile(\"aziza-sample.wav\"), filename: \"aziza-sample.wav\"},\n    ref_text: \"Mening ismim Aziza, men sizga yordam berishga tayyorman.\",\n});\n\nconsole.log(voice.id);"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\nvoice = client.voices.create(\n    name=\"Aziza\",\n    language=\"uz\",\n    ref_audio=\"aziza-sample.wav\",\n    ref_text=\"Mening ismim Aziza, men sizga yordam berishga tayyorman.\",\n)\n\nprint(voice.id)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n$voice = $client->voices->create([\n    'name' => 'Aziza',\n    'language' => 'uz',\n    'ref_audio' => 'aziza-sample.wav',\n    'ref_text' => 'Mening ismim Aziza, men sizga yordam berishga tayyorman.',\n]);\n\necho $voice->id, PHP_EOL;"
+          },
+          {
             "lang": "javascript",
             "label": "JavaScript",
             "source": "const form = new FormData();\nform.append('name', 'Aziza');\nform.append('language', 'uz');\nform.append('ref_audio', file);  // a File or Blob (10-15s clip)\nform.append('ref_text', 'Mening ismim Aziza, men sizga yordam berishga tayyorman.');\n\nconst response = await fetch('https://my.neuronai.uz/api/v1/tts/voices', {\n    method: 'POST',\n    headers: { 'Authorization': 'Bearer <your-api-key>' },\n    body: form,\n});\n\nconst { data } = await response.json();\nconst voiceId = data.id;  // use this as voice_id when synthesizing"
@@ -3253,6 +3394,23 @@
           {},
           {
             "bearer": []
+          }
+        ],
+        "x-codeSamples": [
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nconst voice = await client.voices.retrieve(\"kamron\");\n\nconsole.log(voice.name);"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\nvoice = client.voices.retrieve(\"kamron\")\n\nprint(voice.name)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n$voice = $client->voices->retrieve('kamron');\n\necho $voice->name, PHP_EOL;"
           }
         ]
       },
@@ -3444,6 +3602,21 @@
             "source": "curl -X PATCH \"https://my.neuronai.uz/api/v1/tts/voices/<voice-id>\" \\\n  -H \"Authorization: Bearer <your-api-key>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"name\": \"Aziza, warm\", \"tags\": [\"warm\", \"narration\"]}'"
           },
           {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nconst voice = await client.voices.update(\"<voice-id>\", {\n    name: \"Aziza, warm\",\n    tags: [\"warm\", \"narration\"],\n});\n\nconsole.log(voice.name, voice.tags);"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\nvoice = client.voices.update(\"<voice-id>\", name=\"Aziza, warm\", tags=[\"warm\", \"narration\"])\n\nprint(voice.name, voice.tags)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n$voice = $client->voices->update('<voice-id>', [\n    'name' => 'Aziza, warm',\n    'tags' => ['warm', 'narration'],\n]);\n\necho $voice->name, ' ', implode(', ', $voice->tags), PHP_EOL;"
+          },
+          {
             "lang": "javascript",
             "label": "JavaScript",
             "source": "const response = await fetch('https://my.neuronai.uz/api/v1/tts/voices/<voice-id>', {\n    method: 'PATCH',\n    headers: {\n        'Authorization': 'Bearer <your-api-key>',\n        'Content-Type': 'application/json',\n    },\n    body: JSON.stringify({ name: 'Aziza, warm', tags: ['warm', 'narration'] }),\n});\n\nconst { data } = await response.json();  // data.id is unchanged"
@@ -3592,7 +3765,24 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nawait client.voices.delete(\"<voice-id>\");"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\nclient.voices.delete(\"<voice-id>\")"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n$client->voices->delete('<voice-id>');"
+          }
+        ]
       }
     },
     "/v1/tts/voices/{id}/audio": {
@@ -3783,6 +3973,21 @@
             "lang": "shell",
             "label": "cURL",
             "source": "curl -X POST \"https://my.neuronai.uz/api/v1/tts/voices/<voice-id>/audio\" \\\n  -H \"Authorization: Bearer <your-api-key>\" \\\n  -F \"ref_audio=@/path/to/sample.wav\" \\\n  -F \"ref_text=Assalomu alaykum, men sizga yordam berishga tayyorman.\""
+          },
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\nimport {readFile} from \"node:fs/promises\";\n\nconst client = new NeuronAI();\n\n// Replacing the clip re-creates the voice, which can take minutes.\nconst voice = await client.voices.replaceAudio(\n    \"<voice-id>\",\n    {\n        ref_audio: {data: await readFile(\"sample.wav\"), filename: \"sample.wav\"},\n        ref_text: \"Assalomu alaykum, men sizga yordam berishga tayyorman.\",\n    },\n    {timeout: 15 * 60_000},\n);\n\nconsole.log(voice.id);"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\n# Replacing the clip re-creates the voice, which can take minutes.\nvoice = client.voices.replace_audio(\n    \"<voice-id>\",\n    ref_audio=\"sample.wav\",\n    ref_text=\"Assalomu alaykum, men sizga yordam berishga tayyorman.\",\n    timeout=15 * 60,\n)\n\nprint(voice.id)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n// Replacing the clip re-creates the voice, which can take minutes.\n$voice = $client->voices->replaceAudio('<voice-id>', [\n    'ref_audio' => 'sample.wav',\n    'ref_text' => 'Assalomu alaykum, men sizga yordam berishga tayyorman.',\n], ['timeout' => 15 * 60]);\n\necho $voice->id, PHP_EOL;"
           },
           {
             "lang": "javascript",
@@ -4160,8 +4365,8 @@
           "rates": [
             {
               "label": "Standard",
-              "value": 300,
-              "currency": "UZS"
+              "value": 60,
+              "currency": "credits"
             }
           ]
         },
@@ -4170,6 +4375,21 @@
             "lang": "shell",
             "label": "cURL",
             "source": "curl -X POST \"https://my.neuronai.uz/api/v1/stt/transcribe\" \\\n  -H \"Authorization: Bearer <your-api-key>\" \\\n  -F \"file=@/path/to/recording.mp3\" \\\n  -F \"language=uz\""
+          },
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\nimport {readFile} from \"node:fs/promises\";\n\nconst client = new NeuronAI();\n\nconst transcription = await client.stt.transcribe({\n    file: {data: await readFile(\"recording.mp3\"), filename: \"recording.mp3\"},\n    language: \"uz\",\n});\n\nconsole.log(transcription.text);"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\ntranscription = client.stt.transcribe(file=\"recording.mp3\", language=\"uz\")\n\nprint(transcription.text)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n$transcription = $client->stt->transcribe([\n    'file' => 'recording.mp3',\n    'language' => 'uz',\n]);\n\necho $transcription->text, PHP_EOL;"
           },
           {
             "lang": "javascript",
@@ -4275,7 +4495,7 @@
             },
             "headers": {
               "X-Cost": {
-                "description": "The price billed, in UZS.",
+                "description": "The price billed, in credits.",
                 "schema": {
                   "type": "number"
                 }
@@ -4562,7 +4782,7 @@
             {
               "label": "Input",
               "value": 0.1,
-              "currency": "UZS"
+              "currency": "credits"
             }
           ]
         },
@@ -4571,6 +4791,21 @@
             "lang": "shell",
             "label": "cURL",
             "source": "curl -X POST \"https://my.neuronai.uz/api/v1/embeddings\" \\\n  -H \"Content-Type: application/json\" \\\n  -H \"Authorization: Bearer <your-api-key>\" \\\n  -d '{\n    \"model\": \"bge-m3\",\n    \"input\": \"Toshkent bugun qanday?\"\n  }'"
+          },
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nconst result = await client.embeddings.create({\n    model: \"bge-m3\",\n    input: \"Toshkent bugun qanday?\",\n});\n\nconsole.log(result.data[0]?.embedding.length);"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\nresult = client.embeddings.create(model=\"bge-m3\", input=\"Toshkent bugun qanday?\")\n\nprint(len(result.data[0].embedding))"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n$result = $client->embeddings->create([\n    'model' => 'bge-m3',\n    'input' => 'Toshkent bugun qanday?',\n]);\n\necho count($result->data[0]->embedding), PHP_EOL;"
           },
           {
             "lang": "python",
@@ -4698,7 +4933,7 @@
             },
             "headers": {
               "X-Cost": {
-                "description": "The price billed, in UZS.",
+                "description": "The price billed, in credits.",
                 "schema": {
                   "type": "number"
                 }
@@ -4985,7 +5220,7 @@
             {
               "label": "Input",
               "value": 0.1,
-              "currency": "UZS"
+              "currency": "credits"
             }
           ]
         },
@@ -4994,6 +5229,21 @@
             "lang": "shell",
             "label": "cURL",
             "source": "curl -X POST \"https://my.neuronai.uz/api/v1/rerank\" \\\n  -H \"Content-Type: application/json\" \\\n  -H \"Authorization: Bearer <your-api-key>\" \\\n  -d '{\n    \"model\": \"bge-reranker-v2-m3\",\n    \"query\": \"ob-havo\",\n    \"documents\": [\"Bugun havo issiq.\", \"Docker qollanmasi.\"],\n    \"top_n\": 5\n  }'"
+          },
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nconst ranked = await client.rerank.create({\n    model: \"bge-reranker-v2-m3\",\n    query: \"ob-havo\",\n    documents: [\"Bugun havo issiq.\", \"Docker qollanmasi.\"],\n    top_n: 5,\n});\n\nfor (const result of ranked.results) {\n    console.log(result.index, result.relevance_score);\n}"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\nranked = client.rerank.create(\n    model=\"bge-reranker-v2-m3\",\n    query=\"ob-havo\",\n    documents=[\"Bugun havo issiq.\", \"Docker qollanmasi.\"],\n    top_n=5,\n)\n\nfor result in ranked.results:\n    print(result.index, result.relevance_score)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n$ranked = $client->rerank->create([\n    'model' => 'bge-reranker-v2-m3',\n    'query' => 'ob-havo',\n    'documents' => ['Bugun havo issiq.', 'Docker qollanmasi.'],\n    'top_n' => 5,\n]);\n\nforeach ($ranked->results as $result) {\n    echo $result->index, ' ', $result->relevance_score, PHP_EOL;\n}"
           },
           {
             "lang": "javascript",
@@ -5071,7 +5321,7 @@
                             },
                             "currency": {
                               "type": "string",
-                              "const": "UZS"
+                              "const": "credits"
                             }
                           },
                           "required": [
@@ -5083,7 +5333,7 @@
                         },
                         "by_service": {
                           "type": "array",
-                          "description": "One row per service used in the window, the costliest first: its code, such as\n`llm`, its name, and its requests and spend in UZS.",
+                          "description": "One row per service used in the window, the costliest first: its code, such as\n`llm`, its name, and its requests and spend in credits.",
                           "items": {
                             "type": "object",
                             "properties": {
@@ -5334,7 +5584,22 @@
           {
             "lang": "shell",
             "label": "cURL",
-            "source": "# Remaining credit\ncurl \"https://my.neuronai.uz/api/v1/balance\" \\\n  -H \"Authorization: Bearer <your-api-key>\"\n\n# Spend and request counts over the last 30 days\ncurl \"https://my.neuronai.uz/api/v1/usage?days=30\" \\\n  -H \"Authorization: Bearer <your-api-key>\""
+            "source": "# Your balance, in credits\ncurl \"https://my.neuronai.uz/api/v1/balance\" \\\n  -H \"Authorization: Bearer <your-api-key>\"\n\n# Spend and request counts over the last 30 days\ncurl \"https://my.neuronai.uz/api/v1/usage?days=30\" \\\n  -H \"Authorization: Bearer <your-api-key>\""
+          },
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nconst usage = await client.account.usage({days: 30});\n\nconsole.log(usage.total, usage.by_service);"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\nusage = client.account.usage(days=30)\n\nprint(usage.total, usage.by_service)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n$usage = $client->account->usage(['days' => 30]);\n\nprint_r($usage->total);\nprint_r($usage->by_service);"
           },
           {
             "lang": "javascript",
@@ -5347,7 +5612,7 @@
     "/v1/balance": {
       "get": {
         "operationId": "retrieveBalance",
-        "description": "Returns the remaining credit for the calling key's organization. Use it to surface a low balance before a request fails with `402`.",
+        "description": "Returns the remaining credits for the calling key's organization. Use it to surface a low balance before a request fails with `402`.",
         "summary": "Get balance",
         "tags": [
           "Account"
@@ -5548,7 +5813,22 @@
           {
             "lang": "shell",
             "label": "cURL",
-            "source": "# Remaining credit\ncurl \"https://my.neuronai.uz/api/v1/balance\" \\\n  -H \"Authorization: Bearer <your-api-key>\"\n\n# Spend and request counts over the last 30 days\ncurl \"https://my.neuronai.uz/api/v1/usage?days=30\" \\\n  -H \"Authorization: Bearer <your-api-key>\""
+            "source": "# Your balance, in credits\ncurl \"https://my.neuronai.uz/api/v1/balance\" \\\n  -H \"Authorization: Bearer <your-api-key>\"\n\n# Spend and request counts over the last 30 days\ncurl \"https://my.neuronai.uz/api/v1/usage?days=30\" \\\n  -H \"Authorization: Bearer <your-api-key>\""
+          },
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nconst balance = await client.account.balance();\n\nconsole.log(balance.formatted);"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\nbalance = client.account.balance()\n\nprint(balance.formatted)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n$balance = $client->account->balance();\n\necho $balance->formatted, PHP_EOL;"
           },
           {
             "lang": "javascript",
@@ -5795,11 +6075,28 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nfor await (const key of client.apiKeys.list()) {\n    console.log(key.id, key.name, key.masked_key);\n}"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\nfor key in client.api_keys.list():\n    print(key.id, key.name, key.masked_key)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\nforeach ($client->apiKeys->list() as $key) {\n    echo $key->id, ' ', $key->name, ' ', $key->masked_key, PHP_EOL;\n}"
+          }
+        ]
       },
       "post": {
         "operationId": "createApiKey",
-        "description": "Creates a key. `name` (1–80 characters) and `access` (`full` or `restricted`) are required. A restricted key holds exactly the levels in `permissions`; a full key holds every product, and its `permissions` may then name only `api_keys`. `allowed_ips` is a list of addresses or CIDR ranges, and `monthly_spend_limit` is in UZS per calendar month (UTC).\n\nAnswers 201 with the key and its `secret`. This is the only time the secret is ever shown, so store it now.\n\nThe new key never holds more than the calling key. A restricted caller cannot create full keys or set a product above its own level, and the caller's own `api_keys` level caps the one it grants. The new key cannot have looser limits either: if the caller expires, the new key must expire no later; if the caller has a monthly spend limit, the new key needs one no higher; and if the caller has an IP allowlist, every entry of the new key's must appear in the caller's, compared entry by entry. A violation answers 403 `insufficient_permissions`.\n\nA spend limit applies to each key on its own. A key made through the API outlives the key that made it, and per-key rate and concurrency overrides are not inherited.",
+        "description": "Creates a key. `name` (1–80 characters) and `access` (`full` or `restricted`) are required. A restricted key holds exactly the levels in `permissions`; a full key holds every product, and its `permissions` may then name only `api_keys`. `allowed_ips` is a list of addresses or CIDR ranges, and `monthly_spend_limit` is in credits per calendar month (UTC).\n\nAnswers 201 with the key and its `secret`. This is the only time the secret is ever shown, so store it now.\n\nThe new key never holds more than the calling key. A restricted caller cannot create full keys or set a product above its own level, and the caller's own `api_keys` level caps the one it grants. The new key cannot have looser limits either: if the caller expires, the new key must expire no later; if the caller has a monthly spend limit, the new key needs one no higher; and if the caller has an IP allowlist, every entry of the new key's must appear in the caller's, compared entry by entry. A violation answers 403 `insufficient_permissions`.\n\nA spend limit applies to each key on its own. A key made through the API outlives the key that made it, and per-key rate and concurrency overrides are not inherited.",
         "summary": "Create an API key",
         "tags": [
           "API keys"
@@ -6031,22 +6328,37 @@
           {
             "lang": "shell",
             "label": "cURL",
-            "source": "# Needs a key holding api_keys:write.\ncurl -X POST \"https://my.neuronai.uz/api/v1/api-keys\" \\\n  -H \"Content-Type: application/json\" \\\n  -H \"Authorization: Bearer <your-api-key>\" \\\n  -d '{\n    \"name\": \"CI\",\n    \"access\": \"restricted\",\n    \"permissions\": {\"tts\": \"write\"},\n    \"expires_at\": \"2027-01-01T00:00:00Z\"\n  }'\n\n# The response's data.secret is shown only this once — store it now."
+            "source": "# Needs a key holding api_keys:write.\ncurl -X POST \"https://my.neuronai.uz/api/v1/api-keys\" \\\n  -H \"Content-Type: application/json\" \\\n  -H \"Authorization: Bearer <your-api-key>\" \\\n  -d '{\n    \"name\": \"CI\",\n    \"access\": \"restricted\",\n    \"permissions\": {\"tts\": \"write\"},\n    \"expires_at\": \"2030-01-01T00:00:00Z\"\n  }'\n\n# The response's data.secret is shown only this once — store it now."
+          },
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\n// Needs a key holding api_keys:write.\nconst key = await client.apiKeys.create({\n    name: \"CI\",\n    access: \"restricted\",\n    permissions: {tts: \"write\"},\n    expires_at: \"2030-01-01T00:00:00Z\",\n});\n\n// The secret is shown only this once: store it now.\nconsole.log(key.secret);"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\n# Needs a key holding api_keys:write.\nkey = client.api_keys.create(\n    name=\"CI\",\n    access=\"restricted\",\n    permissions={\"tts\": \"write\"},\n    expires_at=\"2030-01-01T00:00:00Z\",\n)\n\n# The secret is shown only this once: store it now.\nprint(key.secret)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n// Needs a key holding api_keys:write.\n$key = $client->apiKeys->create([\n    'name' => 'CI',\n    'access' => 'restricted',\n    'permissions' => ['tts' => 'write'],\n    'expires_at' => '2030-01-01T00:00:00Z',\n]);\n\n// The secret is shown only this once: store it now.\necho $key->secret, PHP_EOL;"
           },
           {
             "lang": "javascript",
             "label": "JavaScript",
-            "source": "const response = await fetch('https://my.neuronai.uz/api/v1/api-keys', {\n    method: 'POST',\n    headers: {\n        'Authorization': 'Bearer <your-api-key>',\n        'Content-Type': 'application/json',\n    },\n    body: JSON.stringify({\n        name: 'CI',\n        access: 'restricted',\n        permissions: { tts: 'write' },\n        expires_at: '2027-01-01T00:00:00Z',\n    }),\n});\n\nconst { data } = await response.json();\n\n// Shown only this once — store it now, it cannot be retrieved again.\nconsole.log(data.secret);"
+            "source": "const response = await fetch('https://my.neuronai.uz/api/v1/api-keys', {\n    method: 'POST',\n    headers: {\n        'Authorization': 'Bearer <your-api-key>',\n        'Content-Type': 'application/json',\n    },\n    body: JSON.stringify({\n        name: 'CI',\n        access: 'restricted',\n        permissions: { tts: 'write' },\n        expires_at: '2030-01-01T00:00:00Z',\n    }),\n});\n\nconst { data } = await response.json();\n\n// Shown only this once — store it now, it cannot be retrieved again.\nconsole.log(data.secret);"
           },
           {
             "lang": "python",
             "label": "Python",
-            "source": "import requests\n\nresponse = requests.post(\n    \"https://my.neuronai.uz/api/v1/api-keys\",\n    headers={\"Authorization\": \"Bearer <your-api-key>\"},\n    json={\n        \"name\": \"CI\",\n        \"access\": \"restricted\",\n        \"permissions\": {\"tts\": \"write\"},\n        \"expires_at\": \"2027-01-01T00:00:00Z\",\n    },\n)\n\nresponse.raise_for_status()\ndata = response.json()[\"data\"]\n\n# Shown only this once — store it now, it cannot be retrieved again.\nprint(data[\"secret\"])"
+            "source": "import requests\n\nresponse = requests.post(\n    \"https://my.neuronai.uz/api/v1/api-keys\",\n    headers={\"Authorization\": \"Bearer <your-api-key>\"},\n    json={\n        \"name\": \"CI\",\n        \"access\": \"restricted\",\n        \"permissions\": {\"tts\": \"write\"},\n        \"expires_at\": \"2030-01-01T00:00:00Z\",\n    },\n)\n\nresponse.raise_for_status()\ndata = response.json()[\"data\"]\n\n# Shown only this once — store it now, it cannot be retrieved again.\nprint(data[\"secret\"])"
           },
           {
             "lang": "php",
             "label": "PHP",
-            "source": "$ch = curl_init('https://my.neuronai.uz/api/v1/api-keys');\n\ncurl_setopt_array($ch, [\n    CURLOPT_RETURNTRANSFER => true,\n    CURLOPT_POST => true,\n    CURLOPT_HTTPHEADER => [\n        'Content-Type: application/json',\n        'Authorization: Bearer <your-api-key>',\n    ],\n    CURLOPT_POSTFIELDS => json_encode([\n        'name' => 'CI',\n        'access' => 'restricted',\n        'permissions' => ['tts' => 'write'],\n        'expires_at' => '2027-01-01T00:00:00Z',\n    ]),\n]);\n\n$response = json_decode(curl_exec($ch), true);\ncurl_close($ch);\n\n// Shown only this once — store it now, it cannot be retrieved again.\necho $response['data']['secret'];"
+            "source": "$ch = curl_init('https://my.neuronai.uz/api/v1/api-keys');\n\ncurl_setopt_array($ch, [\n    CURLOPT_RETURNTRANSFER => true,\n    CURLOPT_POST => true,\n    CURLOPT_HTTPHEADER => [\n        'Content-Type: application/json',\n        'Authorization: Bearer <your-api-key>',\n    ],\n    CURLOPT_POSTFIELDS => json_encode([\n        'name' => 'CI',\n        'access' => 'restricted',\n        'permissions' => ['tts' => 'write'],\n        'expires_at' => '2030-01-01T00:00:00Z',\n    ]),\n]);\n\n$response = json_decode(curl_exec($ch), true);\ncurl_close($ch);\n\n// Shown only this once — store it now, it cannot be retrieved again.\necho $response['data']['secret'];"
           }
         ]
       }
@@ -6264,7 +6576,24 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nconst key = await client.apiKeys.retrieve(\"<key-id>\");\n\nconsole.log(key.name, key.masked_key);"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\nkey = client.api_keys.retrieve(\"<key-id>\")\n\nprint(key.name, key.masked_key)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n$key = $client->apiKeys->retrieve('<key-id>');\n\necho $key->name, ' ', $key->masked_key, PHP_EOL;"
+          }
+        ]
       },
       "patch": {
         "operationId": "updateApiKey",
@@ -6561,7 +6890,24 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nconst key = await client.apiKeys.update(\"<key-id>\", {enabled: false});\n\nconsole.log(key.enabled);"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\nkey = client.api_keys.update(\"<key-id>\", enabled=False)\n\nprint(key.enabled)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n$key = $client->apiKeys->update('<key-id>', ['enabled' => false]);\n\nvar_dump($key->enabled);"
+          }
+        ]
       }
     },
     "/v1/api-keys/{id}/revoke": {
@@ -6765,6 +7111,21 @@
             "source": "# Rotate a key safely: create the replacement first, move your apps to\n# its secret, and only then revoke the old key below.\ncurl -X POST \"https://my.neuronai.uz/api/v1/api-keys/<key-id>/revoke\" \\\n  -H \"Authorization: Bearer <your-api-key>\"\n# 204 No Content"
           },
           {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\n// Rotate a key safely: create the replacement first, move your apps to it, then revoke the old key.\nawait client.apiKeys.revoke(\"<key-id>\");"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\n# Rotate a key safely: create the replacement first, move your apps to it, then revoke the old key.\nclient.api_keys.revoke(\"<key-id>\")"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n// Rotate a key safely: create the replacement first, move your apps to it, then revoke the old key.\n$client->apiKeys->revoke('<key-id>');"
+          },
+          {
             "lang": "javascript",
             "label": "JavaScript",
             "source": "// Rotate a key safely: create the replacement first, move your apps to\n// its secret, and only then revoke the old key below.\nconst response = await fetch('https://my.neuronai.uz/api/v1/api-keys/<key-id>/revoke', {\n    method: 'POST',\n    headers: { 'Authorization': 'Bearer <your-api-key>' },\n});\n\nif (response.status !== 204) {\n    throw new Error(`Request failed: ${response.status}`);\n}"
@@ -6911,11 +7272,11 @@
               "number",
               "null"
             ],
-            "description": "UZS per calendar month (UTC), or `null` for no limit."
+            "description": "Credits per calendar month (UTC), or `null` for no limit."
           },
           "spent_this_month": {
             "type": "number",
-            "description": "UZS spent this calendar month (UTC)."
+            "description": "Credits spent this calendar month (UTC)."
           },
           "enabled": {
             "type": "boolean"
@@ -7067,7 +7428,7 @@
               "number",
               "null"
             ],
-            "description": "In UZS per calendar month (UTC), from 0 to 999999999999.99 with at\nmost two decimals. Leave it out, or send `null`, for no limit."
+            "description": "In credits per calendar month (UTC), from 0 to 999999999999.99 with at\nmost two decimals. Leave it out, or send `null`, for no limit."
           },
           "allowed_ips": {
             "type": [
@@ -8039,7 +8400,7 @@
               "number",
               "null"
             ],
-            "description": "In UZS per calendar month (UTC), from 0 to 999999999999.99 with at\nmost two decimals. `null` removes the limit."
+            "description": "In credits per calendar month (UTC), from 0 to 999999999999.99 with at\nmost two decimals. `null` removes the limit."
           },
           "enabled": {
             "type": "boolean"
