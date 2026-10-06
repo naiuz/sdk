@@ -18,7 +18,7 @@ final readonly class ChatCompletion extends ApiObject
      * @param string $model The model's id.
      * @param list<ChatCompletionChoice> $choices The choices: one.
      * @param ChatCompletionUsage $usage The tokens billed.
-     * @param float|null $cost The price billed, in UZS, from the `X-Cost` header; null when the answer has none. It
+     * @param float|null $cost The price billed, in credits, from the `X-Cost` header; null when the answer has none. It
      *     isn't a field: toArray() and json_encode() leave it out.
      */
     private function __construct(

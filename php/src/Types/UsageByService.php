@@ -15,7 +15,7 @@ final readonly class UsageByService extends ApiObject
      * @param string $service The service's code, such as `llm`.
      * @param string $label The service's name.
      * @param int $requests The requests made.
-     * @param float $cost The spend, in UZS.
+     * @param float $cost The spend, in credits.
      */
     private function __construct(\stdClass $sent, public string $service, public string $label, public int $requests, public float $cost)
     {

@@ -22,7 +22,7 @@ try {
 if ($job->status === 'succeeded') {
     // A finished job's audio is kept for 24 hours: download it now.
     $client->tts->jobs->audio($job->id)->save('story.wav');
-    echo "Saved story.wav: {$job->cost} UZS.\n";
+    echo "Saved story.wav: {$job->cost} credits.\n";
 } else {
     echo 'The job failed: ' . ($job->error->code ?? 'unknown') . ".\n";
 }

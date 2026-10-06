@@ -14,11 +14,11 @@ use Naiuz\Tests\Support\TestHttp;
 
 final class AccountTest extends TestCase
 {
-    private const BALANCE = ['balance' => 10000, 'formatted' => '10 000 UZS', 'currency' => 'UZS', 'stt_price_per_minute' => 500, 'tts_price_per_char' => 2.5, 'min_topup' => 5000];
+    private const BALANCE = ['balance' => 10000, 'formatted' => '10 000 credits', 'currency' => 'credits', 'stt_price_per_minute' => 500, 'tts_price_per_char' => 2.5, 'min_topup' => 5000];
 
     private const USAGE = [
         'period' => ['days' => 7, 'start' => '2026-09-23', 'end' => '2026-09-29'],
-        'total' => ['requests' => 2, 'cost' => 25, 'formatted_cost' => '25 UZS', 'currency' => 'UZS'],
+        'total' => ['requests' => 2, 'cost' => 25, 'formatted_cost' => '25 credits', 'currency' => 'credits'],
         'by_service' => [['service' => 'tts', 'label' => 'Text to speech', 'requests' => 2, 'cost' => 25]],
         'by_key' => [['id' => null, 'name' => 'Dashboard', 'requests' => 2, 'cost' => 25]],
     ];
@@ -39,7 +39,7 @@ final class AccountTest extends TestCase
         $usage = $client->account->usage(['days' => 7]);
         $client->account->usage();
         self::assertNull($usage->by_key[0]->id);
-        self::assertSame([7, 'tts', 25.0], [$usage->period->days, $usage->by_service[0]->service, $usage->total->cost]);
+        self::assertSame([7, 'tts', 25.0, 'credits'], [$usage->period->days, $usage->by_service[0]->service, $usage->total->cost, $usage->total->currency]);
         self::assertSame(['/api/v1/usage?days=7', '/api/v1/usage'], [$api->requests[0]->getRequestTarget(), $api->requests[1]->getRequestTarget()]);
     }
 

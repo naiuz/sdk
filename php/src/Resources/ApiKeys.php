@@ -68,7 +68,7 @@ readonly class ApiKeys
      *       `none`. A full key already holds every other product at its highest level, so its map may name only
      *       `api_keys`.
      *     - expires_at: when the key stops working (ISO 8601), or null for never.
-     *     - monthly_spend_limit: in UZS per calendar month (UTC), from 0 to 999999999999.99 with at most two
+     *     - monthly_spend_limit: in credits per calendar month (UTC), from 0 to 999999999999.99 with at most two
      *       decimals. Leave it out, or pass null, for no limit.
      *     - allowed_ips: up to 100 addresses or CIDR ranges the key may be used from.
      * @param CallOptions $options
@@ -105,7 +105,7 @@ readonly class ApiKeys
      *     - access: `full` or `restricted`.
      *     - permissions: replaces the whole map. Levels by product, such as ['tts' => 'write'].
      *     - expires_at: when the key stops working (ISO 8601); null clears the expiry.
-     *     - monthly_spend_limit: in UZS per calendar month (UTC), from 0 to 999999999999.99 with at most two
+     *     - monthly_spend_limit: in credits per calendar month (UTC), from 0 to 999999999999.99 with at most two
      *       decimals. Null removes the limit.
      *     - enabled: switches the key on or off.
      *     - allowed_ips: up to 100 addresses or CIDR ranges; null or [] clears the allowlist.

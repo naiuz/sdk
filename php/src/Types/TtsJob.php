@@ -21,7 +21,7 @@ final readonly class TtsJob extends ApiObject
      * @param string|null $started_at When a worker started on the job, or null while it is queued.
      * @param string|null $finished_at When the job succeeded or failed, or null until then.
      * @param int $character_count The text's spoken length, the measure billing uses.
-     * @param float|null $cost The price, in UZS, once the job has succeeded; null until then.
+     * @param float|null $cost The price, in credits, once the job has succeeded; null until then.
      * @param float|null $balance_after The balance after the charge, once the job has succeeded; null until then.
      * @param bool $voice_custom Whether the voice is one of your clones.
      * @param float|null $latency_ms How long synthesis took, in milliseconds, once the job has succeeded; null until

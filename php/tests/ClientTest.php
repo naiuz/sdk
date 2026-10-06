@@ -16,7 +16,7 @@ use Psr\Http\Message\RequestInterface;
 
 final class ClientTest extends TestCase
 {
-    private const BALANCE = ['balance' => 10000, 'formatted' => '10 000 UZS', 'currency' => 'UZS', 'stt_price_per_minute' => 500, 'tts_price_per_char' => 2.5, 'min_topup' => 5000];
+    private const BALANCE = ['balance' => 10000, 'formatted' => '10 000 credits', 'currency' => 'credits', 'stt_price_per_minute' => 500, 'tts_price_per_char' => 2.5, 'min_topup' => 5000];
 
     public function test_it_takes_the_key_from_api_key_else_from_neuronai_api_key(): void
     {

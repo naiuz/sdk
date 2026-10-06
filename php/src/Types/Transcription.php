@@ -17,8 +17,8 @@ final readonly class Transcription extends ApiObject
      * @param float $duration_seconds The audio's duration, in seconds. The price is set by it, at the per-minute rate.
      * @param list<TranscriptionSegment> $segments The text in timed pieces, in order: where each starts and ends in the
      *     audio, in seconds, and what was said.
-     * @param float $cost The price billed, in UZS.
-     * @param float $balance Your balance after the charge, in UZS.
+     * @param float $cost The price billed, in credits.
+     * @param float $balance Your balance after the charge, in credits.
      * @param string|null $request_id The request's ID, to quote to support: the answer's `request_id`, else its
      *     `X-Request-Id` header. It isn't a field: toArray() and json_encode() leave it out.
      */

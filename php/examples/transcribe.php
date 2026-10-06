@@ -23,4 +23,4 @@ $transcription = $client->stt->transcribe(['file' => $path, 'language' => 'uz'])
 foreach ($transcription->segments as $segment) {
     printf("[%.1f-%.1f s] %s\n", $segment->start, $segment->end, $segment->text);
 }
-printf("%.1f s of audio, %s UZS.\n", $transcription->duration_seconds, $transcription->cost);
+printf("%.1f s of audio, %s credits.\n", $transcription->duration_seconds, $transcription->cost);

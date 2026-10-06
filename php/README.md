@@ -21,7 +21,7 @@ $client = new NeuronAI();
 
 $speech = $client->tts->synthesize(['text' => 'Assalomu alaykum!', 'voice_id' => 'kamron', 'language' => 'uz']);
 $speech->save('salom.wav');
-echo "{$speech->character_count} characters, {$speech->cost} UZS\n";
+echo "{$speech->character_count} characters, {$speech->cost} credits\n";
 
 $answer = $client->chat->completions->create([
     'model' => 'gemma-4-26b-a4b',
@@ -79,7 +79,7 @@ $speech->save('welcome.wav');
 |---|---|
 | `audio` | `string`: the WAV file's bytes |
 | `content_type` | `'audio/wav'` |
-| `cost` | the price billed, in UZS (`X-Cost`) |
+| `cost` | the price billed, in credits (`X-Cost`) |
 | `character_count` | the characters billed (`X-Character-Count`); an emotion tag counts as one |
 | `balance` | your balance after the charge (`X-Balance`) |
 | `voice_custom` | whether the voice is one of your clones (`X-Voice-Custom`) |
@@ -199,7 +199,7 @@ Without `stream`, the result is the `ChatCompletion` body, with `cost` from the 
 
 ```php
 $embeddings = $client->embeddings->create(['model' => 'bge-m3', 'input' => ['Salom', 'Rahmat']]);
-echo count($embeddings->data[0]->embedding), " dimensions, {$embeddings->cost} UZS\n";
+echo count($embeddings->data[0]->embedding), " dimensions, {$embeddings->cost} credits\n";
 
 $ranked = $client->rerank->create(['model' => 'bge-reranker-v2-m3', 'query' => 'ob-havo', 'documents' => ['Bugun quyoshli.', 'Narxlar oshdi.'], 'top_n' => 1]);
 echo "{$ranked->results[0]->index} {$ranked->results[0]->relevance_score}\n";

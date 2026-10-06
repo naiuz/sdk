@@ -16,7 +16,7 @@ final readonly class UsageByKey extends ApiObject
      *     dashboard.
      * @param string $name The key's name.
      * @param int $requests The requests made.
-     * @param float $cost The spend, in UZS.
+     * @param float $cost The spend, in credits.
      */
     private function __construct(\stdClass $sent, public ?string $id, public string $name, public int $requests, public float $cost)
     {

@@ -27,7 +27,7 @@ readonly class Account
     public function __construct(private HttpClient $http) {}
 
     /**
-     * The remaining credit of the calling key's organization, and its prices. Use it to surface a low balance before
+     * The remaining credits of the calling key's organization, and its prices. Use it to surface a low balance before
      * a request fails with 402.
      *
      * @param CallOptions $options

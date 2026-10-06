@@ -186,7 +186,7 @@ Creates a job, polls it until it has `succeeded` or `failed`, and returns it. Th
 
 ### `account->balance(array $options = []): Balance`
 
-`GET /balance`. Your organization's remaining credit, and its prices.
+`GET /balance`. Your organization's remaining credits, and its prices.
 
 ### `account->usage(array $query = [], array $options = []): Usage`
 
@@ -209,7 +209,7 @@ Creates a job, polls it until it has `succeeded` or `failed`, and returns it. Th
 | `description` | `string\|null` | Up to 500 characters. |
 | `permissions` | `ApiKeyPermissionsParam` | Levels by product, such as `['tts' => 'write']`. |
 | `expires_at` | `string\|null` | When the key stops working (ISO 8601). |
-| `monthly_spend_limit` | `float\|int\|null` | UZS per calendar month. |
+| `monthly_spend_limit` | `float\|int\|null` | Credits per calendar month. |
 | `allowed_ips` | `list<string>\|null` | Up to 100 addresses or CIDR ranges. |
 
 ### `apiKeys->retrieve(string $id, array $options = []): ApiKey`

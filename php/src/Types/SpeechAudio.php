@@ -18,9 +18,9 @@ readonly class SpeechAudio
     /**
      * @param string $audio The WAV file's bytes.
      * @param string $content_type The media type, `audio/wav`.
-     * @param float|null $cost The price billed, in UZS (`X-Cost`).
+     * @param float|null $cost The price billed, in credits (`X-Cost`).
      * @param int|null $character_count The characters billed (`X-Character-Count`): an emotion tag counts as one.
-     * @param float|null $balance Your balance after the charge, in UZS (`X-Balance`).
+     * @param float|null $balance Your balance after the charge, in credits (`X-Balance`).
      * @param bool $voice_custom Whether the voice is one of your clones (`X-Voice-Custom: 1`); for a dialogue, whether
      *     any turn's is.
      * @param float|null $latency_ms How long the voice took, in milliseconds (`X-Latency-Ms`).

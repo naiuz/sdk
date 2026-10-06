@@ -47,4 +47,4 @@ $ranked = $client->rerank->create(['model' => 'bge-reranker-v2-m3', 'query' => $
 foreach ($ranked->results as $result) {
     printf("relevance %.3f  %s\n", $result->relevance_score, $documents[$result->index] ?? '');
 }
-echo "Embeddings cost {$embeddings->cost} UZS, rerank {$ranked->cost} UZS.\n";
+echo "Embeddings cost {$embeddings->cost} credits, rerank {$ranked->cost} credits.\n";

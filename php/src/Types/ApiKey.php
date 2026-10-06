@@ -21,8 +21,8 @@ final readonly class ApiKey extends ApiObject
      *     `api_keys` is only ever granted explicitly.
      * @param string|null $expires_at When the key stops working, or null for never.
      * @param list<string> $allowed_ips Addresses or CIDR ranges the key may be used from. Empty allows any address.
-     * @param float|null $monthly_spend_limit UZS per calendar month (UTC), or null for no limit.
-     * @param float $spent_this_month UZS spent this calendar month (UTC).
+     * @param float|null $monthly_spend_limit Credits per calendar month (UTC), or null for no limit.
+     * @param float $spent_this_month Credits spent this calendar month (UTC).
      * @param bool $enabled Whether the key works; a disabled key can be enabled again.
      * @param string|null $revoked_at When the key was revoked, or null. A revoked key never works again.
      * @param string|null $last_used_at When the key was last used, or null.

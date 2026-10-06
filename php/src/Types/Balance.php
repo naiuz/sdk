@@ -7,14 +7,14 @@ namespace Naiuz\Types;
 use Naiuz\Core\Fields;
 
 /**
- * The organization's remaining credit, and its prices.
+ * The organization's remaining credits, and its prices.
  */
 final readonly class Balance extends ApiObject
 {
     /**
-     * @param float $balance The remaining credit, in `currency`.
-     * @param string $formatted The balance written for people, such as `10 000 UZS`.
-     * @param string $currency The currency, such as `UZS`.
+     * @param float $balance The remaining balance, in `currency`.
+     * @param string $formatted The balance written for people, such as `10 000 credits`.
+     * @param string $currency The unit of the balance and the prices: `credits`.
      * @param float $stt_price_per_minute The price of one minute of transcription, in `currency`.
      * @param float $tts_price_per_char The price of one character of speech, in `currency`.
      * @param float $min_topup The smallest top-up, in `currency`.

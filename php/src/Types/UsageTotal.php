@@ -13,9 +13,9 @@ final readonly class UsageTotal extends ApiObject
 {
     /**
      * @param int $requests The requests made.
-     * @param float $cost The spend, in UZS.
-     * @param string $formatted_cost The spend written for people, such as `1 250,50 UZS`.
-     * @param string $currency Always `UZS`.
+     * @param float $cost The spend, in credits.
+     * @param string $formatted_cost The spend written for people, such as `1 251 credits`.
+     * @param string $currency Always `credits`.
      */
     private function __construct(\stdClass $sent, public int $requests, public float $cost, public string $formatted_cost, public string $currency)
     {

@@ -17,7 +17,7 @@ final readonly class RerankResponse extends ApiObject
      * @param list<RerankResult> $results The documents ranked by relevance_score, highest first.
      * @param RerankMeta $meta The billed input tokens, in Cohere's shape.
      * @param RerankUsage $usage The same input tokens, in OpenAI's shape.
-     * @param float|null $cost The price billed, in UZS, from the `X-Cost` header; null when the answer has none. It
+     * @param float|null $cost The price billed, in credits, from the `X-Cost` header; null when the answer has none. It
      *     isn't a field: toArray() and json_encode() leave it out.
      */
     private function __construct(\stdClass $sent, public string $id, public string $model, public array $results, public RerankMeta $meta, public RerankUsage $usage, public ?float $cost)

@@ -14,7 +14,7 @@ final readonly class ModelList extends ApiObject
     /**
      * @param string $object Always `list`.
      * @param list<Model> $data The models.
-     * @param float|null $cost The price billed, in UZS, from the `X-Cost` header; null when the answer has none. It
+     * @param float|null $cost The price billed, in credits, from the `X-Cost` header; null when the answer has none. It
      *     isn't a field: toArray() and json_encode() leave it out.
      */
     private function __construct(\stdClass $sent, public string $object, public array $data, public ?float $cost)
