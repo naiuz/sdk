@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/naiuz/sdk/compare/php-v0.1.0...php-v0.1.1) (2026-10-07)
+
+
+### Bug Fixes
+
+* describe the PHP SDK's costs, balances and spend limits in credits, as the API does ([6be015b](https://github.com/naiuz/sdk/commit/6be015bedf1018f22657be9b7ef478021f58c12b))
+
 ## 0.1.0 (2026-10-06)
 
 
