@@ -32,7 +32,7 @@ use Psr\Http\Client\ClientInterface;
 final readonly class NeuronAI
 {
     /** This package's version, sent in the User-Agent header. release-please sets it on each release. */
-    public const VERSION = '0.1.0'; // x-release-please-version
+    public const VERSION = '0.1.1'; // x-release-please-version
 
     /** The API's address when neither base_url nor NEURONAI_BASE_URL gives one. */
     public const DEFAULT_BASE_URL = 'https://my.neuronai.uz/api/v1';
