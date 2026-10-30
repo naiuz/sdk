@@ -105,6 +105,7 @@ export interface ConversationInitiationClientData {
     /** Values for the agent's variables. Signed values in the token win. */
     dynamic_variables?: Record<string, string | number | boolean>;
     overrides?: Overrides;
+    /** False asks for a call. Left out, the session is text. */
     text_only?: boolean;
     user_id?: string | null;
     audio?: AudioFormats;
@@ -250,10 +251,11 @@ export interface AudioFormats {
     output: AudioFormat;
 }
 
-/** How much of a reply's audio has played, sent every 250 ms while it plays. */
+/** How much of a reply's audio has played: every 250 ms while it plays, once when it pauses, and once when its audio ends. */
 export interface Playback {
     type: "playback";
     event_id: EventId;
+    /** Milliseconds of that reply's audio played since its first frame, pauses excluded. */
     played_ms: number;
 }
 

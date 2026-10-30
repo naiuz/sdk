@@ -375,6 +375,7 @@
           "$ref": "#/$defs/Overrides"
         },
         "text_only": {
+          "description": "False asks for a call. Left out, the session is text.",
           "type": "boolean"
         },
         "user_id": {
@@ -873,7 +874,7 @@
       "additionalProperties": false
     },
     "Playback": {
-      "description": "How much of a reply's audio has played, sent every 250 ms while it plays.",
+      "description": "How much of a reply's audio has played: every 250 ms while it plays, once when it pauses, and once when its audio ends.",
       "type": "object",
       "properties": {
         "type": {
@@ -883,6 +884,7 @@
           "$ref": "#/$defs/EventId"
         },
         "played_ms": {
+          "description": "Milliseconds of that reply's audio played since its first frame, pauses excluded.",
           "type": "integer",
           "minimum": 0
         }

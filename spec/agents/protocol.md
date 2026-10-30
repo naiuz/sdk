@@ -22,9 +22,9 @@ The server accepts every connection and then closes it with a [close code](#clos
 
 | Event | Fields |
 |---|---|
-| `conversation_initiation_client_data` | All optional: `dynamic_variables` (values for the agent's variables; signed values in the token win), `overrides` (`first_message`, `language`; only those the token allows), `text_only` (`false` asks for a call), `audio` (a call's formats: `input` `pcm_16000`, `output` `pcm_16000` or `pcm_24000`), `user_id` |
+| `conversation_initiation_client_data` | All optional: `dynamic_variables` (values for the agent's variables; signed values in the token win), `overrides` (`first_message`, `language`; only those the token allows), `text_only` (`false` asks for a call; left out, the session is text), `audio` (a call's formats: `input` `pcm_16000`, `output` `pcm_16000` or `pcm_24000`), `user_id` |
 | `user_message` | `client_message_id`: your own id for the message, `^[A-Za-z0-9_-]{1,64}$`, the same on every retry; `text`: 1 to 10,000 characters |
-| `playback` | `event_id`, `played_ms`: how much of a reply's audio has played. Sent every 250 ms while it plays |
+| `playback` | `event_id`, `played_ms`: milliseconds of that reply's audio played since its first frame, pauses excluded. Sent every 250 ms while it plays, once when it pauses (on `audio_pause` or `interruption`), and once when its audio ends, so the server knows what was heard |
 | `pong` | `event_id`: the id of the `ping` it answers |
 
 ## Server events
@@ -39,7 +39,7 @@ The server accepts every connection and then closes it with a [close code](#clos
 | `agent_typing` | Shown before a text reply |
 | `agent_chat_response_part` | `event_id`, `text_response_part` (`type`: `start`, `delta` or `stop`; `text`): one piece of a streamed reply |
 | `agent_response` | `event_id`, `text`: the final text of a reply |
-| `agent_response_correction` | `event_id`, `text`: replaces what you have of that reply. An empty text withdraws it |
+| `agent_response_correction` | `event_id`, `text`: replaces what you have of that reply. An empty text withdraws it. After an `interruption` it is the reply's final text: nothing more comes for that `event_id` |
 | `operator_message` | `event_id`, `text`, `operator` (`name`, `avatar_url`): an operator's reply |
 | `handoff` | `reason` (`agent`, `agent_failed` or `balance`), `mode_outcome` (`continue_as_text`): operators have the conversation now, and the agent stays silent |
 | `turn_debug` | Only when the token allows debugging: how a turn ran, with its `event_id`, `turn_id`, `step`, `model`, `fallback_used`, `timings`, `usage` and `warnings` |
@@ -47,7 +47,7 @@ The server accepts every connection and then closes it with a [close code](#clos
 | `user_transcript` | In a call: `text`, `language`, `occurred_at`: what the customer said, once their turn ended. Every viewer gets it |
 | `audio_pause` | In a call: `event_id`. The customer started speaking over that reply: pause its playback and keep the buffer |
 | `audio_resume` | In a call: `event_id`. Nothing to answer was said: resume the paused reply where it stopped |
-| `interruption` | In a call: `event_id`. Drop that reply's audio. An `agent_response_correction` follows with what was heard |
+| `interruption` | In a call: `event_id`. Drop that reply's audio. An `agent_response_correction` follows with what was heard, and is the reply's last word |
 | `ping` | `event_id`: answer with a `pong` carrying the same id |
 | `conversation_ended` | `reason`. The server then closes with 1000 |
 | `error` | `code` (`unknown_event`, `invalid_event` or `internal`), `message`: a frame the server couldn't use. The socket stays open |
@@ -100,12 +100,12 @@ The server accepts every connection and then closes it with a [close code](#clos
 - Frames up to 64 KB.
 - 10 new `user_message`s per 10 seconds on a connection. One over it gets `message_error` with `rate_limited`, which is retryable. Sending a message again with its `client_message_id` doesn't count.
 - 50 JSON frames of any kind per 10 seconds. Over it, the server closes with 4029. Binary audio frames don't count.
-- A call's audio at most twice as fast as real time: 2 s of audio per second. Faster closes the connection with 4029.
+- A call's audio at most twice as fast as real time, after a catch-up of up to 10 s, so a client whose network stalled can send what it held. Faster closes the connection with 4029. The silence a gap in the numbers stands for counts as audio.
 - A `ping` every 15 seconds. Two unanswered pings close the connection with 1001 `ping_timeout`. A client that has heard nothing for 40 seconds can take the connection as lost, and resume.
 
 ## Voice
 
-- **Asking for a call:** send `text_only: false` in `conversation_initiation_client_data`, with `audio` (`input`: `pcm_16000`; `output`: `pcm_16000` or `pcm_24000`, `pcm_16000` when omitted).
+- **Asking for a call:** send `text_only: false` in `conversation_initiation_client_data`, with `audio` (`input`: `pcm_16000`; `output`: `pcm_16000` or `pcm_24000`, `pcm_16000` when omitted). Leaving `text_only` out opens a text session.
   - The token must allow voice, or the server closes with 4003.
   - The server takes a voice line first (4009 when none is free), then checks the balance (4010 when it can't cover one minute).
   - The metadata then carries `features.voice: true` and the `audio` formats.
@@ -117,14 +117,16 @@ The server accepts every connection and then closes it with a [close code](#clos
   bytes 5…    PCM16 little-endian, mono, at the negotiated rate
   ```
 
-  - Send the microphone in 20 ms frames, numbered from 0. A gap in the numbers counts as silence.
-  - Agent audio arrives up to about 400 ms ahead of real time. Play it in order, and send `playback` every 250 ms while it plays.
+  - Send the microphone in 20 ms frames (640 bytes of PCM), numbered from 0 on each connection and only upward.
+    - A gap in the numbers counts as silence, up to 1 s of it. A number at or below one already sent is dropped.
+    - After a stall, drop the audio you couldn't send rather than flood the socket, and keep numbering.
+  - Agent audio arrives up to about 400 ms ahead of real time. Play it in order. Send `playback` every 250 ms while it plays, once when it pauses, and once when it ends.
 - **A turn:** `agent_state` moves through `listening`, `thinking` and `speaking`.
   - When the customer stops talking, the server sends `user_transcript`, then the reply streams as text (`agent_chat_response_part`, `agent_response`) beside its audio.
   - On a new conversation, the agent speaks its first message first.
 - **Interruptions:**
   1. When the customer speaks over a reply, `audio_pause` arrives: pause playback and keep the buffer.
-  2. Then either `audio_resume` (nothing to answer was said: carry on where you paused), or `interruption` (drop the reply's audio). After an interruption, `agent_response_correction` gives the part of the reply the customer heard.
+  2. Then either `audio_resume` (nothing to answer was said: carry on where you paused), or `interruption` (drop the reply's audio). After an interruption, `agent_response_correction` gives the part of the reply the customer heard, and nothing more comes for that reply.
 - **One call per conversation:** a second connection that asks for a call takes it over, and the first is closed with 4008. Text viewers are never replaced.
 - **Typing during a call:** a `user_message` from any viewer goes into the call, and the agent answers it by voice.
 

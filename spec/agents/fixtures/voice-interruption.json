@@ -208,6 +208,14 @@
       }
     },
     {
+      "from": "client",
+      "frame": {
+        "type": "playback",
+        "event_id": 3,
+        "played_ms": 1230
+      }
+    },
+    {
       "from": "server",
       "frame": {
         "type": "audio_resume",
@@ -342,29 +350,18 @@
       }
     },
     {
+      "from": "client",
+      "frame": {
+        "type": "playback",
+        "event_id": 3,
+        "played_ms": 1270
+      }
+    },
+    {
       "from": "server",
       "frame": {
         "type": "interruption",
         "event_id": 3
-      }
-    },
-    {
-      "from": "server",
-      "frame": {
-        "type": "agent_chat_response_part",
-        "event_id": 3,
-        "text_response_part": {
-          "type": "stop",
-          "text": ""
-        }
-      }
-    },
-    {
-      "from": "server",
-      "frame": {
-        "type": "agent_response",
-        "event_id": 3,
-        "text": "Buyurtmangiz ertaga yetkaziladi, kuryer sizga oldindan qoʻngʻiroq qiladi."
       }
     },
     {
