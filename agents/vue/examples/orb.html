@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AgentOrb</title>
+<!--
+  Every state of the agent orb at 132 px, the avatar sizes from 24 to 64 px, NeuronAI's palette and a customer's.
+  Build the packages first (npm run build in agents/), serve the repository's root, and open this page:
+    python3 -m http.server 8766 --bind 127.0.0.1
+    http://127.0.0.1:8766/agents/vue/examples/orb.html
+  ?theme=dark shows the dark theme, and ?nowebgl shows the gradient a browser without WebGL gets.
+-->
+<script type="importmap">
+{
+  "imports": {
+    "vue": "https://unpkg.com/vue@3.5.13/dist/vue.esm-browser.prod.js",
+    "@naiuz/agents": "../../client/dist/index.js",
+    "@naiuz/agents-vue": "../dist/index.js"
+  }
+}
+</script>
+<style>
+:root {
+  --bg: hsl(38 80% 98%);
+  --fg: hsl(28 36% 14%);
+  --card: hsl(0 0% 100%);
+  --muted-fg: hsl(26 24% 38%);
+  --border: hsl(36 34% 88%);
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  --bg: hsl(24 12% 10%);
+  --fg: hsl(36 20% 97%);
+  --card: hsl(24 12% 13%);
+  --muted-fg: hsl(30 12% 68%);
+  --border: hsl(24 10% 20%);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; padding: 32px 16px 48px; background: var(--bg); color: var(--fg); font: 15px/1.5 ui-sans-serif, system-ui, sans-serif; }
+main { max-width: 1040px; margin-inline: auto; display: grid; gap: 32px; }
+h1 { margin: 0; font-size: 28px; letter-spacing: -0.02em; }
+h2 { margin: 0 0 12px; font-size: 17px; }
+p { margin: 0; color: var(--muted-fg); }
+nav { display: flex; gap: 16px; flex-wrap: wrap; font-size: 14px; }
+nav a { color: inherit; }
+.row { display: grid; grid-template-columns: repeat(auto-fill, minmax(176px, 1fr)); gap: 16px; }
+.tile { display: grid; justify-items: center; gap: 14px; padding: 28px 12px 16px; border: 1px solid var(--border); border-radius: 20px; background: var(--card); }
+.tile span { font-size: 13px; color: var(--muted-fg); }
+.sizes { display: flex; align-items: flex-end; gap: 20px; flex-wrap: wrap; padding: 20px; border: 1px solid var(--border); border-radius: 20px; background: var(--card); }
+.sizes figure { margin: 0; display: grid; justify-items: center; gap: 8px; font: 12px ui-monospace, monospace; color: var(--muted-fg); }
+</style>
+</head>
+<body>
+<main id="app"></main>
+<script type="module">
+const query = new URLSearchParams(location.search);
+if (query.get("theme") === "dark") document.documentElement.dataset.theme = "dark";
+if (query.has("nowebgl")) {
+  // As a browser without WebGL: the orbs draw their gradient.
+  const getContext = HTMLCanvasElement.prototype.getContext;
+  HTMLCanvasElement.prototype.getContext = function (kind, ...options) {
+    return kind === "webgl" ? null : getContext.call(this, kind, ...options);
+  };
+}
+
+const {createApp, h} = await import("vue");
+const {AgentOrb} = await import("@naiuz/agents-vue");
+
+// No call here, so a voice stands in for the level: syllables of a fifth of a second, with pauses between words.
+const voice = () => {
+  const t = performance.now() / 1000;
+  const syllable = Math.max(0, Math.sin(t * Math.PI * 5));
+  const word = Math.sin(t * 1.7) > -0.4 ? 1 : 0;
+  return syllable ** 0.7 * word * (0.55 + 0.45 * Math.sin(t * 0.9) ** 2);
+};
+const STATES = ["idle", "connecting", "listening", "thinking", "speaking"];
+const CUSTOMER = ["#0ea5e9", "#a5f3fc"];
+const tiles = (colors) => STATES.map((state) => h("div", {class: "tile"}, [
+  h(AgentOrb, {state, colors, level: state === "listening" || state === "speaking" ? voice : undefined}),
+  h("span", state),
+]));
+
+createApp({
+  render: () => [
+    h("header", [h("h1", "AgentOrb"), h("p", "A lit sphere with its colours flowing inside, moving with the agent's state and the voice's level.")]),
+    h("nav", [
+      h("a", {href: "?"}, "Light"),
+      h("a", {href: "?theme=dark"}, "Dark"),
+      h("a", {href: `?nowebgl${query.get("theme") === "dark" ? "&theme=dark" : ""}`}, "Without WebGL"),
+    ]),
+    h("section", [h("h2", "NeuronAI, every state at 132 px"), h("div", {class: "row"}, tiles(undefined))]),
+    h("section", [h("h2", "A customer's two colours"), h("div", {class: "row"}, tiles(CUSTOMER))]),
+    h("section", [h("h2", "As the agent's avatar"), h("div", {class: "sizes"}, [64, 48, 36, 28, 24].flatMap((size, i) => [
+      h("figure", [h(AgentOrb, {size, state: "idle", colors: i % 2 ? CUSTOMER : undefined}), h("figcaption", `${size} px`)]),
+    ]))]),
+  ],
+}).mount("#app");
+</script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 # @naiuz/agents-vue
 
-Vue for NeuronAI agents: `useConversation`, a composable over the [`@naiuz/agents`](../client) client.
+Vue for NeuronAI agents: `useConversation`, a composable over the [`@naiuz/agents`](../client) client, and `AgentOrb`, the agent's face.
 
 ```vue
 <script setup lang="ts">
@@ -36,3 +36,32 @@ async function call(): Promise<void> {
 - **The session ends with the component,** when its effect scope does.
 - **Callbacks** are the client's (see [its README](../client/README.md)). They run after the refs have changed.
 - `vue` ^3.5 is a peer dependency.
+
+## AgentOrb
+
+A lit sphere with the agent's colours flowing inside, drawn by a WebGL shader. It moves with the agent's state and the voice's level.
+
+```vue
+<script setup lang="ts">
+import {computed} from "vue";
+import {AgentOrb, useConversation} from "@naiuz/agents-vue";
+
+const {status, mode, isSpeaking, getInputVolume, getOutputVolume} = useConversation();
+const state = computed(() => status.value === "connecting" ? "connecting" : mode.value === null || mode.value === "text" ? "idle" : mode.value);
+</script>
+
+<template>
+    <AgentOrb :state="state" :level="isSpeaking ? getOutputVolume : getInputVolume" />
+    <p>{{ state }}</p>
+</template>
+```
+
+- **Props:**
+  - `state`: `idle`, `connecting`, `listening`, `thinking` or `speaking`;
+  - `level`: read every frame, from 0 to 1: the agent's voice while it speaks, the microphone while it listens;
+  - `colors`: a customer's two colours, from which the deepest and lightest tones are derived. NeuronAI's orange when left out;
+  - `size`: 24 to 210 px, 132 by default.
+- **It is decorative,** hidden from screen readers: put the state's word beside it.
+- **One WebGL context** draws every orb on a page. Without WebGL, or once the context is lost, an orb is a lit gradient of its tones.
+- **Under reduced motion** it holds one still frame, drawn again when its state changes.
+- **`examples/orb.html`** shows every state, the avatar sizes and a customer's palette, in light and dark. Build the packages (`npm run build` in `agents/`), serve the repository's root (`python3 -m http.server 8766 --bind 127.0.0.1`), and open `http://127.0.0.1:8766/agents/vue/examples/orb.html`.
