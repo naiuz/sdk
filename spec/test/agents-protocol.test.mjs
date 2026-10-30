@@ -1,6 +1,8 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
+import {spawnSync} from "node:child_process";
 import {readdir, readFile} from "node:fs/promises";
+import {fileURLToPath} from "node:url";
 import Ajv2020 from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
 
@@ -104,4 +106,11 @@ test("every voice close code has a fixture", () => {
     for (const expected of ["4003 not_allowed", "4008 taken_over", "4009 voice_limit", "4010 balance", "1000 max_duration"]) {
         assert.ok(closes.includes(expected), `no call closes with ${expected}`);
     }
+});
+
+test("the voice fixtures are what spec/scripts/voice-fixtures.py makes of the engine's playout and the client's clock", (t) => {
+    if (spawnSync("python3", ["--version"]).status !== 0) return t.skip("python3 isn't installed");
+    const script = fileURLToPath(new URL("../scripts/voice-fixtures.py", import.meta.url));
+    const run = spawnSync("python3", [script, "--check"], {encoding: "utf8"});
+    assert.equal(run.status, 0, run.stderr || run.stdout);
 });

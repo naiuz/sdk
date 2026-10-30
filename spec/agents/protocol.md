@@ -24,7 +24,7 @@ The server accepts every connection and then closes it with a [close code](#clos
 |---|---|
 | `conversation_initiation_client_data` | All optional: `dynamic_variables` (values for the agent's variables; signed values in the token win), `overrides` (`first_message`, `language`; only those the token allows), `text_only` (`false` asks for a call; left out, the session is text), `audio` (a call's formats: `input` `pcm_16000`, `output` `pcm_16000` or `pcm_24000`), `user_id` |
 | `user_message` | `client_message_id`: your own id for the message, `^[A-Za-z0-9_-]{1,64}$`, the same on every retry; `text`: 1 to 10,000 characters |
-| `playback` | `event_id`, `played_ms`: milliseconds of that reply's audio played since its first frame, pauses excluded. Sent every 250 ms while it plays, once when it pauses (on `audio_pause` or `interruption`), and once when its audio ends, so the server knows what was heard |
+| `playback` | `event_id`, `played_ms`: milliseconds of that reply's audio played since its first frame, pauses excluded. Sent every 250 ms while it plays, once when it pauses (on `audio_pause` or `interruption`), and whenever its audio runs out, at its end or early after a stall, so the server knows what was heard |
 | `pong` | `event_id`: the id of the `ping` it answers |
 
 ## Server events
@@ -99,8 +99,10 @@ The server accepts every connection and then closes it with a [close code](#clos
 
 - Frames up to 64 KB.
 - 10 new `user_message`s per 10 seconds on a connection. One over it gets `message_error` with `rate_limited`, which is retryable. Sending a message again with its `client_message_id` doesn't count.
-- 50 JSON frames of any kind per 10 seconds. Over it, the server closes with 4029. A call's audio frames don't count; any other binary frame does.
-- A call's audio at most twice as fast as real time, after a catch-up of up to 10 s, so a client whose network stalled can send what it held. Faster closes the connection with 4029. The silence a gap in the numbers stands for counts as audio.
+- 50 frames per 10 seconds: every JSON frame, and every binary frame but a call's audio. Over it, the server closes with 4029.
+- A call's audio at most twice as fast as real time, after a catch-up of up to 10 s, so a client whose network stalled can send what it held. Faster closes the connection with 4029.
+  - The silence a gap in the numbers stands for counts as audio.
+  - Every microphone frame counts as at least 20 ms: a smaller one, or one numbered at or below one already sent, costs as much as a full frame.
 - A `ping` every 15 seconds. Two unanswered pings close the connection with 1001 `ping_timeout`. A client that has heard nothing for 40 seconds can take the connection as lost, and resume.
 
 ## Voice
@@ -122,10 +124,10 @@ The server accepts every connection and then closes it with a [close code](#clos
     - A gap in the numbers counts as silence, up to 1 s of it. A number at or below one already sent is dropped.
     - After a stall, drop the audio you couldn't send rather than flood the socket, and keep numbering.
   - Agent audio arrives up to about 400 ms ahead of real time. Play it in order, at the metadata's `audio.output` rate.
-  - **Playback reports** tell the server what the customer heard. Send `playback` with the reply's `played_ms` every 250 ms while the reply plays, once at `audio_pause`, once at `interruption`, and once when the reply's audio runs out.
+  - **Playback reports** tell the server what the customer heard. Send `playback` with the reply's `played_ms` every 250 ms while the reply plays, once at `audio_pause`, once at `interruption`, and whenever the reply's audio runs out: at its end, or early after a stall.
   - **Frames the server can't use:** on a call, a binary frame that isn't user audio (shorter than its 5-byte header, a kind other than `0x01`, no PCM, or an odd number of PCM bytes) gets `error` with `invalid_event`. On a text session, every binary frame gets `error` with `unknown_event`. Either way the socket stays open, and the frame counts against the frame limit.
 - **A turn:** `agent_state` moves through `listening`, `thinking` and `speaking`.
-  - On a new conversation, the agent speaks its first message first: its `agent_response`, then `agent_state` `speaking` and its audio.
+  - On a new conversation, the agent speaks its first message first: its `agent_response`, and `agent_state` `speaking` with its audio, in either order. Play the audio as it comes, whether or not the text has arrived.
   - The customer's turn ends after a pause in their speech, 700 ms unless the agent is set to answer sooner or later. The server sends `user_transcript`, then `agent_typing`, and the reply streams as text (`agent_chat_response_part`, `agent_response`) beside its audio.
   - `agent_state` goes back to `listening` once the reply has played.
 - **Interruptions:**
@@ -161,3 +163,5 @@ Each file in [`fixtures/`](fixtures) records one connection: `{description, toke
 - A client frame marked `invalid` must fail the schema; it shows what the server does with one.
 
 `npm test` in `spec/` checks that every frame is an event of its side, and that every event appears in some fixture. For calls, it also checks that the microphone's numbers only go up, that agent audio belongs to a reply the fixture shows, that no `playback` claims more of a reply than its audio so far, and that every voice close code has a fixture.
+
+The voice fixtures come from [`spec/scripts/voice-fixtures.py`](../scripts/voice-fixtures.py), which simulates the engine's playout and the client's report clock. Change it, not the fixtures, and run it again; `npm test` fails when they differ.
