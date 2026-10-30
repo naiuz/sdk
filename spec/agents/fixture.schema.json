@@ -74,27 +74,56 @@
             "additionalProperties": false
           },
           {
-            "description": "One binary audio frame: its kind, its sequence (user) or response event_id (agent), and its length.",
+            "description": "A run of the client's microphone frames, 20 ms each: the first frame's sequence, and how many there are (1 when count is left out). Their sequences run from sequence to sequence + count - 1.",
             "type": "object",
             "properties": {
               "from": {
-                "enum": [
-                  "client",
-                  "server"
-                ]
+                "const": "client"
               },
               "audio": {
                 "type": "object",
                 "properties": {
                   "kind": {
-                    "enum": [
-                      "user",
-                      "agent"
-                    ]
+                    "const": "user"
                   },
                   "sequence": {
                     "type": "integer",
                     "minimum": 0
+                  },
+                  "ms": {
+                    "const": 20
+                  },
+                  "count": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                },
+                "required": [
+                  "kind",
+                  "sequence",
+                  "ms"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "from",
+              "audio"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "description": "A run of the agent's audio frames for one reply: the reply's event_id, each frame's length, and how many there are (1 when count is left out).",
+            "type": "object",
+            "properties": {
+              "from": {
+                "const": "server"
+              },
+              "audio": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "const": "agent"
                   },
                   "event_id": {
                     "type": "integer",
@@ -103,10 +132,15 @@
                   "ms": {
                     "type": "integer",
                     "minimum": 1
+                  },
+                  "count": {
+                    "type": "integer",
+                    "minimum": 1
                   }
                 },
                 "required": [
                   "kind",
+                  "event_id",
                   "ms"
                 ],
                 "additionalProperties": false

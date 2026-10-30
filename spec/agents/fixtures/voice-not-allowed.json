@@ -1,0 +1,24 @@
+{
+  "description": "A voice call with a token that doesn't allow voice: the server closes with 4003 before the metadata.",
+  "token": "session",
+  "frames": [
+    {
+      "from": "client",
+      "frame": {
+        "type": "conversation_initiation_client_data",
+        "text_only": false,
+        "audio": {
+          "input": "pcm_16000",
+          "output": "pcm_24000"
+        }
+      }
+    },
+    {
+      "from": "server",
+      "close": {
+        "code": 4003,
+        "reason": "not_allowed"
+      }
+    }
+  ]
+}

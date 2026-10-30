@@ -47,3 +47,61 @@ test("every event the schema defines appears in a fixture, on its side", () => {
     assert.deepEqual([...seen("client")].sort(), types("ClientEvent").sort());
     assert.deepEqual([...seen("server")].sort(), types("ServerEvent").sort());
 });
+
+const isCall = (recorded) => recorded.frames.some((item) =>
+    item.frame?.type === "conversation_initiation_client_data" && item.frame.text_only === false);
+
+test("an audio entry is the kind of its side", () => {
+    const one = (item) => fixture({description: "One frame.", token: "session", frames: [item]});
+    assert.equal(one({from: "client", audio: {kind: "agent", event_id: 1, ms: 20}}), false);
+    assert.equal(one({from: "server", audio: {kind: "user", sequence: 0, ms: 20}}), false);
+    assert.equal(one({from: "client", audio: {kind: "user", ms: 20}}), false);
+    assert.equal(one({from: "server", audio: {kind: "agent", ms: 20}}), false);
+    assert.equal(one({from: "client", audio: {kind: "user", sequence: 0, ms: 20, count: 30}}), true);
+    assert.equal(one({from: "server", audio: {kind: "agent", event_id: 2, ms: 20, count: 5}}), true);
+});
+
+test("a call's microphone frames are numbered upward without repeats", () => {
+    for (const [name, recorded] of fixtures) {
+        let next = 0;
+        for (const item of recorded.frames) {
+            if (item.audio?.kind !== "user") continue;
+            assert.ok(item.audio.sequence >= next, `${name}: frame ${item.audio.sequence} comes after ${next - 1}`);
+            next = item.audio.sequence + (item.audio.count ?? 1);
+        }
+    }
+});
+
+test("agent audio belongs to a reply the fixture shows", () => {
+    for (const [name, recorded] of fixtures) {
+        const replies = new Set(recorded.frames
+            .filter((item) => item.from === "server" && ["agent_response", "agent_chat_response_part"].includes(item.frame?.type))
+            .map((item) => item.frame.event_id));
+        for (const item of recorded.frames) {
+            if (item.audio?.kind === "agent") assert.ok(replies.has(item.audio.event_id), `${name}: audio for reply ${item.audio.event_id}`);
+        }
+    }
+});
+
+test("a playback report never claims more of a reply than its audio so far", () => {
+    for (const [name, recorded] of fixtures) {
+        const received = new Map();
+        for (const item of recorded.frames) {
+            if (item.audio?.kind === "agent") {
+                received.set(item.audio.event_id, (received.get(item.audio.event_id) ?? 0) + item.audio.ms * (item.audio.count ?? 1));
+            }
+            if (item.from === "client" && item.frame?.type === "playback") {
+                const {event_id: eventId, played_ms: played} = item.frame;
+                assert.ok(played <= (received.get(eventId) ?? 0), `${name}: ${played} ms of reply ${eventId} played, ${received.get(eventId) ?? 0} ms received`);
+            }
+        }
+    }
+});
+
+test("every voice close code has a fixture", () => {
+    const closes = fixtures.filter(([, recorded]) => isCall(recorded))
+        .flatMap(([, recorded]) => recorded.frames.filter((item) => item.close).map((item) => `${item.close.code} ${item.close.reason}`));
+    for (const expected of ["4003 not_allowed", "4008 taken_over", "4009 voice_limit", "4010 balance", "1000 max_duration"]) {
+        assert.ok(closes.includes(expected), `no call closes with ${expected}`);
+    }
+});

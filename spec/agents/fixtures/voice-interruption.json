@@ -1,5 +1,5 @@
 {
-  "description": "A resumed voice call: a cough pauses the agent and it resumes; then the customer's words interrupt it, and its reply is cut to what was heard.",
+  "description": "A resumed voice call: the customer's question and the spoken reply. A cough over the reply pauses it, and its empty transcript resumes it. Then the customer's words pause it and, after 1.5 s of speech, interrupt it: the reply is cut to what was heard, and the customer's turn goes on.",
   "token": "resume",
   "frames": [
     {
@@ -45,8 +45,15 @@
           {
             "role": "customer",
             "text": "Buyurtmam qayerda?",
-            "at": "2026-10-30T09:15:02.120Z",
+            "at": "2026-10-30T09:12:41.120Z",
             "message_id": 981,
+            "client_message_id": null
+          },
+          {
+            "role": "agent",
+            "text": "Buyurtmangiz yoʻlda, bugun omborga keldi.",
+            "at": "2026-10-30T09:12:43.480Z",
+            "message_id": 982,
             "client_message_id": null
           }
         ]
@@ -56,7 +63,55 @@
       "from": "server",
       "frame": {
         "type": "agent_state",
+        "state": "listening"
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 0,
+        "ms": 20,
+        "count": 102
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_state",
         "state": "thinking"
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "user_transcript",
+        "text": "Qachon yetib keladi?",
+        "language": "uz",
+        "occurred_at": "2026-10-30T09:15:02.106Z"
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 102,
+        "ms": 20
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_typing"
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 103,
+        "ms": 20,
+        "count": 19
       }
     },
     {
@@ -77,8 +132,65 @@
         "event_id": 3,
         "text_response_part": {
           "type": "delta",
-          "text": "Buyurtmangiz ertaga yetkaziladi, kuryer sizga oldindan qoʻngʻiroq qiladi."
+          "text": "Buyurtmangiz ertaga yetkaziladi, "
         }
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 122,
+        "ms": 20,
+        "count": 3
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_chat_response_part",
+        "event_id": 3,
+        "text_response_part": {
+          "type": "delta",
+          "text": "kuryer sizga oldindan qoʻngʻiroq qiladi."
+        }
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 125,
+        "ms": 20,
+        "count": 2
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_chat_response_part",
+        "event_id": 3,
+        "text_response_part": {
+          "type": "stop",
+          "text": ""
+        }
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_response",
+        "event_id": 3,
+        "text": "Buyurtmangiz ertaga yetkaziladi, kuryer sizga oldindan qoʻngʻiroq qiladi."
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 127,
+        "ms": 20,
+        "count": 2
       }
     },
     {
@@ -93,118 +205,17 @@
       "audio": {
         "kind": "agent",
         "event_id": 3,
-        "ms": 20
+        "ms": 20,
+        "count": 32
       }
     },
     {
       "from": "client",
       "audio": {
         "kind": "user",
-        "sequence": 0,
-        "ms": 20
-      }
-    },
-    {
-      "from": "client",
-      "audio": {
-        "kind": "user",
-        "sequence": 1,
-        "ms": 20
-      }
-    },
-    {
-      "from": "client",
-      "audio": {
-        "kind": "user",
-        "sequence": 2,
-        "ms": 20
-      }
-    },
-    {
-      "from": "client",
-      "audio": {
-        "kind": "user",
-        "sequence": 3,
-        "ms": 20
-      }
-    },
-    {
-      "from": "client",
-      "audio": {
-        "kind": "user",
-        "sequence": 4,
-        "ms": 20
-      }
-    },
-    {
-      "from": "client",
-      "audio": {
-        "kind": "user",
-        "sequence": 5,
-        "ms": 20
-      }
-    },
-    {
-      "from": "client",
-      "audio": {
-        "kind": "user",
-        "sequence": 6,
-        "ms": 20
-      }
-    },
-    {
-      "from": "client",
-      "audio": {
-        "kind": "user",
-        "sequence": 7,
-        "ms": 20
-      }
-    },
-    {
-      "from": "client",
-      "audio": {
-        "kind": "user",
-        "sequence": 8,
-        "ms": 20
-      }
-    },
-    {
-      "from": "client",
-      "audio": {
-        "kind": "user",
-        "sequence": 9,
-        "ms": 20
-      }
-    },
-    {
-      "from": "client",
-      "audio": {
-        "kind": "user",
-        "sequence": 10,
-        "ms": 20
-      }
-    },
-    {
-      "from": "client",
-      "audio": {
-        "kind": "user",
-        "sequence": 11,
-        "ms": 20
-      }
-    },
-    {
-      "from": "client",
-      "audio": {
-        "kind": "user",
-        "sequence": 12,
-        "ms": 20
-      }
-    },
-    {
-      "from": "server",
-      "frame": {
-        "type": "audio_pause",
-        "event_id": 3
+        "sequence": 129,
+        "ms": 20,
+        "count": 13
       }
     },
     {
@@ -212,14 +223,7 @@
       "frame": {
         "type": "playback",
         "event_id": 3,
-        "played_ms": 1230
-      }
-    },
-    {
-      "from": "server",
-      "frame": {
-        "type": "audio_resume",
-        "event_id": 3
+        "played_ms": 250
       }
     },
     {
@@ -227,7 +231,95 @@
       "audio": {
         "kind": "agent",
         "event_id": 3,
-        "ms": 20
+        "ms": 20,
+        "count": 12
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 142,
+        "ms": 20,
+        "count": 12
+      }
+    },
+    {
+      "from": "client",
+      "frame": {
+        "type": "playback",
+        "event_id": 3,
+        "played_ms": 500
+      }
+    },
+    {
+      "from": "server",
+      "audio": {
+        "kind": "agent",
+        "event_id": 3,
+        "ms": 20,
+        "count": 13
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 154,
+        "ms": 20,
+        "count": 13
+      }
+    },
+    {
+      "from": "client",
+      "frame": {
+        "type": "playback",
+        "event_id": 3,
+        "played_ms": 750
+      }
+    },
+    {
+      "from": "server",
+      "audio": {
+        "kind": "agent",
+        "event_id": 3,
+        "ms": 20,
+        "count": 12
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 167,
+        "ms": 20,
+        "count": 12
+      }
+    },
+    {
+      "from": "client",
+      "frame": {
+        "type": "playback",
+        "event_id": 3,
+        "played_ms": 1000
+      }
+    },
+    {
+      "from": "server",
+      "audio": {
+        "kind": "agent",
+        "event_id": 3,
+        "ms": 20,
+        "count": 13
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 179,
+        "ms": 20,
+        "count": 13
       }
     },
     {
@@ -239,107 +331,73 @@
       }
     },
     {
-      "from": "client",
+      "from": "server",
       "audio": {
-        "kind": "user",
-        "sequence": 13,
-        "ms": 20
+        "kind": "agent",
+        "event_id": 3,
+        "ms": 20,
+        "count": 12
       }
     },
     {
       "from": "client",
       "audio": {
         "kind": "user",
-        "sequence": 14,
-        "ms": 20
+        "sequence": 192,
+        "ms": 20,
+        "count": 12
+      }
+    },
+    {
+      "from": "client",
+      "frame": {
+        "type": "playback",
+        "event_id": 3,
+        "played_ms": 1500
+      }
+    },
+    {
+      "from": "server",
+      "audio": {
+        "kind": "agent",
+        "event_id": 3,
+        "ms": 20,
+        "count": 13
       }
     },
     {
       "from": "client",
       "audio": {
         "kind": "user",
-        "sequence": 15,
-        "ms": 20
+        "sequence": 204,
+        "ms": 20,
+        "count": 13
+      }
+    },
+    {
+      "from": "client",
+      "frame": {
+        "type": "playback",
+        "event_id": 3,
+        "played_ms": 1750
+      }
+    },
+    {
+      "from": "server",
+      "audio": {
+        "kind": "agent",
+        "event_id": 3,
+        "ms": 20,
+        "count": 3
       }
     },
     {
       "from": "client",
       "audio": {
         "kind": "user",
-        "sequence": 16,
-        "ms": 20
-      }
-    },
-    {
-      "from": "client",
-      "audio": {
-        "kind": "user",
-        "sequence": 17,
-        "ms": 20
-      }
-    },
-    {
-      "from": "client",
-      "audio": {
-        "kind": "user",
-        "sequence": 18,
-        "ms": 20
-      }
-    },
-    {
-      "from": "client",
-      "audio": {
-        "kind": "user",
-        "sequence": 19,
-        "ms": 20
-      }
-    },
-    {
-      "from": "client",
-      "audio": {
-        "kind": "user",
-        "sequence": 20,
-        "ms": 20
-      }
-    },
-    {
-      "from": "client",
-      "audio": {
-        "kind": "user",
-        "sequence": 21,
-        "ms": 20
-      }
-    },
-    {
-      "from": "client",
-      "audio": {
-        "kind": "user",
-        "sequence": 22,
-        "ms": 20
-      }
-    },
-    {
-      "from": "client",
-      "audio": {
-        "kind": "user",
-        "sequence": 23,
-        "ms": 20
-      }
-    },
-    {
-      "from": "client",
-      "audio": {
-        "kind": "user",
-        "sequence": 24,
-        "ms": 20
-      }
-    },
-    {
-      "from": "client",
-      "audio": {
-        "kind": "user",
-        "sequence": 25,
-        "ms": 20
+        "sequence": 217,
+        "ms": 20,
+        "count": 3
       }
     },
     {
@@ -354,7 +412,117 @@
       "frame": {
         "type": "playback",
         "event_id": 3,
-        "played_ms": 1270
+        "played_ms": 1802
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 220,
+        "ms": 20,
+        "count": 37
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "audio_resume",
+        "event_id": 3
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 257,
+        "ms": 20,
+        "count": 10
+      }
+    },
+    {
+      "from": "server",
+      "audio": {
+        "kind": "agent",
+        "event_id": 3,
+        "ms": 20,
+        "count": 9
+      }
+    },
+    {
+      "from": "client",
+      "frame": {
+        "type": "playback",
+        "event_id": 3,
+        "played_ms": 2000
+      }
+    },
+    {
+      "from": "server",
+      "audio": {
+        "kind": "agent",
+        "event_id": 3,
+        "ms": 20,
+        "count": 13
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 267,
+        "ms": 20,
+        "count": 13
+      }
+    },
+    {
+      "from": "client",
+      "frame": {
+        "type": "playback",
+        "event_id": 3,
+        "played_ms": 2250
+      }
+    },
+    {
+      "from": "server",
+      "audio": {
+        "kind": "agent",
+        "event_id": 3,
+        "ms": 20,
+        "count": 10
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 280,
+        "ms": 20,
+        "count": 10
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "audio_pause",
+        "event_id": 3
+      }
+    },
+    {
+      "from": "client",
+      "frame": {
+        "type": "playback",
+        "event_id": 3,
+        "played_ms": 2444
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 290,
+        "ms": 20,
+        "count": 62
       }
     },
     {
@@ -365,11 +533,35 @@
       }
     },
     {
+      "from": "client",
+      "frame": {
+        "type": "playback",
+        "event_id": 3,
+        "played_ms": 2444
+      }
+    },
+    {
       "from": "server",
       "frame": {
         "type": "agent_response_correction",
         "event_id": 3,
-        "text": "Buyurtmangiz ertaga yetkaziladi"
+        "text": "Buyurtmangiz ertaga yetkaziladi, kuryer"
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_state",
+        "state": "listening"
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 352,
+        "ms": 20,
+        "count": 65
       }
     },
     {
@@ -378,7 +570,7 @@
         "type": "user_transcript",
         "text": "Kechirasiz, manzilni oʻzgartirsam boʻladimi?",
         "language": "uz",
-        "occurred_at": "2026-10-30T09:15:09.300Z"
+        "occurred_at": "2026-10-30T09:15:08.405Z"
       }
     },
     {
@@ -386,6 +578,21 @@
       "frame": {
         "type": "agent_state",
         "state": "thinking"
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 417,
+        "ms": 20,
+        "count": 2
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_typing"
       }
     }
   ]

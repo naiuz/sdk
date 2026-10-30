@@ -1,0 +1,24 @@
+{
+  "description": "A voice call when every voice line is busy, the organization's or the platform's: the server closes with 4009 before the metadata. The client offers text instead.",
+  "token": "session",
+  "frames": [
+    {
+      "from": "client",
+      "frame": {
+        "type": "conversation_initiation_client_data",
+        "text_only": false,
+        "audio": {
+          "input": "pcm_16000",
+          "output": "pcm_24000"
+        }
+      }
+    },
+    {
+      "from": "server",
+      "close": {
+        "code": 4009,
+        "reason": "voice_limit"
+      }
+    }
+  ]
+}

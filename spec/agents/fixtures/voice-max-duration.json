@@ -1,0 +1,155 @@
+{
+  "description": "A resumed voice call that reaches the agent's max duration, 60 s here, while the agent listens: the server closes with 1000 max_duration and no conversation_ended, and the conversation goes on as chat.",
+  "token": "resume",
+  "frames": [
+    {
+      "from": "client",
+      "frame": {
+        "type": "conversation_initiation_client_data",
+        "text_only": false,
+        "audio": {
+          "input": "pcm_16000",
+          "output": "pcm_24000"
+        }
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "conversation_initiation_metadata",
+        "conversation_id": "conv_01JB8Z5R4Q6Y2N7K3M9D0F1H3K",
+        "resume_token": "eyJhbGciOiJFZERTQSIsImtpZCI6ImUxIiwidHlwIjoiSldUIn0.eyJjb252IjoiY29udl8wMUpCOFo1UjRRNlkyTjdLM005RDBGMUgzSyIsImp0aSI6Imp0aS00In0.c2lnbmF0dXJlLTQ",
+        "status": "ai_handling",
+        "languages": [
+          "uz",
+          "ru",
+          "en"
+        ],
+        "language": "uz",
+        "features": {
+          "text": true,
+          "voice": true,
+          "debug": false
+        },
+        "audio": {
+          "input": "pcm_16000",
+          "output": "pcm_24000"
+        }
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "conversation_history",
+        "messages": [
+          {
+            "role": "customer",
+            "text": "Buyurtmam qayerda?",
+            "at": "2026-10-30T09:12:41.120Z",
+            "message_id": 981,
+            "client_message_id": null
+          },
+          {
+            "role": "agent",
+            "text": "Buyurtmangiz yoʻlda, bugun omborga keldi.",
+            "at": "2026-10-30T09:12:43.480Z",
+            "message_id": 982,
+            "client_message_id": null
+          }
+        ]
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_state",
+        "state": "listening"
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 0,
+        "ms": 20,
+        "count": 750
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "ping",
+        "event_id": 1
+      }
+    },
+    {
+      "from": "client",
+      "frame": {
+        "type": "pong",
+        "event_id": 1
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 750,
+        "ms": 20,
+        "count": 750
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "ping",
+        "event_id": 2
+      }
+    },
+    {
+      "from": "client",
+      "frame": {
+        "type": "pong",
+        "event_id": 2
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 1500,
+        "ms": 20,
+        "count": 750
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "ping",
+        "event_id": 3
+      }
+    },
+    {
+      "from": "client",
+      "frame": {
+        "type": "pong",
+        "event_id": 3
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 2250,
+        "ms": 20,
+        "count": 750
+      }
+    },
+    {
+      "from": "server",
+      "close": {
+        "code": 1000,
+        "reason": "max_duration"
+      }
+    }
+  ]
+}

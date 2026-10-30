@@ -1,5 +1,5 @@
 {
-  "description": "A voice call on a new conversation: the spoken first message, the customer's turn, and the spoken reply, with playback reports.",
+  "description": "A voice call on a new conversation: the spoken first message, the customer's turn (1.2 s of speech, then 700 ms of quiet), and the spoken reply. The microphone streams from the metadata on, the agent's audio runs up to 400 ms ahead of real time, and playback is reported every 250 ms and at each reply's end.",
   "token": "session",
   "frames": [
     {
@@ -40,32 +40,43 @@
     {
       "from": "server",
       "frame": {
+        "type": "agent_response",
+        "event_id": 1,
+        "text": "Assalomu alaykum! Eshitaman."
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 0,
+        "ms": 20,
+        "count": 4
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
         "type": "agent_state",
         "state": "speaking"
       }
     },
     {
       "from": "server",
-      "frame": {
-        "type": "agent_response",
-        "event_id": 1,
-        "text": "Assalomu alaykum! Sizga qanday yordam bera olaman?"
-      }
-    },
-    {
-      "from": "server",
       "audio": {
         "kind": "agent",
         "event_id": 1,
-        "ms": 20
+        "ms": 20,
+        "count": 32
       }
     },
     {
-      "from": "server",
+      "from": "client",
       "audio": {
-        "kind": "agent",
-        "event_id": 1,
-        "ms": 20
+        "kind": "user",
+        "sequence": 4,
+        "ms": 20,
+        "count": 13
       }
     },
     {
@@ -78,6 +89,145 @@
     },
     {
       "from": "server",
+      "audio": {
+        "kind": "agent",
+        "event_id": 1,
+        "ms": 20,
+        "count": 12
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 17,
+        "ms": 20,
+        "count": 12
+      }
+    },
+    {
+      "from": "client",
+      "frame": {
+        "type": "playback",
+        "event_id": 1,
+        "played_ms": 500
+      }
+    },
+    {
+      "from": "server",
+      "audio": {
+        "kind": "agent",
+        "event_id": 1,
+        "ms": 20,
+        "count": 13
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 29,
+        "ms": 20,
+        "count": 13
+      }
+    },
+    {
+      "from": "client",
+      "frame": {
+        "type": "playback",
+        "event_id": 1,
+        "played_ms": 750
+      }
+    },
+    {
+      "from": "server",
+      "audio": {
+        "kind": "agent",
+        "event_id": 1,
+        "ms": 20,
+        "count": 12
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 42,
+        "ms": 20,
+        "count": 12
+      }
+    },
+    {
+      "from": "client",
+      "frame": {
+        "type": "playback",
+        "event_id": 1,
+        "played_ms": 1000
+      }
+    },
+    {
+      "from": "server",
+      "audio": {
+        "kind": "agent",
+        "event_id": 1,
+        "ms": 20,
+        "count": 13
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 54,
+        "ms": 20,
+        "count": 13
+      }
+    },
+    {
+      "from": "client",
+      "frame": {
+        "type": "playback",
+        "event_id": 1,
+        "played_ms": 1250
+      }
+    },
+    {
+      "from": "server",
+      "audio": {
+        "kind": "agent",
+        "event_id": 1,
+        "ms": 20,
+        "count": 3
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 67,
+        "ms": 20,
+        "count": 12
+      }
+    },
+    {
+      "from": "client",
+      "frame": {
+        "type": "playback",
+        "event_id": 1,
+        "played_ms": 1500
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 79,
+        "ms": 20,
+        "count": 10
+      }
+    },
+    {
+      "from": "server",
       "frame": {
         "type": "agent_state",
         "state": "listening"
@@ -85,42 +235,19 @@
     },
     {
       "from": "client",
-      "audio": {
-        "kind": "user",
-        "sequence": 0,
-        "ms": 20
+      "frame": {
+        "type": "playback",
+        "event_id": 1,
+        "played_ms": 1700
       }
     },
     {
       "from": "client",
       "audio": {
         "kind": "user",
-        "sequence": 1,
-        "ms": 20
-      }
-    },
-    {
-      "from": "client",
-      "audio": {
-        "kind": "user",
-        "sequence": 2,
-        "ms": 20
-      }
-    },
-    {
-      "from": "client",
-      "audio": {
-        "kind": "user",
-        "sequence": 3,
-        "ms": 20
-      }
-    },
-    {
-      "from": "client",
-      "audio": {
-        "kind": "user",
-        "sequence": 4,
-        "ms": 20
+        "sequence": 89,
+        "ms": 20,
+        "count": 103
       }
     },
     {
@@ -129,7 +256,7 @@
         "type": "user_transcript",
         "text": "Yetkazib berish qancha turadi?",
         "language": "uz",
-        "occurred_at": "2026-10-30T09:15:04.700Z"
+        "occurred_at": "2026-10-30T09:15:03.905Z"
       }
     },
     {
@@ -137,6 +264,29 @@
       "frame": {
         "type": "agent_state",
         "state": "thinking"
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 192,
+        "ms": 20
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_typing"
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 193,
+        "ms": 20,
+        "count": 18
       }
     },
     {
@@ -157,22 +307,35 @@
         "event_id": 2,
         "text_response_part": {
           "type": "delta",
-          "text": "Toshkent boʻylab yetkazib berish bepul."
+          "text": "Toshkent boʻylab"
         }
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 211,
+        "ms": 20,
+        "count": 3
       }
     },
     {
       "from": "server",
       "frame": {
-        "type": "agent_state",
-        "state": "speaking"
+        "type": "agent_chat_response_part",
+        "event_id": 2,
+        "text_response_part": {
+          "type": "delta",
+          "text": " yetkazib berish bepul."
+        }
       }
     },
     {
-      "from": "server",
+      "from": "client",
       "audio": {
-        "kind": "agent",
-        "event_id": 2,
+        "kind": "user",
+        "sequence": 214,
         "ms": 20
       }
     },
@@ -197,6 +360,40 @@
     },
     {
       "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 215,
+        "ms": 20,
+        "count": 8
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_state",
+        "state": "speaking"
+      }
+    },
+    {
+      "from": "server",
+      "audio": {
+        "kind": "agent",
+        "event_id": 2,
+        "ms": 20,
+        "count": 32
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 223,
+        "ms": 20,
+        "count": 12
+      }
+    },
+    {
+      "from": "client",
       "frame": {
         "type": "playback",
         "event_id": 2,
@@ -204,10 +401,183 @@
       }
     },
     {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 235,
+        "ms": 20,
+        "count": 13
+      }
+    },
+    {
+      "from": "server",
+      "audio": {
+        "kind": "agent",
+        "event_id": 2,
+        "ms": 20,
+        "count": 12
+      }
+    },
+    {
+      "from": "client",
+      "frame": {
+        "type": "playback",
+        "event_id": 2,
+        "played_ms": 500
+      }
+    },
+    {
+      "from": "server",
+      "audio": {
+        "kind": "agent",
+        "event_id": 2,
+        "ms": 20,
+        "count": 13
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 248,
+        "ms": 20,
+        "count": 12
+      }
+    },
+    {
+      "from": "client",
+      "frame": {
+        "type": "playback",
+        "event_id": 2,
+        "played_ms": 750
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 260,
+        "ms": 20,
+        "count": 13
+      }
+    },
+    {
+      "from": "server",
+      "audio": {
+        "kind": "agent",
+        "event_id": 2,
+        "ms": 20,
+        "count": 12
+      }
+    },
+    {
+      "from": "client",
+      "frame": {
+        "type": "playback",
+        "event_id": 2,
+        "played_ms": 1000
+      }
+    },
+    {
+      "from": "server",
+      "audio": {
+        "kind": "agent",
+        "event_id": 2,
+        "ms": 20,
+        "count": 13
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 273,
+        "ms": 20,
+        "count": 12
+      }
+    },
+    {
+      "from": "client",
+      "frame": {
+        "type": "playback",
+        "event_id": 2,
+        "played_ms": 1250
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 285,
+        "ms": 20,
+        "count": 13
+      }
+    },
+    {
+      "from": "server",
+      "audio": {
+        "kind": "agent",
+        "event_id": 2,
+        "ms": 20,
+        "count": 12
+      }
+    },
+    {
+      "from": "client",
+      "frame": {
+        "type": "playback",
+        "event_id": 2,
+        "played_ms": 1500
+      }
+    },
+    {
+      "from": "server",
+      "audio": {
+        "kind": "agent",
+        "event_id": 2,
+        "ms": 20,
+        "count": 6
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 298,
+        "ms": 20,
+        "count": 12
+      }
+    },
+    {
+      "from": "client",
+      "frame": {
+        "type": "playback",
+        "event_id": 2,
+        "played_ms": 1750
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 310,
+        "ms": 20,
+        "count": 13
+      }
+    },
+    {
       "from": "server",
       "frame": {
         "type": "agent_state",
         "state": "listening"
+      }
+    },
+    {
+      "from": "client",
+      "frame": {
+        "type": "playback",
+        "event_id": 2,
+        "played_ms": 2000
       }
     }
   ]
