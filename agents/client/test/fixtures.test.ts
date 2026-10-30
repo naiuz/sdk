@@ -2,7 +2,7 @@ import {expect, test} from "vitest";
 import {clientFrames, expectedMessages, loadFixture, replay} from "./replay";
 import {ids} from "./fake-socket";
 
-test.each(["new-conversation", "handoff", "debug", "ended", "resume", "refused-message", "unknown-event"])("replays %s", async (name) => {
+test.each(["new-conversation", "handoff", "debug", "ended", "resume", "refused-message", "unknown-event", "invalid-message"])("replays %s", async (name) => {
     const recorded = loadFixture(name);
     const {sent, calls} = await replay(recorded, {idGenerator: ids("c-1", "c-2")});
     expect(sent).toEqual(clientFrames(recorded));

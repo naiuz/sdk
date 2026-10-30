@@ -17,6 +17,12 @@ describe("sending", () => {
         expect(acks).toEqual([{clientMessageId: "c-1", messageId: 981, occurredAt: "2026-10-30T09:15:02.120Z"}]);
     });
 
+    test("a rate-limited message is sent again with its id, and saved", async () => {
+        const {sent, acks} = await replay(loadFixture("rate-limited-message"), {idGenerator: ids("c-1")});
+        expect(sent.filter((frame) => (frame as {type: string}).type === "user_message")).toHaveLength(2);
+        expect(acks.map((ack) => ack.messageId)).toEqual([981]);
+    });
+
     test("a refused message rejects at once, without a retry", async () => {
         const {errors, sent} = await replay(loadFixture("refused-message"), {idGenerator: ids("c-1")});
         expect(errors).toEqual([expect.objectContaining({clientMessageId: "c-1", retryable: false, code: "refused"})]);
@@ -86,13 +92,13 @@ describe("resuming", () => {
         expect(calls.onDisconnect).toEqual([[{reason: "user", code: 1000}]]);
     });
 
-    test("five failed reconnects end the session, and an unsent message fails", async () => {
+    test("ten failed reconnects end the session, and an unsent message fails as retryable", async () => {
         const {sockets, conversation, calls} = await connected({idGenerator: ids("c-1")});
         sockets.socket.serverCloses(1006, "");
         const sending = conversation.sendUserMessage("Salom");
         sending.catch(() => undefined);
-        for (let attempt = 0; attempt < 5; attempt++) {
-            await vi.advanceTimersByTimeAsync(250 * 2 ** attempt);
+        for (let attempt = 0; attempt < 10; attempt++) {
+            await vi.advanceTimersByTimeAsync(Math.min(250 * 2 ** attempt, 8000));
             expect(sockets.opened).toBe(attempt + 2);
             sockets.socket.serverCloses(1006, "");
         }

@@ -22,6 +22,11 @@ export interface MessageAck {
     occurredAt: string;
 }
 
+export interface SendOptions {
+    /** The id to send the message with. Pass a failed message's clientMessageId to send it again without a duplicate. */
+    clientMessageId?: string;
+}
+
 /** A message for the transcript: the agent's reply, an operator's, or another viewer's. */
 export type IncomingMessage =
     | {source: "ai"; message: string; eventId: number}
