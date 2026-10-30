@@ -1,4 +1,5 @@
 import type {AudioFormat, ConversationInitiationClientData, HistoryMessage, ServerEvent} from "@naiuz/agents-protocol";
+import {BrowserAudio} from "./audio/browser";
 import type {AudioIO} from "./audio/io";
 import {Call} from "./call";
 import {MessageError, MicrophoneError, SessionError} from "./errors";
@@ -66,7 +67,8 @@ export class Conversation {
     private constructor(private readonly options: SessionOptions) {
         this.WebSocketClass = options.WebSocket ?? (globalThis.WebSocket as unknown as WebSocketFactory);
         this.nextId = options.idGenerator ?? (() => globalThis.crypto.randomUUID());
-        this.audio = options.textOnly === false ? (options.audio ?? null) : null;
+        // Made here, before startSession's first await, so its context starts inside the caller's gesture.
+        this.audio = options.textOnly === false ? (options.audio ?? new BrowserAudio()) : null;
     }
 
     /**
@@ -74,9 +76,6 @@ export class Conversation {
      * so a refused microphone rejects with MicrophoneError before any socket opens.
      */
     static async startSession(options: SessionOptions): Promise<Conversation> {
-        if (options.textOnly === false && options.audio === undefined) {
-            throw new Error("A call needs the audio option: an AudioIO for its microphone and the agent's voice.");
-        }
         const conversation = new Conversation(options);
         conversation.setStatus("connecting");
         if (conversation.audio !== null) await conversation.startMicrophone(conversation.audio);

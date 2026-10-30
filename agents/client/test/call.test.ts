@@ -92,7 +92,7 @@ describe("starting a call", () => {
         expect(calls.onStatusChange.map(([change]) => change.status)).toEqual(["connecting", "disconnected"]);
     });
 
-    test("a call without audio fails, naming the option", async () => {
+    test("outside a browser, a call without audio fails, naming the option", async () => {
         const sockets = fakeSockets();
         await expect(Conversation.startSession({token: "tok", WebSocket: sockets.factory, textOnly: false})).rejects.toThrow(/audio/);
         expect(sockets.opened).toBe(0);

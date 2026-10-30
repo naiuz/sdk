@@ -76,7 +76,7 @@ export interface SessionOptions extends Callbacks {
     textOnly?: boolean;
     /** The rate a call's agent audio comes at. Defaults to "pcm_24000"; the client plays whatever the server sends. */
     output?: AudioFormat;
-    /** A call's microphone and speaker. Calls need one for now. */
+    /** A call's microphone and speaker. Defaults to a new BrowserAudio; outside a browser, bring an AudioIO of your own. */
     audio?: AudioIO;
     userId?: string;
     /** Defaults to globalThis.WebSocket. */

@@ -25,22 +25,33 @@ await conversation.endSession();
 
 ## Voice calls
 
-A call is a session with `textOnly: false`. It asks for the microphone before it connects, so a refused microphone never takes a voice line: `startSession` rejects with a `MicrophoneError`, whose `cause` is the browser's error.
+A call is a session with `textOnly: false`. Start it from a click or a tap: the browser lets the microphone and the audio start only inside the user's gesture.
 
 ```ts
-const conversation = await Conversation.startSession({
-    token,
-    textOnly: false,
-    audio, // an AudioIO: the microphone in, the agent's voice out
-    onModeChange: ({mode}) => console.log(mode), // listening, thinking or speaking
-    onMessage: (message) => console.log(message), // what the customer said comes with spoken: true
-});
+let conversation: Conversation;
+button.onclick = async () => {
+    conversation = await Conversation.startSession({
+        token,
+        textOnly: false,
+        onModeChange: ({mode}) => console.log(mode), // listening, thinking or speaking
+        onMessage: (message) => console.log(message), // what the customer said comes with spoken: true
+    });
+};
 
+// While the call runs:
 conversation.setMicMuted(true); // the call goes on, and the agent hears silence
 conversation.setVolume({volume: 0.5});
 const level = conversation.getOutputVolume(); // 0 to 1, for a visualizer; getInputVolume() for the microphone
 ```
 
+- **The microphone** is asked for before the call connects, so a refused one never takes a voice line. `startSession` then rejects with a `MicrophoneError`, whose `cause` is the browser's error:
+  - `NotAllowedError`: the user or the browser refused it;
+  - `NotFoundError`: there is no microphone;
+  - `NotReadableError`: another app holds it;
+  - a `TypeError`: the page isn't secure (https, or localhost).
+- **In the browser,** `BrowserAudio` does the audio: one AudioContext at the device's rate, an AudioWorklet that takes the microphone (echo-cancelled, denoised, mono) to 16 kHz, and one that plays the agent. The agent plays through an `<audio>` element, which the browser's echo canceller hears. Pass `audio: new BrowserAudio({inputStream})` to send a recording in place of the microphone.
+- **Content Security Policy:** the worklets load from a `blob:` URL the client makes, so a strict policy must allow `blob:` in `script-src` (or `worklet-src`).
+- **Outside a browser,** pass `audio`, an `AudioIO` of your own: the microphone in, the agent's voice out.
 - **Audio:** the call asks for the agent's voice at 24 kHz (`output: "pcm_16000"` asks for 16 kHz), and plays it at the rate the server answers with.
 - **What it sends:** the microphone in 20 ms frames, and playback reports, so the server knows what the customer heard when they speak over the agent. After a network stall it drops the audio the socket couldn't take rather than send it late.
 - **Interruptions:** when the customer speaks over a reply, its audio pauses, then resumes or stops as the server decides. `onAgentResponseCorrection` then gets the part of the reply the customer heard.
