@@ -2,7 +2,7 @@
 
 A client talks to a NeuronAI agent over one WebSocket. This document is the prose spec. The events themselves are defined in [`events.schema.json`](events.schema.json), which is the source of truth. [`fixtures/`](fixtures) holds recorded sessions that the SDKs and the engine both replay.
 
-Version 0.1 covers text conversations. Voice arrives in a later 0.x version, which adds events and fields without changing the ones here.
+Version 0.1 covers text conversations and basic voice calls (see [Voice](#voice)). Later 0.x versions add events and fields without changing the ones here.
 
 ## Connecting
 
@@ -10,7 +10,7 @@ Version 0.1 covers text conversations. Voice arrives in a later 0.x version, whi
 - **The token** is either:
   - a session token: a short-lived JWS your backend, or the dashboard, gets from NeuronAI;
   - a resume token: one the server gave this conversation earlier (see [Resuming](#resuming)).
-- **Frames:** every event is a JSON text frame with a `type` field. Version 0.1 has no binary frames.
+- **Frames:** every event is a JSON text frame with a `type` field. A call's audio travels in binary frames (see [Voice](#voice)).
 - **The handshake:**
   1. The client sends `conversation_initiation_client_data` as its first frame, within 10 seconds.
   2. The server answers `conversation_initiation_metadata`.
@@ -22,15 +22,16 @@ The server accepts every connection and then closes it with a [close code](#clos
 
 | Event | Fields |
 |---|---|
-| `conversation_initiation_client_data` | All optional: `dynamic_variables` (values for the agent's variables; signed values in the token win), `overrides` (`first_message`, `language`; only those the token allows), `text_only`, `user_id` |
+| `conversation_initiation_client_data` | All optional: `dynamic_variables` (values for the agent's variables; signed values in the token win), `overrides` (`first_message`, `language`; only those the token allows), `text_only` (`false` asks for a call), `audio` (a call's formats: `input` `pcm_16000`, `output` `pcm_16000` or `pcm_24000`), `user_id` |
 | `user_message` | `client_message_id`: your own id for the message, `^[A-Za-z0-9_-]{1,64}$`, the same on every retry; `text`: 1 to 10,000 characters |
+| `playback` | `event_id`, `played_ms`: how much of a reply's audio has played. Sent every 250 ms while it plays |
 | `pong` | `event_id`: the id of the `ping` it answers |
 
 ## Server events
 
 | Event | Fields |
 |---|---|
-| `conversation_initiation_metadata` | `conversation_id`, `resume_token`, `status` (the conversation's status, such as `ai_handling` or `human_handling`), `languages`, `language`, `features` (`text`, `voice`, `debug`) |
+| `conversation_initiation_metadata` | `conversation_id`, `resume_token`, `status` (the conversation's status, such as `ai_handling` or `human_handling`), `languages`, `language`, `features` (`text`, `voice`, `debug`), `audio` (the call's formats, or null for a text session) |
 | `conversation_history` | On a resume: `messages`, each `{role, text, at, message_id, client_message_id}`, oldest first. It includes replies that arrived while the client was away, and every message the customer sent, answered or not |
 | `message_ack` | `client_message_id`, `message_id`, `occurred_at`: the message is saved |
 | `message_error` | `client_message_id`, `retryable`, `code` (`refused`, `unavailable`, `invalid` or `rate_limited`): the message wasn't saved |
@@ -42,6 +43,11 @@ The server accepts every connection and then closes it with a [close code](#clos
 | `operator_message` | `event_id`, `text`, `operator` (`name`, `avatar_url`): an operator's reply |
 | `handoff` | `reason` (`agent`, `agent_failed` or `balance`), `mode_outcome` (`continue_as_text`): operators have the conversation now, and the agent stays silent |
 | `turn_debug` | Only when the token allows debugging: how a turn ran, with its `event_id`, `turn_id`, `step`, `model`, `fallback_used`, `timings`, `usage` and `warnings` |
+| `agent_state` | In a call: `state` (`listening`, `thinking` or `speaking`), which drives the orb |
+| `user_transcript` | In a call: `text`, `language`, `occurred_at`: what the customer said, once their turn ended. Every viewer gets it |
+| `audio_pause` | In a call: `event_id`. The customer started speaking over that reply: pause its playback and keep the buffer |
+| `audio_resume` | In a call: `event_id`. Nothing to answer was said: resume the paused reply where it stopped |
+| `interruption` | In a call: `event_id`. Drop that reply's audio. An `agent_response_correction` follows with what was heard |
 | `ping` | `event_id`: answer with a `pong` carrying the same id |
 | `conversation_ended` | `reason`. The server then closes with 1000 |
 | `error` | `code` (`unknown_event`, `invalid_event` or `internal`), `message`: a frame the server couldn't use. The socket stays open |
@@ -59,11 +65,12 @@ The server accepts every connection and then closes it with a [close code](#clos
 | 1011 | An internal error | Reconnect with the resume token, after a pause |
 | 1012, 1013 | The web server restarted, or is overloaded. The gateway itself doesn't send these | Reconnect with the resume token, after a pause |
 | 4001 | The token is invalid or expired | Stop. A session token must be fetched again; an expired resume token ends the conversation on this client |
-| 4003 | Not allowed: the agent is paused or gone, or an override the token doesn't allow | Stop |
-| 4012 | The server is draining | Reconnect with the resume token. Before the metadata arrives, connect again with the same token: a server that is already draining opens nothing |
-| 4029 | Too many frames | Stop |
-
-Codes 4008, 4009 and 4010 belong to voice, in a later version.
+| 4003 | Not allowed: the agent is paused or gone, an override the token doesn't allow, or a call the token doesn't allow | Stop |
+| 4008 | Another connection took this conversation's call | Stop the call. The conversation goes on, in the other connection |
+| 4009 | All voice lines are busy: the organization's or the platform's limit | Stop the call, and offer text: "All lines are busy. Send a message instead." |
+| 4010 | The balance can't cover one minute of voice | Stop the call, and show the reason |
+| 4012 | The server is draining | Reconnect with the resume token. Before the metadata arrives, connect again with the same token: a server that is already draining opens nothing. A call starts again with a short notice |
+| 4029 | Too many frames, or audio faster than twice real time | Stop |
 
 ## Sending messages
 
@@ -92,8 +99,34 @@ Codes 4008, 4009 and 4010 belong to voice, in a later version.
 
 - Frames up to 64 KB.
 - 10 new `user_message`s per 10 seconds on a connection. One over it gets `message_error` with `rate_limited`, which is retryable. Sending a message again with its `client_message_id` doesn't count.
-- 50 frames of any kind per 10 seconds. Over it, the server closes with 4029.
+- 50 JSON frames of any kind per 10 seconds. Over it, the server closes with 4029. Binary audio frames don't count.
+- A call's audio at most twice as fast as real time: 2 s of audio per second. Faster closes the connection with 4029.
 - A `ping` every 15 seconds. Two unanswered pings close the connection with 1001 `ping_timeout`. A client that has heard nothing for 40 seconds can take the connection as lost, and resume.
+
+## Voice
+
+- **Asking for a call:** send `text_only: false` in `conversation_initiation_client_data`, with `audio` (`input`: `pcm_16000`; `output`: `pcm_16000` or `pcm_24000`, `pcm_16000` when omitted).
+  - The token must allow voice, or the server closes with 4003.
+  - The server takes a voice line first (4009 when none is free), then checks the balance (4010 when it can't cover one minute).
+  - The metadata then carries `features.voice: true` and the `audio` formats.
+- **Audio frames** are binary:
+
+  ```
+  byte 0      kind: 0x01 user audio, 0x02 agent audio
+  bytes 1–4   uint32, big-endian: the chunk's sequence (user) or the reply's event_id (agent)
+  bytes 5…    PCM16 little-endian, mono, at the negotiated rate
+  ```
+
+  - Send the microphone in 20 ms frames, numbered from 0. A gap in the numbers counts as silence.
+  - Agent audio arrives up to about 400 ms ahead of real time. Play it in order, and send `playback` every 250 ms while it plays.
+- **A turn:** `agent_state` moves through `listening`, `thinking` and `speaking`.
+  - When the customer stops talking, the server sends `user_transcript`, then the reply streams as text (`agent_chat_response_part`, `agent_response`) beside its audio.
+  - On a new conversation, the agent speaks its first message first.
+- **Interruptions:**
+  1. When the customer speaks over a reply, `audio_pause` arrives: pause playback and keep the buffer.
+  2. Then either `audio_resume` (nothing to answer was said: carry on where you paused), or `interruption` (drop the reply's audio). After an interruption, `agent_response_correction` gives the part of the reply the customer heard.
+- **One call per conversation:** a second connection that asks for a call takes it over, and the first is closed with 4008. Text viewers are never replaced.
+- **Typing during a call:** a `user_message` from any viewer goes into the call, and the agent answers it by voice.
 
 ## Unknown events
 
@@ -103,7 +136,7 @@ A newer client may send an event an older server doesn't know. The server answer
 
 Each file in [`fixtures/`](fixtures) records one connection: `{description, token, frames}`.
 - `token` says whether the client connects with a session token or a resume token.
-- Each entry in `frames` is a client or server frame, in the order they crossed the connection, or the server's close.
+- Each entry in `frames` is a client or server frame, in the order they crossed the connection, the server's close, or an `audio` entry standing for one binary audio frame (`kind`, `sequence` or `event_id`, and its length in `ms`).
 - A client frame marked `invalid` must fail the schema; it shows what the server does with one.
 
 `npm test` in `spec/` checks that every frame is an event of its side, and that every event appears in some fixture.

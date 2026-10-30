@@ -26,7 +26,8 @@
           "text": true,
           "voice": false,
           "debug": true
-        }
+        },
+        "audio": null
       }
     },
     {

@@ -15,6 +15,9 @@
         },
         {
           "$ref": "#/$defs/Pong"
+        },
+        {
+          "$ref": "#/$defs/Playback"
         }
       ]
     },
@@ -65,6 +68,21 @@
         },
         {
           "$ref": "#/$defs/ErrorEvent"
+        },
+        {
+          "$ref": "#/$defs/AgentState"
+        },
+        {
+          "$ref": "#/$defs/UserTranscript"
+        },
+        {
+          "$ref": "#/$defs/AudioPause"
+        },
+        {
+          "$ref": "#/$defs/AudioResume"
+        },
+        {
+          "$ref": "#/$defs/Interruption"
         }
       ]
     },
@@ -365,6 +383,9 @@
             "null"
           ],
           "maxLength": 128
+        },
+        "audio": {
+          "$ref": "#/$defs/AudioFormats"
         }
       },
       "required": [
@@ -449,6 +470,17 @@
         },
         "features": {
           "$ref": "#/$defs/Features"
+        },
+        "audio": {
+          "description": "The call's audio formats; null for a text session.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AudioFormats"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "required": [
@@ -458,7 +490,8 @@
         "status",
         "languages",
         "language",
-        "features"
+        "features",
+        "audio"
       ],
       "additionalProperties": false
     },
@@ -810,6 +843,151 @@
         "type",
         "code",
         "message"
+      ],
+      "additionalProperties": false
+    },
+    "AudioFormat": {
+      "description": "PCM16 little-endian mono at the named sample rate.",
+      "enum": [
+        "pcm_16000",
+        "pcm_24000"
+      ]
+    },
+    "AudioFormats": {
+      "description": "A call's audio: the client sends 16 kHz, and gets the output rate it asked for.",
+      "type": "object",
+      "properties": {
+        "input": {
+          "enum": [
+            "pcm_16000"
+          ]
+        },
+        "output": {
+          "$ref": "#/$defs/AudioFormat"
+        }
+      },
+      "required": [
+        "input",
+        "output"
+      ],
+      "additionalProperties": false
+    },
+    "Playback": {
+      "description": "How much of a reply's audio has played, sent every 250 ms while it plays.",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "playback"
+        },
+        "event_id": {
+          "$ref": "#/$defs/EventId"
+        },
+        "played_ms": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "type",
+        "event_id",
+        "played_ms"
+      ],
+      "additionalProperties": false
+    },
+    "AgentState": {
+      "description": "What the agent is doing in a call, which drives the orb.",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "agent_state"
+        },
+        "state": {
+          "enum": [
+            "listening",
+            "thinking",
+            "speaking"
+          ]
+        }
+      },
+      "required": [
+        "type",
+        "state"
+      ],
+      "additionalProperties": false
+    },
+    "UserTranscript": {
+      "description": "What the customer said in a call, once their turn ended.",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "user_transcript"
+        },
+        "text": {
+          "type": "string"
+        },
+        "language": {
+          "$ref": "#/$defs/LanguageCode"
+        },
+        "occurred_at": {
+          "$ref": "#/$defs/DateTime"
+        }
+      },
+      "required": [
+        "type",
+        "text",
+        "language",
+        "occurred_at"
+      ],
+      "additionalProperties": false
+    },
+    "AudioPause": {
+      "description": "The customer started speaking over a reply: pause its playback and keep the buffer.",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "audio_pause"
+        },
+        "event_id": {
+          "$ref": "#/$defs/EventId"
+        }
+      },
+      "required": [
+        "type",
+        "event_id"
+      ],
+      "additionalProperties": false
+    },
+    "AudioResume": {
+      "description": "Nothing to answer was said: resume the paused reply where it stopped.",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "audio_resume"
+        },
+        "event_id": {
+          "$ref": "#/$defs/EventId"
+        }
+      },
+      "required": [
+        "type",
+        "event_id"
+      ],
+      "additionalProperties": false
+    },
+    "Interruption": {
+      "description": "The customer interrupted: drop the reply's audio, up to and including this response.",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "interruption"
+        },
+        "event_id": {
+          "$ref": "#/$defs/EventId"
+        }
+      },
+      "required": [
+        "type",
+        "event_id"
       ],
       "additionalProperties": false
     }

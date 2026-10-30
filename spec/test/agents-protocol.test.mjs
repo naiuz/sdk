@@ -24,7 +24,8 @@ test("every fixture is a recorded session, and each frame is an event of its sid
     for (const [name, recorded] of fixtures) {
         assert.ok(fixture(recorded), `${name}: ${ajv.errorsText(fixture.errors)}`);
         for (const [index, item] of recorded.frames.entries()) {
-            if (item.close) continue;
+            // A close, or a binary audio frame, isn't a JSON event.
+            if (item.close || item.audio) continue;
             const check = item.from === "client" ? client : server;
             assert.equal(check(item.frame), item.invalid !== true, `${name} #${index}: ${ajv.errorsText(check.errors)}`);
         }

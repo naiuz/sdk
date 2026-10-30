@@ -1,0 +1,214 @@
+{
+  "description": "A voice call on a new conversation: the spoken first message, the customer's turn, and the spoken reply, with playback reports.",
+  "token": "session",
+  "frames": [
+    {
+      "from": "client",
+      "frame": {
+        "type": "conversation_initiation_client_data",
+        "text_only": false,
+        "audio": {
+          "input": "pcm_16000",
+          "output": "pcm_24000"
+        }
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "conversation_initiation_metadata",
+        "conversation_id": "conv_01JB8Z5R4Q6Y2N7K3M9D0F1H3K",
+        "resume_token": "eyJhbGciOiJFZERTQSIsImtpZCI6ImUxIiwidHlwIjoiSldUIn0.eyJjb252IjoiY29udl8wMUpCOFo1UjRRNlkyTjdLM005RDBGMUgzSyIsImp0aSI6Imp0aS0xIn0.c2lnbmF0dXJlLTE",
+        "status": "ai_handling",
+        "languages": [
+          "uz",
+          "ru",
+          "en"
+        ],
+        "language": "uz",
+        "features": {
+          "text": true,
+          "voice": true,
+          "debug": false
+        },
+        "audio": {
+          "input": "pcm_16000",
+          "output": "pcm_24000"
+        }
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_state",
+        "state": "speaking"
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_response",
+        "event_id": 1,
+        "text": "Assalomu alaykum! Sizga qanday yordam bera olaman?"
+      }
+    },
+    {
+      "from": "server",
+      "audio": {
+        "kind": "agent",
+        "event_id": 1,
+        "ms": 20
+      }
+    },
+    {
+      "from": "server",
+      "audio": {
+        "kind": "agent",
+        "event_id": 1,
+        "ms": 20
+      }
+    },
+    {
+      "from": "client",
+      "frame": {
+        "type": "playback",
+        "event_id": 1,
+        "played_ms": 250
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_state",
+        "state": "listening"
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 0,
+        "ms": 20
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 1,
+        "ms": 20
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 2,
+        "ms": 20
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 3,
+        "ms": 20
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 4,
+        "ms": 20
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "user_transcript",
+        "text": "Yetkazib berish qancha turadi?",
+        "language": "uz",
+        "occurred_at": "2026-10-30T09:15:04.700Z"
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_state",
+        "state": "thinking"
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_chat_response_part",
+        "event_id": 2,
+        "text_response_part": {
+          "type": "start",
+          "text": ""
+        }
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_chat_response_part",
+        "event_id": 2,
+        "text_response_part": {
+          "type": "delta",
+          "text": "Toshkent boʻylab yetkazib berish bepul."
+        }
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_state",
+        "state": "speaking"
+      }
+    },
+    {
+      "from": "server",
+      "audio": {
+        "kind": "agent",
+        "event_id": 2,
+        "ms": 20
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_chat_response_part",
+        "event_id": 2,
+        "text_response_part": {
+          "type": "stop",
+          "text": ""
+        }
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_response",
+        "event_id": 2,
+        "text": "Toshkent boʻylab yetkazib berish bepul."
+      }
+    },
+    {
+      "from": "client",
+      "frame": {
+        "type": "playback",
+        "event_id": 2,
+        "played_ms": 250
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_state",
+        "state": "listening"
+      }
+    }
+  ]
+}

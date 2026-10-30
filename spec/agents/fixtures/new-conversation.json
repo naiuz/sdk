@@ -29,7 +29,8 @@
           "text": true,
           "voice": false,
           "debug": false
-        }
+        },
+        "audio": null
       }
     },
     {

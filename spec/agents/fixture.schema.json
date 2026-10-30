@@ -72,6 +72,51 @@
               "close"
             ],
             "additionalProperties": false
+          },
+          {
+            "description": "One binary audio frame: its kind, its sequence (user) or response event_id (agent), and its length.",
+            "type": "object",
+            "properties": {
+              "from": {
+                "enum": [
+                  "client",
+                  "server"
+                ]
+              },
+              "audio": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "enum": [
+                      "user",
+                      "agent"
+                    ]
+                  },
+                  "sequence": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "event_id": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "ms": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                },
+                "required": [
+                  "kind",
+                  "ms"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "from",
+              "audio"
+            ],
+            "additionalProperties": false
           }
         ]
       }

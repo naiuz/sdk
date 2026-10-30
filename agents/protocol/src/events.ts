@@ -4,7 +4,8 @@
 export type ClientEvent =
     | ConversationInitiationClientData
     | ClientUserMessage
-    | Pong;
+    | Pong
+    | Playback;
 
 /** Every event the server sends. */
 export type ServerEvent =
@@ -22,7 +23,12 @@ export type ServerEvent =
     | TurnDebug
     | Ping
     | ConversationEnded
-    | ErrorEvent;
+    | ErrorEvent
+    | AgentState
+    | UserTranscript
+    | AudioPause
+    | AudioResume
+    | Interruption;
 
 /** A language the platform speaks. */
 export type LanguageCode = "uz" | "ru" | "en";
@@ -101,6 +107,7 @@ export interface ConversationInitiationClientData {
     overrides?: Overrides;
     text_only?: boolean;
     user_id?: string | null;
+    audio?: AudioFormats;
 }
 
 /** A message the user typed. */
@@ -126,6 +133,8 @@ export interface ConversationInitiationMetadata {
     languages: LanguageCode[];
     language: LanguageCode;
     features: Features;
+    /** The call's audio formats; null for a text session. */
+    audio: AudioFormats | null;
 }
 
 /** On a resume: the messages so far, oldest first. */
@@ -232,8 +241,56 @@ export interface ErrorEvent {
     message: string;
 }
 
+/** PCM16 little-endian mono at the named sample rate. */
+export type AudioFormat = "pcm_16000" | "pcm_24000";
+
+/** A call's audio: the client sends 16 kHz, and gets the output rate it asked for. */
+export interface AudioFormats {
+    input: "pcm_16000";
+    output: AudioFormat;
+}
+
+/** How much of a reply's audio has played, sent every 250 ms while it plays. */
+export interface Playback {
+    type: "playback";
+    event_id: EventId;
+    played_ms: number;
+}
+
+/** What the agent is doing in a call, which drives the orb. */
+export interface AgentState {
+    type: "agent_state";
+    state: "listening" | "thinking" | "speaking";
+}
+
+/** What the customer said in a call, once their turn ended. */
+export interface UserTranscript {
+    type: "user_transcript";
+    text: string;
+    language: LanguageCode;
+    occurred_at: DateTime;
+}
+
+/** The customer started speaking over a reply: pause its playback and keep the buffer. */
+export interface AudioPause {
+    type: "audio_pause";
+    event_id: EventId;
+}
+
+/** Nothing to answer was said: resume the paused reply where it stopped. */
+export interface AudioResume {
+    type: "audio_resume";
+    event_id: EventId;
+}
+
+/** The customer interrupted: drop the reply's audio, up to and including this response. */
+export interface Interruption {
+    type: "interruption";
+    event_id: EventId;
+}
+
 /** Every event type a client sends. */
-export const CLIENT_EVENT_TYPES = ["conversation_initiation_client_data", "user_message", "pong"] as const;
+export const CLIENT_EVENT_TYPES = ["conversation_initiation_client_data", "user_message", "pong", "playback"] as const;
 
 /** Every event type the server sends. */
-export const SERVER_EVENT_TYPES = ["conversation_initiation_metadata", "conversation_history", "message_ack", "message_error", "user_message", "agent_typing", "agent_chat_response_part", "agent_response", "agent_response_correction", "operator_message", "handoff", "turn_debug", "ping", "conversation_ended", "error"] as const;
+export const SERVER_EVENT_TYPES = ["conversation_initiation_metadata", "conversation_history", "message_ack", "message_error", "user_message", "agent_typing", "agent_chat_response_part", "agent_response", "agent_response_correction", "operator_message", "handoff", "turn_debug", "ping", "conversation_ended", "error", "agent_state", "user_transcript", "audio_pause", "audio_resume", "interruption"] as const;

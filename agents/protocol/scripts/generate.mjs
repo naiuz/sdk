@@ -1,6 +1,6 @@
 // Writes src/events.ts from spec/agents/events.schema.json. With --check, it writes nothing and fails when the file
 // is stale. It knows only the constructs the schema uses, and throws on anything else, so the schema can't outgrow it
-// without anyone noticing.
+// without anyone noticing. --schema <file> --print generates from another schema to stdout, for the generator's tests.
 import {readFileSync, writeFileSync} from "node:fs";
 
 const SCHEMA = new URL("../../../spec/agents/events.schema.json", import.meta.url);
@@ -32,6 +32,14 @@ function union(types) {
 
 /** The TypeScript type of a property's schema. */
 function typeOf(schema, path, indent) {
+    if ("anyOf" in schema) {
+        checkKeywords(schema, new Set(["anyOf"]), path);
+        const [first, second, ...rest] = schema.anyOf;
+        if (rest.length > 0 || first === undefined || second === undefined || !("$ref" in first) || second.type !== "null" || Object.keys(second).length !== 1) {
+            fail(path, "unsupported anyOf: only a reference or null");
+        }
+        return `${typeOf(first, `${path}/anyOf/0`, indent)} | null`;
+    }
     if ("$ref" in schema) {
         checkKeywords(schema, new Set(["$ref"]), path);
         return refName(schema.$ref, path);
@@ -110,8 +118,12 @@ export function generate(schema) {
     return parts.join("\n");
 }
 
-const expected = generate(JSON.parse(readFileSync(SCHEMA, "utf8")));
-if (process.argv.includes("--check")) {
+const schemaAt = process.argv.indexOf("--schema");
+const source = schemaAt === -1 ? SCHEMA : process.argv[schemaAt + 1];
+const expected = generate(JSON.parse(readFileSync(source, "utf8")));
+if (process.argv.includes("--print")) {
+    process.stdout.write(expected);
+} else if (process.argv.includes("--check")) {
     let current = "";
     try {
         current = readFileSync(OUT, "utf8");
