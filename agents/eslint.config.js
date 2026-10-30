@@ -19,7 +19,7 @@ export default defineConfig(
         files: ["eslint.config.js", "**/scripts/**/*.mjs", "**/examples/**/*.mjs"],
         extends: [tseslint.configs.disableTypeChecked],
         languageOptions: {
-            globals: {console: "readonly", process: "readonly", URL: "readonly", WebSocket: "readonly", setTimeout: "readonly"},
+            globals: {console: "readonly", process: "readonly", URL: "readonly", WebSocket: "readonly", setTimeout: "readonly", clearTimeout: "readonly"},
         },
     },
 );

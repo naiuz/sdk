@@ -22,3 +22,13 @@ await conversation.endSession();
 
 - **Callbacks:** `onConnect`, `onDisconnect`, `onStatusChange`, `onModeChange`, `onMessage`, `onAgentChatResponsePart`, `onAgentResponseCorrection`, `onAgentTyping`, `onHistory`, `onHandoff`, `onDebug` and `onError`. Their names follow `@elevenlabs/client` where they mean the same thing.
 - **Options:** `serverUrl` defaults to `wss://my.neuronai.uz/api/v1/realtime`. `WebSocket` lets another runtime supply its own; the default is `globalThis.WebSocket`, which browsers and Node 22 have.
+
+## A scripted conversation
+
+`examples/preview-chat.mjs` holds a conversation through the socket, for local runs against an engine. Build the client first (`npm run build` in `agents/`), then:
+
+```bash
+node agents/client/examples/preview-chat.mjs --url ws://localhost:8080/api/v1/realtime --token "$TOKEN" "Salom" "Yetkazib berish qancha?"
+```
+
+It prints each status change, the first message, each saved message and each reply, and exits 0 after the last reply. `--pause <ms>` waits between messages, long enough to restart the engine and watch the client resume. In the dashboard, `php artisan agents:preview-token <agent> --user=<tester>` issues a preview token, good for 5 minutes.
