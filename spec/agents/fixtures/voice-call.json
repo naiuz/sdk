@@ -51,7 +51,7 @@
         "kind": "user",
         "sequence": 0,
         "ms": 20,
-        "count": 4
+        "count": 5
       }
     },
     {
@@ -67,16 +67,16 @@
         "kind": "agent",
         "event_id": 1,
         "ms": 20,
-        "count": 32
+        "count": 27
       }
     },
     {
       "from": "client",
       "audio": {
         "kind": "user",
-        "sequence": 4,
+        "sequence": 5,
         "ms": 20,
-        "count": 13
+        "count": 7
       }
     },
     {
@@ -84,7 +84,16 @@
       "frame": {
         "type": "playback",
         "event_id": 1,
-        "played_ms": 250
+        "played_ms": 150
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 12,
+        "ms": 20,
+        "count": 13
       }
     },
     {
@@ -98,9 +107,26 @@
     },
     {
       "from": "client",
+      "frame": {
+        "type": "playback",
+        "event_id": 1,
+        "played_ms": 400
+      }
+    },
+    {
+      "from": "server",
+      "audio": {
+        "kind": "agent",
+        "event_id": 1,
+        "ms": 20,
+        "count": 13
+      }
+    },
+    {
+      "from": "client",
       "audio": {
         "kind": "user",
-        "sequence": 17,
+        "sequence": 25,
         "ms": 20,
         "count": 12
       }
@@ -110,33 +136,16 @@
       "frame": {
         "type": "playback",
         "event_id": 1,
-        "played_ms": 500
-      }
-    },
-    {
-      "from": "server",
-      "audio": {
-        "kind": "agent",
-        "event_id": 1,
-        "ms": 20,
-        "count": 13
+        "played_ms": 650
       }
     },
     {
       "from": "client",
       "audio": {
         "kind": "user",
-        "sequence": 29,
+        "sequence": 37,
         "ms": 20,
         "count": 13
-      }
-    },
-    {
-      "from": "client",
-      "frame": {
-        "type": "playback",
-        "event_id": 1,
-        "played_ms": 750
       }
     },
     {
@@ -150,9 +159,26 @@
     },
     {
       "from": "client",
+      "frame": {
+        "type": "playback",
+        "event_id": 1,
+        "played_ms": 900
+      }
+    },
+    {
+      "from": "server",
+      "audio": {
+        "kind": "agent",
+        "event_id": 1,
+        "ms": 20,
+        "count": 13
+      }
+    },
+    {
+      "from": "client",
       "audio": {
         "kind": "user",
-        "sequence": 42,
+        "sequence": 50,
         "ms": 20,
         "count": 12
       }
@@ -162,7 +188,16 @@
       "frame": {
         "type": "playback",
         "event_id": 1,
-        "played_ms": 1000
+        "played_ms": 1150
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 62,
+        "ms": 20,
+        "count": 13
       }
     },
     {
@@ -171,16 +206,7 @@
         "kind": "agent",
         "event_id": 1,
         "ms": 20,
-        "count": 13
-      }
-    },
-    {
-      "from": "client",
-      "audio": {
-        "kind": "user",
-        "sequence": 54,
-        "ms": 20,
-        "count": 13
+        "count": 8
       }
     },
     {
@@ -188,49 +214,33 @@
       "frame": {
         "type": "playback",
         "event_id": 1,
-        "played_ms": 1250
+        "played_ms": 1400
       }
     },
     {
-      "from": "server",
+      "from": "client",
       "audio": {
-        "kind": "agent",
+        "kind": "user",
+        "sequence": 75,
+        "ms": 20,
+        "count": 12
+      }
+    },
+    {
+      "from": "client",
+      "frame": {
+        "type": "playback",
         "event_id": 1,
+        "played_ms": 1650
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 87,
         "ms": 20,
         "count": 3
-      }
-    },
-    {
-      "from": "client",
-      "audio": {
-        "kind": "user",
-        "sequence": 67,
-        "ms": 20,
-        "count": 12
-      }
-    },
-    {
-      "from": "client",
-      "frame": {
-        "type": "playback",
-        "event_id": 1,
-        "played_ms": 1500
-      }
-    },
-    {
-      "from": "client",
-      "audio": {
-        "kind": "user",
-        "sequence": 79,
-        "ms": 20,
-        "count": 10
-      }
-    },
-    {
-      "from": "server",
-      "frame": {
-        "type": "agent_state",
-        "state": "listening"
       }
     },
     {
@@ -242,12 +252,19 @@
       }
     },
     {
+      "from": "server",
+      "frame": {
+        "type": "agent_state",
+        "state": "listening"
+      }
+    },
+    {
       "from": "client",
       "audio": {
         "kind": "user",
-        "sequence": 89,
+        "sequence": 90,
         "ms": 20,
-        "count": 103
+        "count": 102
       }
     },
     {
@@ -271,7 +288,8 @@
       "audio": {
         "kind": "user",
         "sequence": 192,
-        "ms": 20
+        "ms": 20,
+        "count": 2
       }
     },
     {
@@ -284,7 +302,7 @@
       "from": "client",
       "audio": {
         "kind": "user",
-        "sequence": 193,
+        "sequence": 194,
         "ms": 20,
         "count": 18
       }
@@ -315,7 +333,7 @@
       "from": "client",
       "audio": {
         "kind": "user",
-        "sequence": 211,
+        "sequence": 212,
         "ms": 20,
         "count": 3
       }
@@ -335,7 +353,7 @@
       "from": "client",
       "audio": {
         "kind": "user",
-        "sequence": 214,
+        "sequence": 215,
         "ms": 20
       }
     },
@@ -362,7 +380,7 @@
       "from": "client",
       "audio": {
         "kind": "user",
-        "sequence": 215,
+        "sequence": 216,
         "ms": 20,
         "count": 8
       }
@@ -380,14 +398,39 @@
         "kind": "agent",
         "event_id": 2,
         "ms": 20,
-        "count": 32
+        "count": 20
       }
     },
     {
       "from": "client",
       "audio": {
         "kind": "user",
-        "sequence": 223,
+        "sequence": 224,
+        "ms": 20
+      }
+    },
+    {
+      "from": "client",
+      "frame": {
+        "type": "playback",
+        "event_id": 2,
+        "played_ms": 20
+      }
+    },
+    {
+      "from": "server",
+      "audio": {
+        "kind": "agent",
+        "event_id": 2,
+        "ms": 20,
+        "count": 13
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 225,
         "ms": 20,
         "count": 12
       }
@@ -397,14 +440,14 @@
       "frame": {
         "type": "playback",
         "event_id": 2,
-        "played_ms": 250
+        "played_ms": 270
       }
     },
     {
       "from": "client",
       "audio": {
         "kind": "user",
-        "sequence": 235,
+        "sequence": 237,
         "ms": 20,
         "count": 13
       }
@@ -423,7 +466,7 @@
       "frame": {
         "type": "playback",
         "event_id": 2,
-        "played_ms": 500
+        "played_ms": 520
       }
     },
     {
@@ -439,7 +482,7 @@
       "from": "client",
       "audio": {
         "kind": "user",
-        "sequence": 248,
+        "sequence": 250,
         "ms": 20,
         "count": 12
       }
@@ -449,66 +492,14 @@
       "frame": {
         "type": "playback",
         "event_id": 2,
-        "played_ms": 750
+        "played_ms": 770
       }
     },
     {
       "from": "client",
       "audio": {
         "kind": "user",
-        "sequence": 260,
-        "ms": 20,
-        "count": 13
-      }
-    },
-    {
-      "from": "server",
-      "audio": {
-        "kind": "agent",
-        "event_id": 2,
-        "ms": 20,
-        "count": 12
-      }
-    },
-    {
-      "from": "client",
-      "frame": {
-        "type": "playback",
-        "event_id": 2,
-        "played_ms": 1000
-      }
-    },
-    {
-      "from": "server",
-      "audio": {
-        "kind": "agent",
-        "event_id": 2,
-        "ms": 20,
-        "count": 13
-      }
-    },
-    {
-      "from": "client",
-      "audio": {
-        "kind": "user",
-        "sequence": 273,
-        "ms": 20,
-        "count": 12
-      }
-    },
-    {
-      "from": "client",
-      "frame": {
-        "type": "playback",
-        "event_id": 2,
-        "played_ms": 1250
-      }
-    },
-    {
-      "from": "client",
-      "audio": {
-        "kind": "user",
-        "sequence": 285,
+        "sequence": 262,
         "ms": 20,
         "count": 13
       }
@@ -527,7 +518,7 @@
       "frame": {
         "type": "playback",
         "event_id": 2,
-        "played_ms": 1500
+        "played_ms": 1020
       }
     },
     {
@@ -536,14 +527,14 @@
         "kind": "agent",
         "event_id": 2,
         "ms": 20,
-        "count": 6
+        "count": 13
       }
     },
     {
       "from": "client",
       "audio": {
         "kind": "user",
-        "sequence": 298,
+        "sequence": 275,
         "ms": 20,
         "count": 12
       }
@@ -553,23 +544,68 @@
       "frame": {
         "type": "playback",
         "event_id": 2,
-        "played_ms": 1750
+        "played_ms": 1270
       }
     },
     {
       "from": "client",
       "audio": {
         "kind": "user",
-        "sequence": 310,
+        "sequence": 287,
         "ms": 20,
         "count": 13
       }
     },
     {
       "from": "server",
+      "audio": {
+        "kind": "agent",
+        "event_id": 2,
+        "ms": 20,
+        "count": 12
+      }
+    },
+    {
+      "from": "client",
       "frame": {
-        "type": "agent_state",
-        "state": "listening"
+        "type": "playback",
+        "event_id": 2,
+        "played_ms": 1520
+      }
+    },
+    {
+      "from": "server",
+      "audio": {
+        "kind": "agent",
+        "event_id": 2,
+        "ms": 20,
+        "count": 5
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 300,
+        "ms": 20,
+        "count": 12
+      }
+    },
+    {
+      "from": "client",
+      "frame": {
+        "type": "playback",
+        "event_id": 2,
+        "played_ms": 1770
+      }
+    },
+    {
+      "from": "client",
+      "audio": {
+        "kind": "user",
+        "sequence": 312,
+        "ms": 20,
+        "count": 12
       }
     },
     {
@@ -578,6 +614,13 @@
         "type": "playback",
         "event_id": 2,
         "played_ms": 2000
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_state",
+        "state": "listening"
       }
     }
   ]
