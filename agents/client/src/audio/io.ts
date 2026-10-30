@@ -9,7 +9,7 @@ export interface AudioIO {
     startPlayback(rate: number): void;
     /** Each 20 ms microphone frame: 320 samples at 16 kHz, silent while muted. */
     onFrame: ((pcm: Int16Array) => void) | null;
-    /** Called once when a reply's queued audio has all played. */
+    /** Called each time a reply's queued audio has all played: at its end, or early, as after a stall. */
     onPlaybackEnd: ((eventId: number) => void) | null;
     enqueue(eventId: number, pcm: Int16Array): void;
     pause(): void;

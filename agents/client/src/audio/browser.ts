@@ -4,8 +4,6 @@ import {workletSource} from "./worklets";
 
 /** The microphone as the agent should hear it: the browser's echo cancelling, noise suppression and gain control, in mono. */
 const MICROPHONE: MediaTrackConstraints = {echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1};
-/** The browser's errors for a microphone refused, missing, or held by another app. */
-const MICROPHONE_ERRORS = new Set(["NotAllowedError", "NotFoundError", "NotReadableError"]);
 
 export interface BrowserAudioOptions {
     /** A stream to send in place of the microphone, such as a recording's. */
@@ -32,6 +30,7 @@ interface PlaybackMessage {
  * A call's audio in the browser: one AudioContext, with a worklet that takes the microphone to 16 kHz frames and one
  * that plays the agent's replies. The agent plays through a media element, which the browser's echo canceller hears,
  * so the microphone doesn't send the agent back to itself. Make it inside the user's gesture, as startSession does.
+ * It serves one session: close() releases it for good.
  */
 export class BrowserAudio implements AudioIO {
     onFrame: ((pcm: Int16Array) => void) | null = null;
@@ -169,7 +168,8 @@ export class BrowserAudio implements AudioIO {
         try {
             this.opened = await devices.getUserMedia({audio: MICROPHONE});
         } catch (error) {
-            throw error instanceof Error && MICROPHONE_ERRORS.has(error.name) ? new MicrophoneError(error) : error;
+            // Refused, missing, held by another app, or a device error: whatever it is, it's the microphone's.
+            throw new MicrophoneError(error);
         }
         return this.opened;
     }

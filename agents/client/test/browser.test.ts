@@ -65,10 +65,12 @@ class FakeContext {
     readonly destination = new FakeNode();
     readonly modules: string[] = [];
     readonly made: FakeNode[] = [];
+    /** Makes the worklet's module fail to load, as a Content Security Policy blocking blob: does. */
+    moduleError: Error | null = null;
     readonly audioWorklet = {
         addModule: (url: string) => {
             this.modules.push(url);
-            return Promise.resolve();
+            return this.moduleError === null ? Promise.resolve() : Promise.reject(this.moduleError);
         },
     };
     readonly resume = vi.fn(() => {
@@ -198,9 +200,20 @@ describe("capture", () => {
         const refusal = new DOMException("Permission denied", "NotAllowedError");
         getUserMedia.mockImplementation(() => Promise.reject(refusal));
         await expect(new BrowserAudio().startCapture()).rejects.toMatchObject({name: "MicrophoneError", cause: refusal});
+        // Whatever else the microphone fails with, such as a device error, is the microphone's too.
+        const broken = new DOMException("Could not start audio source", "AbortError");
+        getUserMedia.mockImplementation(() => Promise.reject(broken));
+        await expect(new BrowserAudio().startCapture()).rejects.toMatchObject({name: "MicrophoneError", cause: broken});
         // A page that isn't secure has no microphone at all.
         vi.stubGlobal("navigator", {});
         await expect(new BrowserAudio().startCapture()).rejects.toMatchObject({name: "MicrophoneError", cause: {name: "TypeError"}});
+    });
+
+    test("a worklet that won't load rejects with its own error, not a microphone one", async () => {
+        const audio = new BrowserAudio();
+        const blocked = new DOMException("The user aborted a request.", "AbortError");
+        context().moduleError = blocked;
+        await expect(audio.startCapture()).rejects.toBe(blocked);
     });
 
     test("an input stream stands in for the microphone", async () => {

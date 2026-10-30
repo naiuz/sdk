@@ -34,7 +34,6 @@ export class FakeAudio implements AudioIO {
     /** What is still to play, in order: each reply's run of audio, in ms. */
     private readonly queue: {eventId: number; ms: number}[] = [];
     private readonly played = new Map<number, number>();
-    private readonly ended = new Set<number>();
     private paused = false;
     private at = Date.now();
     private end: ReturnType<typeof setTimeout> | null = null;
@@ -132,7 +131,7 @@ export class FakeAudio implements AudioIO {
         return Promise.resolve();
     }
 
-    /** Plays the time since the last look, reply by reply, calling onPlaybackEnd as each one's audio runs out. */
+    /** Plays the time since the last look, reply by reply, calling onPlaybackEnd each time a reply's audio runs out. */
     private advance(): void {
         const now = Date.now();
         let elapsed = now - this.at;
@@ -147,8 +146,6 @@ export class FakeAudio implements AudioIO {
             elapsed -= step;
             if (head.ms > 0) continue;
             this.queue.shift();
-            if (this.ended.has(head.eventId)) continue;
-            this.ended.add(head.eventId);
             this.onPlaybackEnd?.(head.eventId);
         }
     }

@@ -44,7 +44,7 @@ export class Downsampler {
 
 /**
  * The agent's replies waiting to play, in order, read at the context's rate from their own by linear interpolation.
- * It counts how much of each reply has played, pauses excluded, and which replies have played out.
+ * It counts how much of each reply has played, pauses excluded, and when each one's queued audio runs out.
  */
 export class PlaybackQueue {
     private readonly chunks: {eventId: number; pcm: Int16Array}[] = [];
@@ -55,7 +55,6 @@ export class PlaybackQueue {
     private paused = false;
     /** Each reply's samples played, in its own rate's samples. */
     private readonly played = new Map<number, number>();
-    private readonly ended = new Set<number>();
     private endedSince: number[] = [];
 
     constructor(private readonly contextRate: number) {
@@ -95,10 +94,8 @@ export class PlaybackQueue {
             if (this.position < chunk.pcm.length) continue;
             this.chunks.shift();
             this.position = this.chunks.length === 0 ? 0 : this.position - chunk.pcm.length;
-            if (this.chunks[0]?.eventId !== chunk.eventId && !this.ended.has(chunk.eventId)) {
-                this.ended.add(chunk.eventId);
-                this.endedSince.push(chunk.eventId);
-            }
+            // Run out: at the reply's end, or early, as after a stall, when more of it may follow.
+            if (this.chunks[0]?.eventId !== chunk.eventId) this.endedSince.push(chunk.eventId);
         }
     }
 
@@ -122,7 +119,7 @@ export class PlaybackQueue {
         return ((this.played.get(eventId) ?? 0) / this.rate) * 1000;
     }
 
-    /** The replies whose audio played out since the last call, each once. */
+    /** The replies whose queued audio ran out since the last call, in order. */
     takeEnded(): number[] {
         const ended = this.endedSince;
         this.endedSince = [];

@@ -101,7 +101,7 @@ describe("the playback queue", () => {
         expect(out[0]).toBe(300 / 32_768);
     });
 
-    test("each reply's end is taken once, also for two replies back to back", () => {
+    test("each reply's end is taken each time its audio runs out, also for two replies back to back", () => {
         const queue = new PlaybackQueue(16_000);
         queue.setRate(16_000);
         queue.enqueue(1, new Int16Array(160).fill(1));
@@ -114,9 +114,10 @@ describe("the playback queue", () => {
         expect(queue.current).toBe(2);
         queue.pull(out);
         expect(queue.takeEnded()).toEqual([2]);
-        // More audio for a reply that played out plays, and doesn't end it twice.
+        // More audio for a reply that ran out, as after a stall, plays, and ends it again where it now runs out.
         queue.enqueue(2, new Int16Array(160).fill(2));
         queue.pull(out);
+        expect(queue.takeEnded()).toEqual([2]);
         expect(queue.takeEnded()).toEqual([]);
         expect([queue.playedMs(1), queue.playedMs(2)]).toEqual([10, 20]);
     });

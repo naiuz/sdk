@@ -50,7 +50,9 @@ const level = conversation.getOutputVolume(); // 0 to 1, for a visualizer; getIn
   - `NotReadableError`: another app holds it;
   - a `TypeError`: the page isn't secure (https, or localhost).
 - **In the browser,** `BrowserAudio` does the audio: one AudioContext at the device's rate, an AudioWorklet that takes the microphone (echo-cancelled, denoised, mono) to 16 kHz, and one that plays the agent. The agent plays through an `<audio>` element, which the browser's echo canceller hears. Pass `audio: new BrowserAudio({inputStream})` to send a recording in place of the microphone.
-- **Content Security Policy:** the worklets load from a `blob:` URL the client makes, so a strict policy must allow `blob:` in `script-src` (or `worklet-src`).
+- **Content Security Policy:** the worklets load from a `blob:` URL the client makes, so a strict policy must allow `blob:` in `script-src` (or in `script-src-elem`, which browsers check for worklets first).
+- **Errors:** a failure that isn't the microphone's, such as a worklet a policy blocks, rejects with its own error, not a `MicrophoneError`.
+- **One session each:** a `BrowserAudio` serves one session, and the session's end closes it. The client makes a new one for each session; one you pass is the session's to close.
 - **Outside a browser,** pass `audio`, an `AudioIO` of your own: the microphone in, the agent's voice out.
 - **Audio:** the call asks for the agent's voice at 24 kHz (`output: "pcm_16000"` asks for 16 kHz), and plays it at the rate the server answers with.
 - **What it sends:** the microphone in 20 ms frames, and playback reports, so the server knows what the customer heard when they speak over the agent. After a network stall it drops the audio the socket couldn't take rather than send it late.

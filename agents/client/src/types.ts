@@ -39,7 +39,7 @@ export interface SendOptions {
 export type IncomingMessage =
     | {source: "ai"; message: string; eventId: number}
     | {source: "operator"; message: string; eventId: number; operator: Operator}
-    | {source: "user"; message: string; messageId: number}
+    | {source: "user"; message: string; messageId: number; spoken?: false}
     | {source: "user"; message: string; spoken: true; language: LanguageCode; occurredAt: string};
 
 export interface DisconnectDetails {

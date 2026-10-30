@@ -25,10 +25,27 @@ export class FakeSocket implements WebSocketLike {
         }
     }
 
+    /** Holds the client's close in CLOSING, as a browser does until the server answers it, or a lost network never does. */
+    holdClose = false;
+    private held: {code: number; reason: string} | null = null;
+
     close(code = 1000, reason = ""): void {
-        if (this.readyState === 3) return;
+        if (this.readyState >= 2) return;
+        if (this.holdClose) {
+            this.readyState = 2;
+            this.held = {code, reason};
+            return;
+        }
         this.readyState = 3;
         this.onclose?.({code, reason});
+    }
+
+    /** The held close completes. */
+    completeClose(): void {
+        const held = this.held ?? {code: 1006, reason: ""};
+        this.held = null;
+        this.readyState = 3;
+        this.onclose?.(held);
     }
 
     open(): void {

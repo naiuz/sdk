@@ -92,6 +92,18 @@ describe("starting a call", () => {
         expect(calls.onStatusChange.map(([change]) => change.status)).toEqual(["connecting", "disconnected"]);
     });
 
+    test("audio that fails to start for another reason rejects with its own error, not a microphone one", async () => {
+        const sockets = fakeSockets();
+        const audio = new FakeAudio();
+        // As when a Content Security Policy blocks the worklet's blob: URL.
+        const blocked = new DOMException("The worklet module couldn't load", "AbortError");
+        audio.refuse(blocked);
+        const started = Conversation.startSession({token: "tok", WebSocket: sockets.factory, textOnly: false, audio});
+        await expect(started).rejects.toBe(blocked);
+        expect(sockets.opened).toBe(0);
+        expect(audio.calls.at(-1)).toEqual({call: "close"});
+    });
+
     test("outside a browser, a call without audio fails, naming the option", async () => {
         const sockets = fakeSockets();
         await expect(Conversation.startSession({token: "tok", WebSocket: sockets.factory, textOnly: false})).rejects.toThrow(/audio/);
@@ -224,6 +236,16 @@ describe("the agent's audio", () => {
         speak(socket, 5, 20);
         expect(audio.calls.slice(before)).toEqual([{call: "enqueue", eventId: 5, samples: 480}]);
     });
+
+    test("a reply whose audio runs out early reports there, and again at its true end", async () => {
+        const {socket} = await call();
+        // 100 ms, then a stall, then 100 ms more of the same reply from 200 ms.
+        speak(socket, 1, 100);
+        await vi.advanceTimersByTimeAsync(200);
+        speak(socket, 1, 100);
+        await vi.advanceTimersByTimeAsync(300);
+        expect(reports(socket)).toEqual([played(1, 100), played(1, 150), played(1, 200)]);
+    });
 });
 
 describe("the call's events", () => {
@@ -235,6 +257,9 @@ describe("the call's events", () => {
         expect(calls.onMessage).toEqual([[{
             source: "user", message: "Yetkazib berish qancha turadi?", spoken: true, language: "uz", occurredAt: "2026-10-30T09:15:03.905Z",
         }]]);
+        // An app tells what was said from what was typed by spoken alone.
+        const [message] = calls.onMessage[0] ?? [];
+        expect(message?.source === "user" && message.spoken ? message.language : null).toBe("uz");
     });
 
     test("a call that reconnects drops what played, numbers from 0 and asks for the call again", async () => {
@@ -260,6 +285,20 @@ describe("the call's events", () => {
         expect(audio.calls.filter((c) => c.call === "startCapture" || c.call === "startPlayback")).toEqual([
             {call: "startCapture"}, {call: "startPlayback", rate: 24_000}, {call: "startPlayback", rate: 24_000},
         ]);
+    });
+
+    test("hanging up releases the microphone and the agent at once, before the socket has closed", async () => {
+        const {conversation, socket, audio, calls} = await call();
+        speak(socket, 1, 400);
+        // A lost network can hold the close up for long.
+        socket.holdClose = true;
+        await conversation.endSession();
+        expect(audio.calls.slice(-2)).toEqual([{call: "drop"}, {call: "close"}]);
+        expect(conversation.status).toBe("disconnected");
+        expect(conversation.getInputVolume()).toBe(0);
+        expect(calls.onDisconnect).toEqual([[{reason: "user", code: 1000}]]);
+        socket.completeClose();
+        expect(calls.onDisconnect).toHaveLength(1);
     });
 
     test("ending the session closes the audio, and a server close closes it too", async () => {

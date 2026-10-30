@@ -22,6 +22,8 @@ const SILENCE_MS = 40_000;
 const CLIENT_MESSAGE_ID = /^[A-Za-z0-9_-]{1,64}$/;
 const MAX_TEXT_LENGTH = 10_000;
 const OUTPUT_RATES: Record<AudioFormat, number> = {pcm_16000: 16_000, pcm_24000: 24_000};
+/** The browser's errors for a microphone refused, missing, held by another app, or barred from the page. */
+const MICROPHONE_ERRORS = new Set(["NotAllowedError", "NotFoundError", "NotReadableError", "OverconstrainedError", "SecurityError"]);
 
 type Timer = ReturnType<typeof setTimeout>;
 
@@ -137,16 +139,19 @@ export class Conversation {
         return this.liveAudio()?.outputLevel() ?? 0;
     }
 
-    /** Closes the session for good, also while it waits to reconnect. */
+    /**
+     * Closes the session for good, also while it waits to reconnect. A call's microphone and the agent's voice stop at
+     * once, without waiting for the socket's close, which a lost network can hold up for long.
+     */
     endSession(): Promise<void> {
         if (this.endedByUser) return Promise.resolve();
         this.endedByUser = true;
+        this.call?.stop();
+        this.call = null;
         const socket = this.socket;
-        if (socket !== null && socket.readyState !== CLOSED) {
-            socket.close(1000, "ended");
-        } else {
-            this.finish({reason: "user"});
-        }
+        const open = socket !== null && socket.readyState !== CLOSED;
+        if (open) socket.close(1000, "ended");
+        this.finish(open ? {reason: "user", code: 1000} : {reason: "user"});
         return Promise.resolve();
     }
 
@@ -156,7 +161,8 @@ export class Conversation {
         } catch (error) {
             this.closeAudio();
             this.setStatus("disconnected");
-            throw error instanceof MicrophoneError ? error : new MicrophoneError(error);
+            // An AudioIO of the app's may throw the browser's own error; anything else isn't the microphone's.
+            throw error instanceof Error && !(error instanceof MicrophoneError) && MICROPHONE_ERRORS.has(error.name) ? new MicrophoneError(error) : error;
         }
     }
 
