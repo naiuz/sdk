@@ -1,0 +1,28 @@
+{
+  "name": "@naiuz/agents-workspace",
+  "private": true,
+  "type": "module",
+  "description": "The agents packages: the protocol's types and the client.",
+  "engines": {
+    "node": ">=20"
+  },
+  "workspaces": [
+    "protocol"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "typecheck": "npm run typecheck --workspaces",
+    "lint": "npm run lint --workspaces",
+    "test": "npm test --workspaces",
+    "generate": "npm run generate --workspace protocol"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@types/node": "^20.19.43",
+    "eslint": "^9.39.5",
+    "tsup": "^8.5.1",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.71.0",
+    "vitest": "^4.1.11"
+  }
+}
