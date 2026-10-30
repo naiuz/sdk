@@ -1,0 +1,59 @@
+{
+  "name": "@naiuz/agents",
+  "version": "0.1.0",
+  "description": "The NeuronAI agents client: talk to a NeuronAI agent over its WebSocket protocol.",
+  "keywords": [
+    "neuronai",
+    "agents",
+    "conversational-ai",
+    "websocket",
+    "uzbek"
+  ],
+  "homepage": "https://github.com/naiuz/sdk/tree/main/agents/client#readme",
+  "bugs": {
+    "url": "https://github.com/naiuz/sdk/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/naiuz/sdk.git",
+    "directory": "agents/client"
+  },
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.build.json",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@naiuz/agents-protocol": "0.1.0"
+  }
+}
