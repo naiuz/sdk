@@ -1,0 +1,8 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    // The client's source, as the tests use it: one Conversation for the composable and the client's fakes.
+    "paths": {"@naiuz/agents": ["../client/src/index.ts"]}
+  },
+  "include": ["src", "test", "tsup.config.ts", "vitest.config.ts"]
+}
