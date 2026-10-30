@@ -1,5 +1,6 @@
 import {effectScope} from "vue";
 import {describe, expect, test, vi} from "vitest";
+import {Conversation} from "@naiuz/agents";
 import type {Callbacks} from "@naiuz/agents";
 import {useConversation} from "../src/index";
 import {FakeAudio} from "../../client/test/fake-audio";
@@ -120,6 +121,47 @@ describe("useConversation", () => {
         fourth.socket.serverSends(metadata("resume-four"));
         await four;
         expect([conversation.status.value, conversation.getResumeToken()]).toEqual(["connected", "resume-four"]);
+        await conversation.endSession();
+    });
+
+    test("a replaced session's callbacks no longer reach the app", async () => {
+        const seen: string[] = [];
+        const {conversation} = inScope({
+            onStatusChange: ({status}) => seen.push(`status ${status}`),
+            onDisconnect: ({reason}) => seen.push(`disconnect ${reason}`),
+        });
+        const first = fakeSockets();
+        const one = conversation.startSession({token: "one", WebSocket: first.factory});
+        await opened(first, 1);
+        first.socket.open();
+        first.socket.serverSends(metadata("resume-one"));
+        await one;
+        const second = fakeSockets();
+        void conversation.startSession({token: "two", WebSocket: second.factory});
+        await opened(second, 1);
+        expect(first.socket.readyState).toBe(3);
+        expect(seen).toEqual(["status connecting", "status connected", "status connecting"]);
+        await conversation.endSession();
+    });
+
+    test("a new start doesn't wait for the old session's end", async () => {
+        const {conversation} = inScope();
+        const first = fakeSockets();
+        const one = conversation.startSession({token: "one", WebSocket: first.factory});
+        await opened(first, 1);
+        first.socket.open();
+        first.socket.serverSends(metadata("resume-one"));
+        await one;
+        // An end that takes its time: the new session starts anyway, inside the same gesture.
+        const ending = vi.spyOn(Conversation.prototype, "endSession").mockReturnValueOnce(new Promise(() => undefined));
+        const second = fakeSockets();
+        const two = conversation.startSession({token: "two", WebSocket: second.factory});
+        await opened(second, 1);
+        expect(ending).toHaveBeenCalledTimes(1);
+        second.socket.open();
+        second.socket.serverSends(metadata("resume-two"));
+        await two;
+        expect(conversation.getResumeToken()).toBe("resume-two");
         await conversation.endSession();
     });
 

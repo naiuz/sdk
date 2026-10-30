@@ -35,23 +35,33 @@ export function useConversation(callbacks: Callbacks = {}): UseConversation {
     /** Each start's number: a session's callbacks change the refs only while it is the newest. */
     let starts = 0;
 
+    /** A session's callbacks: the refs change, then the app hears, only while it is the newest. */
     function ownCallbacks(start: number): Callbacks {
         const current = () => start === starts;
+        const forwarded = Object.fromEntries(
+            Object.entries(callbacks).map(([name, callback]) => [
+                name,
+                (...args: unknown[]) => {
+                    if (current()) (callback as (...given: unknown[]) => void)(...args);
+                },
+            ]),
+        ) as Callbacks;
         return {
-            ...callbacks,
+            ...forwarded,
             onStatusChange: (change) => {
-                if (current()) status.value = change.status;
+                if (!current()) return;
+                status.value = change.status;
                 callbacks.onStatusChange?.(change);
             },
             onModeChange: (change) => {
-                if (current()) mode.value = change.mode;
+                if (!current()) return;
+                mode.value = change.mode;
                 callbacks.onModeChange?.(change);
             },
             onDisconnect: (details) => {
-                if (current()) {
-                    mode.value = null;
-                    conversation = null;
-                }
+                if (!current()) return;
+                mode.value = null;
+                conversation = null;
                 callbacks.onDisconnect?.(details);
             },
         };
@@ -67,8 +77,12 @@ export function useConversation(callbacks: Callbacks = {}): UseConversation {
         const start = ++starts;
         // The session being replaced no longer reports its mode, so none is shown until the new one has its own.
         mode.value = null;
-        await endSession();
-        const started = await Conversation.startSession({...options, ...ownCallbacks(start)});
+        const replaced = conversation;
+        conversation = null;
+        // Started before the old one ends, so its audio starts inside the caller's gesture, whatever the end takes.
+        const starting = Conversation.startSession({...options, ...ownCallbacks(start)});
+        void replaced?.endSession();
+        const started = await starting;
         if (start !== starts) {
             // A newer start, or the component's end, came while this one waited.
             await started.endSession();

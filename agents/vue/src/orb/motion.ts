@@ -23,16 +23,23 @@ interface Spring {
 const MAX_STEP_S = 0.05;
 const TURN = Math.PI * 2;
 
-/** Moves a spring towards its target: stiffness k, damping c. */
-function spring(s: Spring, target: number, dt: number, k: number, c: number): number {
+/** Closer than this to its target, and slower, a spring is at rest, and snaps there. */
+const REST = 1e-4;
+
+/** Moves a spring towards its target, stiffness k and damping c; true once it rests there. */
+function spring(s: Spring, target: number, dt: number, k: number, c: number): boolean {
     s.v += (-k * (s.x - target) - c * s.v) * dt;
     s.x += s.v * dt;
-    return s.x;
+    if (Math.abs(s.x - target) >= REST || Math.abs(s.v) >= REST * 10) return false;
+    s.x = target;
+    s.v = 0;
+    return true;
 }
 
 /**
  * The orb's motion, on springs, as the approved demo moves it: speaking grows and brightens with the voice, listening
- * leans in and follows the voice coming in, thinking swirls the colour and circles the light, idle breathes.
+ * leans in and follows the voice coming in, and thinking swirls the colour and circles the light. Idle holds still, as
+ * the UX plan has it: the orb moves only with what it hears, and the thinking it shows.
  */
 export class OrbMotion {
     private readonly scale: Spring = {x: 1, v: 0};
@@ -43,6 +50,12 @@ export class OrbMotion {
     private flow = 0;
     private rot = 0;
     private lightA = 0;
+    private resting = false;
+
+    /** Whether it has come to rest: idle, with every spring still. Nothing moves until the state changes. */
+    settled(): boolean {
+        return this.resting;
+    }
 
     /** Steps dt seconds, at time t in seconds, with the voice's level from 0 to 1. */
     step(dt: number, state: OrbState, level: number, t: number): OrbFrame {
@@ -55,9 +68,11 @@ export class OrbMotion {
         let sat = 0;
         let rotSpeed = 0.1;
         let flowSpeed = 0.07;
-        if (state === "idle" || state === "connecting") {
-            scale = 1 + 0.014 * Math.sin(t * 1.25);
-            glow = 0.14 + 0.05 * Math.sin(t * 1.25);
+        const idle = state === "idle" || state === "connecting";
+        if (idle) {
+            glow = 0.14;
+            rotSpeed = 0;
+            flowSpeed = 0;
         } else if (state === "listening") {
             scale = 1.045 + 0.03 * voice;
             glow = 0.22 + 0.35 * voice;
@@ -81,17 +96,24 @@ export class OrbMotion {
             rotSpeed = 0.25 + 0.5 * voice;
             flowSpeed = 0.25 + 1.3 * voice;
         }
+        let lit = false;
         if (state === "thinking") {
             this.lightA += step * 1.5;
         } else {
             // Out of thinking, the light eases back to its nearest full turn.
-            this.lightA += (Math.round(this.lightA / TURN) * TURN - this.lightA) * Math.min(1, step * 2.5);
+            const turn = Math.round(this.lightA / TURN) * TURN;
+            this.lightA += (turn - this.lightA) * Math.min(1, step * 2.5);
+            lit = Math.abs(turn - this.lightA) < REST;
+            if (lit) this.lightA = turn;
         }
-        spring(this.scale, scale, step, 340, 17);
-        spring(this.glow, glow, step, 90, 15);
-        spring(this.energy, energy, step, 120, 16);
-        spring(this.swirl, swirl, step, 18, 8);
-        spring(this.sat, sat, step, 60, 14);
+        const still = [
+            spring(this.scale, scale, step, 340, 17),
+            spring(this.glow, glow, step, 90, 15),
+            spring(this.energy, energy, step, 120, 16),
+            spring(this.swirl, swirl, step, 18, 8),
+            spring(this.sat, sat, step, 60, 14),
+        ].every(Boolean);
+        this.resting = idle && still && lit;
         this.flow += step * flowSpeed;
         this.rot += step * rotSpeed;
         const squash = Math.max(-0.04, Math.min(0.04, this.scale.v * 0.012));

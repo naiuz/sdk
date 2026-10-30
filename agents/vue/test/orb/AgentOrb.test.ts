@@ -26,6 +26,9 @@ test("the glow wears the orb's tones", async () => {
     expect(neuron).toContain("blur(36px)");
     const custom = await renderToString(h(AgentOrb, {colors: ["#0ea5e9", "#a5f3fc"]}));
     expect(custom).toContain("radial-gradient(circle, #0ea5e9 0%, #a5f3fc 45%, transparent 72%)");
+    // The animation sets the glow through variables, which a re-render doesn't reset.
+    expect(neuron).toContain("opacity:var(--naiuz-glow-opacity, 0.2)");
+    expect(neuron).toContain("transform:scale(var(--naiuz-glow-scale, 1.1))");
 });
 
 test("it has no ring", async () => {

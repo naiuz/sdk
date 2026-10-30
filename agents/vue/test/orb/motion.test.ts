@@ -54,11 +54,18 @@ test("thinking swirls and circles the light", () => {
     expect(after?.swirl).toBeCloseTo(0, 1);
 });
 
-test("idle breathes within 1.4%", () => {
-    const frames = run(new OrbMotion(), "idle", 1, 8).slice(120);
-    const extent = Math.max(...frames.flatMap((frame) => [Math.abs(frame.scaleX - 1), Math.abs(frame.scaleY - 1)]));
-    expect(extent).toBeGreaterThan(0.01);
-    expect(extent).toBeLessThanOrEqual(0.0145);
+test("idle holds still, and settles, since nothing it hears moves it", () => {
+    const motion = new OrbMotion();
+    run(motion, "speaking", 1, 1);
+    expect(motion.settled()).toBe(false);
+    const frames = run(motion, "idle", 1, 3, 1);
+    expect(motion.settled()).toBe(true);
+    const [before, last] = [frames.at(-60), frames.at(-1)];
+    expect(last).toEqual(before);
+    expect([last?.scaleX, last?.scaleY]).toEqual([1, 1]);
+    expect(last?.glow).toBeCloseTo(0.14, 3);
+    expect(last?.energy).toBeCloseTo(0, 3);
+    expect(last?.swirl).toBeCloseTo(0, 3);
     // Connecting moves as idle does.
     expect(run(new OrbMotion(), "connecting", 1, 2).at(-1)).toEqual(run(new OrbMotion(), "idle", 1, 2).at(-1));
 });

@@ -26,7 +26,8 @@ class SharedRenderer implements OrbRenderer {
     drawOrb(ctx: CanvasRenderingContext2D, px: number, tones: OrbTones, frame: OrbFrame): void {
         const canvas = this.canvas ?? this.open();
         const gl = this.gl;
-        if (gl === null) {
+        // Lost before its event arrives, a context draws nothing: a blank square a still frame would keep.
+        if (gl === null || gl.isContextLost()) {
             gradient(ctx, px, tones);
             return;
         }

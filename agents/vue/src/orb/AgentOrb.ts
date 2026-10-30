@@ -35,6 +35,7 @@ export const AgentOrb = defineComponent({
         const size = computed(() => Math.round(Math.min(MAX_SIZE, Math.max(MIN_SIZE, props.size))));
         const tones = computed(() => orbTones(props.colors));
         const motion = new OrbMotion();
+        let lastFrame: OrbFrame = stillFrame("idle");
         let mounted = false;
         let visible = true;
         let frameId = 0;
@@ -52,24 +53,29 @@ export const AgentOrb = defineComponent({
             if (!target || !halo || !ctx) return;
             orbRenderer().drawOrb(ctx, target.width, tones.value, frame);
             target.style.transform = `scale(${frame.scaleX.toFixed(4)}, ${frame.scaleY.toFixed(4)})`;
-            halo.style.opacity = (0.12 + 0.6 * frame.glow).toFixed(3);
-            halo.style.transform = `scale(${(1.02 + 0.42 * frame.glow).toFixed(3)})`;
+            // Variables, which the render's own style leaves alone when it patches the element.
+            halo.style.setProperty("--naiuz-glow-opacity", (0.12 + 0.6 * frame.glow).toFixed(3));
+            halo.style.setProperty("--naiuz-glow-scale", (1.02 + 0.42 * frame.glow).toFixed(3));
         }
+
+        /** Idle and at rest: the last frame stays on the canvas, and nothing runs until the state changes. */
+        const resting = () => (props.state === "idle" || props.state === "connecting") && motion.settled();
 
         function tick(now: number): void {
             frameId = 0;
             const dt = last === 0 ? 0 : (now - last) / 1000;
             last = now;
-            const frame = motion.step(dt, props.state, props.level?.() ?? 0, now / 1000);
-            if (now - lastDraw >= (size.value >= LARGE_SIZE ? 16 : 50)) {
+            lastFrame = motion.step(dt, props.state, props.level?.() ?? 0, now / 1000);
+            const rested = resting();
+            if (rested || now - lastDraw >= (size.value >= LARGE_SIZE ? 16 : 50)) {
                 lastDraw = now;
-                paint(frame);
+                paint(lastFrame);
             }
-            frameId = requestAnimationFrame(tick);
+            if (!rested) frameId = requestAnimationFrame(tick);
         }
 
         function update(): void {
-            const moving = mounted && visible && !reduced();
+            const moving = mounted && visible && !reduced() && !resting();
             if (moving && frameId === 0) {
                 last = 0;
                 frameId = requestAnimationFrame(tick);
@@ -77,7 +83,8 @@ export const AgentOrb = defineComponent({
                 cancelAnimationFrame(frameId);
                 frameId = 0;
             }
-            if (mounted && reduced()) paint(stillFrame(props.state));
+            // Held still, it draws again when it would show something else: a new state, size or colour.
+            if (mounted && !moving) paint(reduced() ? stillFrame(props.state) : lastFrame);
         }
 
         onMounted(() => {
@@ -101,9 +108,9 @@ export const AgentOrb = defineComponent({
             reducedMotion?.removeEventListener("change", update);
         });
 
-        // Under reduced motion the still frame is drawn again when it would show something else.
+        // A new state starts the motion again, and a held frame is drawn again for a new size or colour.
         watch([() => props.state, tones, size], () => {
-            if (reduced()) void nextTick(update);
+            void nextTick(update);
         });
 
         return () => {
@@ -123,7 +130,8 @@ export const AgentOrb = defineComponent({
                         borderRadius: "50%",
                         background: `radial-gradient(circle, ${main} 0%, ${light} 45%, transparent 72%)`,
                         filter: `blur(${String(Math.round((GLOW_BLUR * size.value) / DEFAULT_SIZE))}px)`,
-                        opacity: "0.2",
+                        opacity: "var(--naiuz-glow-opacity, 0.2)",
+                        transform: "scale(var(--naiuz-glow-scale, 1.1))",
                         pointerEvents: "none",
                     },
                 }),

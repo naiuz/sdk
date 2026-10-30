@@ -5,12 +5,13 @@ import {orbRenderer} from "../../src/orb/renderer";
 
 type Call = [string, ...unknown[]];
 
-/** A WebGL context that records its calls: every method answers, and its program always links. */
-function fakeWebGl(calls: Call[]): WebGLRenderingContext {
+/** A WebGL context that records its calls: every method answers, its program always links, and it's lost when told. */
+function fakeWebGl(calls: Call[], state: {lost: boolean}): WebGLRenderingContext {
     const constants: Record<string, number> = {VERTEX_SHADER: 1, FRAGMENT_SHADER: 2, ARRAY_BUFFER: 3, STATIC_DRAW: 4, LINK_STATUS: 5, FLOAT: 6, COLOR_BUFFER_BIT: 7, TRIANGLE_STRIP: 8};
     return new Proxy({}, {
         get: (_, name: string) => constants[name] ?? ((...args: unknown[]) => {
             calls.push([name, ...args]);
+            if (name === "isContextLost") return state.lost;
             return name === "getProgramParameter" ? true : {name};
         }),
     }) as WebGLRenderingContext;
@@ -18,17 +19,18 @@ function fakeWebGl(calls: Call[]): WebGLRenderingContext {
 
 /** The offscreen canvases the renderer makes: each records its contexts and can lose its WebGL. */
 function canvases(webgl: boolean) {
-    const made: {canvas: HTMLCanvasElement; contexts: string[]; gl: Call[]; fire: (type: string) => void}[] = [];
+    const made: {canvas: HTMLCanvasElement; contexts: string[]; gl: Call[]; state: {lost: boolean}; fire: (type: string) => void}[] = [];
     const make = () => {
         const contexts: string[] = [];
         const gl: Call[] = [];
+        const state = {lost: false};
         const listeners = new Map<string, ((event: {preventDefault(): void}) => void)[]>();
         const canvas = {
             width: 0,
             height: 0,
             getContext: (kind: string) => {
                 contexts.push(kind);
-                return webgl && kind === "webgl" ? fakeWebGl(gl) : null;
+                return webgl && kind === "webgl" ? fakeWebGl(gl, state) : null;
             },
             addEventListener: (type: string, listener: (event: {preventDefault(): void}) => void) => {
                 listeners.set(type, [...(listeners.get(type) ?? []), listener]);
@@ -37,7 +39,7 @@ function canvases(webgl: boolean) {
         const fire = (type: string) => {
             for (const listener of listeners.get(type) ?? []) listener({preventDefault: () => undefined});
         };
-        made.push({canvas, contexts, gl, fire});
+        made.push({canvas, contexts, gl, state, fire});
         return canvas;
     };
     return {make, made};
@@ -88,6 +90,18 @@ test("without WebGL the orb is a gradient, not a blank circle", () => {
     expect(orb.stops).toEqual([[0, "#FFF3E0"], [0.45, "#FFC56E"], [0.8, "#FF9A14"], [1, "#D96F00"]]);
     expect(orb.calls.find(([name]) => name === "arc")).toEqual(["arc", 50, 50, 48.5, 0, Math.PI * 2]);
     expect(orb.calls.some(([name]) => name === "fill")).toBe(true);
+});
+
+test("a context lost before its event arrives draws the gradient, not a blank square", () => {
+    const {make, made} = canvases(true);
+    const renderer = orbRenderer(make);
+    renderer.drawOrb(surface().ctx, 64, NEURON_TONES, stillFrame("idle"));
+    const state = made[0]?.state;
+    if (state) state.lost = true;
+    const orb = surface();
+    renderer.drawOrb(orb.ctx, 64, NEURON_TONES, stillFrame("idle"));
+    expect(orb.calls.some(([name]) => name === "createRadialGradient")).toBe(true);
+    expect(orb.calls.some(([name]) => name === "drawImage")).toBe(false);
 });
 
 test("a lost context falls back to the gradient, and a restored one draws the sphere again", () => {
