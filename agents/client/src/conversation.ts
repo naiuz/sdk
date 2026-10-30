@@ -4,9 +4,17 @@ import type {DisconnectDetails, MessageAck, SessionOptions, Status, WebSocketFac
 
 const DEFAULT_URL = "wss://my.neuronai.uz/api/v1/realtime";
 const OPEN = 1;
+const CLOSED = 3;
+/** Closes after which the client resumes with its resume token: a drain, a lost network, a server error. */
+const RESUMABLE = new Set([1001, 1006, 1011, 4012]);
+const RECONNECT_ATTEMPTS = 5;
+const RECONNECT_DELAY_MS = 250;
+const MESSAGE_RETRIES = 3;
+const RETRY_DELAY_MS = 500;
 
 interface Pending {
     text: string;
+    retries: number;
     resolve: (ack: MessageAck) => void;
     reject: (error: MessageError) => void;
 }
@@ -15,9 +23,13 @@ interface Pending {
 export class Conversation {
     private socket: WebSocketLike | null = null;
     private conversationId = "";
+    private resumeToken: string | null = null;
+    private reconnects = 0;
+    private resendOnHistory = false;
     private currentStatus: Status = "disconnected";
     private connectedOnce = false;
     private endedByUser = false;
+    private finished = false;
     private endedReason: string | undefined;
     private opening: {resolve: () => void; reject: (error: SessionError) => void} | null = null;
     private readonly pending = new Map<string, Pending>();
@@ -32,7 +44,11 @@ export class Conversation {
     /** Opens the socket and resolves once the server has answered the handshake. */
     static async startSession(options: SessionOptions): Promise<Conversation> {
         const conversation = new Conversation(options);
-        await conversation.open(options.token);
+        conversation.setStatus("connecting");
+        await new Promise<void>((resolve, reject) => {
+            conversation.opening = {resolve, reject};
+            conversation.connect(options.token);
+        });
         return conversation;
     }
 
@@ -44,40 +60,45 @@ export class Conversation {
         return this.conversationId;
     }
 
-    /** Sends a message, resolving once the server has saved it. */
+    /**
+     * Sends a message, resolving once the server has saved it. A message the server couldn't save yet, or one sent
+     * while the client reconnects, is sent again with the same client_message_id, so it is saved once.
+     */
     sendUserMessage(text: string): Promise<MessageAck> {
         const clientMessageId = this.nextId();
         return new Promise((resolve, reject) => {
-            this.pending.set(clientMessageId, {text, resolve, reject});
+            this.pending.set(clientMessageId, {text, retries: 0, resolve, reject});
             this.sendMessage(clientMessageId, text);
         });
     }
 
-    /** Closes the session for good. */
+    /** Closes the session for good, also while it waits to reconnect. */
     endSession(): Promise<void> {
+        if (this.endedByUser) return Promise.resolve();
         this.endedByUser = true;
-        this.socket?.close(1000, "ended");
+        const socket = this.socket;
+        if (socket !== null && socket.readyState !== CLOSED) {
+            socket.close(1000, "ended");
+        } else {
+            this.finish({reason: "user"});
+        }
         return Promise.resolve();
     }
 
-    private open(token: string): Promise<void> {
-        this.setStatus("connecting");
+    private connect(token: string): void {
         const socket = new this.WebSocketClass(`${this.options.serverUrl ?? DEFAULT_URL}?token=${encodeURIComponent(token)}`);
         this.socket = socket;
-        return new Promise((resolve, reject) => {
-            this.opening = {resolve, reject};
-            socket.onopen = () => {
-                this.send(this.initiation());
-            };
-            socket.onmessage = (event) => {
-                this.receive(event.data);
-            };
-            socket.onclose = (event) => {
-                this.closed(socket, event.code, event.reason);
-            };
-            // A failed socket closes too, and onclose handles it.
-            socket.onerror = () => undefined;
-        });
+        socket.onopen = () => {
+            this.send(this.initiation());
+        };
+        socket.onmessage = (event) => {
+            this.receive(event.data);
+        };
+        socket.onclose = (event) => {
+            this.closed(socket, event.code, event.reason);
+        };
+        // A failed socket closes too, and onclose handles it.
+        socket.onerror = () => undefined;
     }
 
     private initiation(): ConversationInitiationClientData {
@@ -106,8 +127,12 @@ export class Conversation {
         switch (event.type) {
             case "conversation_initiation_metadata":
                 this.conversationId = event.conversation_id;
+                this.resumeToken = event.resume_token;
+                this.reconnects = 0;
                 this.setStatus("connected");
-                if (!this.connectedOnce) {
+                if (this.connectedOnce) {
+                    this.resendOnHistory = true;
+                } else {
                     this.connectedOnce = true;
                     o.onConnect?.({conversationId: event.conversation_id});
                     o.onModeChange?.({mode: "text"});
@@ -117,6 +142,10 @@ export class Conversation {
                 break;
             case "conversation_history":
                 o.onHistory?.(event.messages);
+                if (this.resendOnHistory) {
+                    this.resendOnHistory = false;
+                    for (const [clientMessageId, pending] of this.pending) this.sendMessage(clientMessageId, pending.text);
+                }
                 break;
             case "message_ack":
                 this.settle(event.client_message_id, (pending) => {
@@ -124,9 +153,7 @@ export class Conversation {
                 });
                 break;
             case "message_error":
-                this.settle(event.client_message_id, (pending) => {
-                    pending.reject(new MessageError(event.client_message_id, event.retryable, event.code));
-                });
+                this.failed(event.client_message_id, event.retryable, event.code);
                 break;
             case "user_message":
                 o.onMessage?.({source: "user", message: event.text, messageId: event.message_id});
@@ -167,6 +194,22 @@ export class Conversation {
         }
     }
 
+    /** A retryable error sends the message again after a pause that doubles, up to MESSAGE_RETRIES times. */
+    private failed(clientMessageId: string, retryable: boolean, code: string): void {
+        const pending = this.pending.get(clientMessageId);
+        if (pending === undefined) return;
+        if (!retryable || pending.retries >= MESSAGE_RETRIES) {
+            this.pending.delete(clientMessageId);
+            pending.reject(new MessageError(clientMessageId, retryable, code));
+            return;
+        }
+        const delay = RETRY_DELAY_MS * 2 ** pending.retries;
+        pending.retries++;
+        setTimeout(() => {
+            if (this.pending.get(clientMessageId) === pending) this.sendMessage(clientMessageId, pending.text);
+        }, delay);
+    }
+
     private settle(clientMessageId: string, apply: (pending: Pending) => void): void {
         const pending = this.pending.get(clientMessageId);
         if (pending === undefined) return;
@@ -176,14 +219,34 @@ export class Conversation {
 
     private closed(socket: WebSocketLike, code: number, reason: string): void {
         if (socket !== this.socket) return;
+        this.resendOnHistory = false;
         if (this.opening !== null) {
             this.opening.reject(new SessionError(code, reason));
             this.opening = null;
             this.setStatus("disconnected");
             return;
         }
+        if (!this.endedByUser && RESUMABLE.has(code) && this.resumeToken !== null && this.reconnects < RECONNECT_ATTEMPTS) {
+            const token = this.resumeToken;
+            const delay = RECONNECT_DELAY_MS * 2 ** this.reconnects;
+            this.reconnects++;
+            this.setStatus("reconnecting");
+            setTimeout(() => {
+                if (this.socket === socket && !this.endedByUser) this.connect(token);
+            }, delay);
+            return;
+        }
+        this.finish(this.disconnectDetails(code, reason));
+    }
+
+    /** Ends the session, once: messages still waiting for their ack fail, as retryable. */
+    private finish(details: DisconnectDetails): void {
+        if (this.finished) return;
+        this.finished = true;
         this.setStatus("disconnected");
-        this.options.onDisconnect?.(this.disconnectDetails(code, reason));
+        for (const [clientMessageId, pending] of this.pending) pending.reject(new MessageError(clientMessageId, true, "unavailable"));
+        this.pending.clear();
+        this.options.onDisconnect?.(details);
     }
 
     private disconnectDetails(code: number, reason: string): DisconnectDetails {
