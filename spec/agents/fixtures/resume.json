@@ -37,12 +37,16 @@
           {
             "role": "customer",
             "text": "Yetkazib berish qancha turadi?",
-            "at": "2026-10-30T09:15:02.120Z"
+            "at": "2026-10-30T09:15:02.120Z",
+            "message_id": 979,
+            "client_message_id": "c-5"
           },
           {
             "role": "agent",
             "text": "Toshkent boʻylab yetkazib berish bepul.",
-            "at": "2026-10-30T09:15:03.480Z"
+            "at": "2026-10-30T09:15:03.480Z",
+            "message_id": 980,
+            "client_message_id": null
           }
         ]
       }

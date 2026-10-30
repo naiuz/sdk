@@ -148,12 +148,30 @@
         },
         "at": {
           "$ref": "#/$defs/DateTime"
+        },
+        "message_id": {
+          "description": "The message's id once the server has stored it, as its message_ack gave it; null for a reply not stored yet.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "client_message_id": {
+          "description": "For a customer's message sent through a socket, the client_message_id it was sent with; null otherwise.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[A-Za-z0-9_-]{1,64}$"
         }
       },
       "required": [
         "role",
         "text",
-        "at"
+        "at",
+        "message_id",
+        "client_message_id"
       ],
       "additionalProperties": false
     },
@@ -506,7 +524,8 @@
           "enum": [
             "refused",
             "unavailable",
-            "invalid"
+            "invalid",
+            "rate_limited"
           ]
         }
       },

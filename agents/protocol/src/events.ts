@@ -54,6 +54,10 @@ export interface HistoryMessage {
     role: "customer" | "agent" | "operator";
     text: string;
     at: DateTime;
+    /** The message's id once the server has stored it, as its message_ack gave it; null for a reply not stored yet. */
+    message_id: number | null;
+    /** For a customer's message sent through a socket, the client_message_id it was sent with; null otherwise. */
+    client_message_id: string | null;
 }
 
 export interface TextResponsePart {
@@ -143,7 +147,7 @@ export interface MessageError {
     type: "message_error";
     client_message_id: ClientMessageId;
     retryable: boolean;
-    code: "refused" | "unavailable" | "invalid";
+    code: "refused" | "unavailable" | "invalid" | "rate_limited";
 }
 
 /** A message another viewer of the conversation sent. */

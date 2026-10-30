@@ -1,0 +1,51 @@
+{
+  "description": "A message that breaks the protocol's rules, here an empty text, isn't saved. The server answers message_error with invalid, and the socket stays open.",
+  "token": "session",
+  "frames": [
+    {
+      "from": "client",
+      "frame": {
+        "type": "conversation_initiation_client_data",
+        "text_only": true
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "conversation_initiation_metadata",
+        "conversation_id": "conv_01JB8Z5R4Q6Y2N7K3M9D0F1H3K",
+        "resume_token": "eyJhbGciOiJFZERTQSIsImtpZCI6ImUxIiwidHlwIjoiSldUIn0.eyJjb252IjoiY29udl8wMUpCOFo1UjRRNlkyTjdLM005RDBGMUgzSyIsImp0aSI6Imp0aS0xIn0.c2lnbmF0dXJlLTE",
+        "status": "ai_handling",
+        "languages": [
+          "uz",
+          "ru",
+          "en"
+        ],
+        "language": "uz",
+        "features": {
+          "text": true,
+          "voice": false,
+          "debug": false
+        }
+      }
+    },
+    {
+      "from": "client",
+      "frame": {
+        "type": "user_message",
+        "client_message_id": "c-1",
+        "text": ""
+      },
+      "invalid": true
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "message_error",
+        "client_message_id": "c-1",
+        "retryable": false,
+        "code": "invalid"
+      }
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "description": "The client resumes after a drain that outlasted its message's store: the history shows the message saved, so the client takes it as acked and doesn't send it again.",
+  "token": "resume",
+  "frames": [
+    {
+      "from": "client",
+      "frame": {
+        "type": "conversation_initiation_client_data",
+        "text_only": true
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "conversation_initiation_metadata",
+        "conversation_id": "conv_01JB8Z5R4Q6Y2N7K3M9D0F1H3K",
+        "resume_token": "eyJhbGciOiJFZERTQSIsImtpZCI6ImUxIiwidHlwIjoiSldUIn0.eyJjb252IjoiY29udl8wMUpCOFo1UjRRNlkyTjdLM005RDBGMUgzSyIsImp0aSI6Imp0aS0yIn0.c2lnbmF0dXJlLTI",
+        "status": "ai_handling",
+        "languages": [
+          "uz",
+          "ru",
+          "en"
+        ],
+        "language": "uz",
+        "features": {
+          "text": true,
+          "voice": false,
+          "debug": false
+        }
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "conversation_history",
+        "messages": [
+          {
+            "role": "customer",
+            "text": "Salom",
+            "at": "2026-10-30T09:15:05.000Z",
+            "message_id": 981,
+            "client_message_id": "c-1"
+          }
+        ]
+      }
+    }
+  ]
+}
