@@ -9,6 +9,8 @@ export interface RecordedFrame {
     frame?: Record<string, unknown>;
     invalid?: true;
     close?: {code: number; reason: string};
+    /** A run of binary audio frames: the microphone's, numbered from sequence, or one reply's. */
+    audio?: {kind: "user" | "agent"; sequence?: number; event_id?: number; ms: number; count?: number};
 }
 
 export interface Recorded {

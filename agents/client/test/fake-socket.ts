@@ -4,7 +4,12 @@ import type {Callbacks, SessionOptions, WebSocketFactory, WebSocketLike} from ".
 /** A socket the test drives: it records what the client sends, and plays what a server would. */
 export class FakeSocket implements WebSocketLike {
     readyState = 0;
+    binaryType = "blob";
+    /** What the socket holds unsent, as a browser's does after a stall: the test sets it. */
+    bufferedAmount = 0;
     readonly sent: string[] = [];
+    /** The binary frames the client sent: a call's microphone audio. */
+    readonly binary: Uint8Array[] = [];
     onopen: ((event: unknown) => void) | null = null;
     onmessage: ((event: {data: unknown}) => void) | null = null;
     onclose: ((event: {code: number; reason: string}) => void) | null = null;
@@ -12,8 +17,12 @@ export class FakeSocket implements WebSocketLike {
 
     constructor(readonly url: string) {}
 
-    send(data: string): void {
-        this.sent.push(data);
+    send(data: string | Uint8Array): void {
+        if (typeof data === "string") {
+            this.sent.push(data);
+        } else {
+            this.binary.push(data);
+        }
     }
 
     close(code = 1000, reason = ""): void {
@@ -31,13 +40,24 @@ export class FakeSocket implements WebSocketLike {
         this.onmessage?.({data: JSON.stringify(event)});
     }
 
+    /** A binary frame from the server, as a socket with binaryType "arraybuffer" delivers it. */
+    serverSendsBinary(bytes: Uint8Array): void {
+        this.onmessage?.({data: bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)});
+    }
+
     serverCloses(code: number, reason: string): void {
         this.readyState = 3;
         this.onclose?.({code, reason});
     }
 
+    /** The JSON frames the client sent, leaving out its binary audio. */
     sentJson(): unknown[] {
         return this.sent.map((frame) => JSON.parse(frame) as unknown);
+    }
+
+    /** The sequence numbers of the microphone frames the client sent, in order. */
+    sequences(): number[] {
+        return this.binary.map((frame) => new DataView(frame.buffer, frame.byteOffset, frame.byteLength).getUint32(1));
     }
 }
 
@@ -84,6 +104,19 @@ export function metadata(resumeToken = "resume-1"): object {
         language: "uz",
         features: {text: true, voice: false, debug: false},
     };
+}
+
+/** The metadata of a call the server took, playing at the output rate it names. */
+export function callMetadata(output: "pcm_16000" | "pcm_24000" = "pcm_24000", resumeToken = "resume-1"): object {
+    return {...metadata(resumeToken), features: {text: true, voice: true, debug: false}, audio: {input: "pcm_16000", output}};
+}
+
+/** A binary frame of agent audio: kind 0x02, the reply's event id, then silence of the given length. */
+export function agentFrame(eventId: number, ms: number, rate = 24_000): Uint8Array {
+    const frame = new Uint8Array(5 + (rate / 1000) * ms * 2);
+    frame[0] = 0x02;
+    new DataView(frame.buffer).setUint32(1, eventId);
+    return frame;
 }
 
 type Recorded = {[K in keyof Required<Callbacks>]: Parameters<Required<Callbacks>[K]>[]};

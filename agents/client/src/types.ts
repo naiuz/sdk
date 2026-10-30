@@ -1,6 +1,10 @@
-import type {HistoryMessage, LanguageCode, Operator, TurnDebug} from "@naiuz/agents-protocol";
+import type {AudioFormat, HistoryMessage, LanguageCode, Operator, TurnDebug} from "@naiuz/agents-protocol";
+import type {AudioIO} from "./audio/io";
 
 export type Status = "connecting" | "connected" | "reconnecting" | "disconnected";
+
+/** A text session's mode is text. A call's is the agent's state: listening, thinking or speaking. */
+export type Mode = "text" | "listening" | "thinking" | "speaking";
 
 /** The part of the browser's WebSocket the client uses, so tests and other runtimes can supply their own. */
 export interface WebSocketLike {
@@ -9,7 +13,11 @@ export interface WebSocketLike {
     onmessage: ((event: {data: unknown}) => void) | null;
     onclose: ((event: {code: number; reason: string}) => void) | null;
     onerror: ((event: unknown) => void) | null;
-    send(data: string): void;
+    /** A call's audio goes out as binary frames, and comes in as ArrayBuffers once this is "arraybuffer". */
+    binaryType?: string;
+    /** The bytes queued and not yet sent, so a call can drop audio after a stall rather than flood the socket. */
+    readonly bufferedAmount?: number;
+    send(data: string | Uint8Array): void;
     close(code?: number, reason?: string): void;
 }
 
@@ -27,11 +35,12 @@ export interface SendOptions {
     clientMessageId?: string;
 }
 
-/** A message for the transcript: the agent's reply, an operator's, or another viewer's. */
+/** A message for the transcript: the agent's reply, an operator's, another viewer's, or what the customer said in a call. */
 export type IncomingMessage =
     | {source: "ai"; message: string; eventId: number}
     | {source: "operator"; message: string; eventId: number; operator: Operator}
-    | {source: "user"; message: string; messageId: number};
+    | {source: "user"; message: string; messageId: number}
+    | {source: "user"; message: string; spoken: true; language: LanguageCode; occurredAt: string};
 
 export interface DisconnectDetails {
     /** Who ended it: the app with endSession(), the server, or an error the client couldn't get past. */
@@ -44,7 +53,7 @@ export interface Callbacks {
     onConnect?: (details: {conversationId: string}) => void;
     onDisconnect?: (details: DisconnectDetails) => void;
     onStatusChange?: (change: {status: Status}) => void;
-    onModeChange?: (change: {mode: "text"}) => void;
+    onModeChange?: (change: {mode: Mode}) => void;
     onMessage?: (message: IncomingMessage) => void;
     onAgentChatResponsePart?: (part: {eventId: number; type: "start" | "delta" | "stop"; text: string}) => void;
     onAgentResponseCorrection?: (correction: {eventId: number; text: string}) => void;
@@ -63,8 +72,12 @@ export interface SessionOptions extends Callbacks {
     dynamicVariables?: Record<string, string | number | boolean>;
     /** Only the overrides the token allows; any other closes the session with 4003. */
     overrides?: {firstMessage?: string; language?: LanguageCode};
-    /** Defaults to true: this version speaks text only. */
+    /** Defaults to true. False makes the session a call: the microphone is asked for first. */
     textOnly?: boolean;
+    /** The rate a call's agent audio comes at. Defaults to "pcm_24000"; the client plays whatever the server sends. */
+    output?: AudioFormat;
+    /** A call's microphone and speaker. Calls need one for now. */
+    audio?: AudioIO;
     userId?: string;
     /** Defaults to globalThis.WebSocket. */
     WebSocket?: WebSocketFactory;

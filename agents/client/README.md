@@ -1,6 +1,6 @@
 # @naiuz/agents
 
-The client for NeuronAI agents. It talks to an agent over the [agents protocol](../../spec/agents/protocol.md), a WebSocket protocol: text conversations today, voice in a later 0.x version.
+The client for NeuronAI agents. It talks to an agent over the [agents protocol](../../spec/agents/protocol.md), a WebSocket protocol, in text conversations and voice calls.
 
 ```ts
 import {Conversation} from "@naiuz/agents";
@@ -21,7 +21,34 @@ await conversation.endSession();
 ```
 
 - **Callbacks:** `onConnect`, `onDisconnect`, `onStatusChange`, `onModeChange`, `onMessage`, `onAgentChatResponsePart`, `onAgentResponseCorrection`, `onAgentTyping`, `onHistory`, `onHandoff`, `onDebug` and `onError`. Their names follow `@elevenlabs/client` where they mean the same thing.
-- **Options:** `serverUrl` defaults to `wss://my.neuronai.uz/api/v1/realtime`. `WebSocket` lets another runtime supply its own; the default is `globalThis.WebSocket`, which browsers and Node 22 have.
+- **Options:** `serverUrl` defaults to `wss://my.neuronai.uz/api/v1/realtime`. `WebSocket` lets another runtime supply its own; the default is `globalThis.WebSocket`, which browsers and Node 22 have. `textOnly`, `output` and `audio` make a call (see [Voice calls](#voice-calls)).
+
+## Voice calls
+
+A call is a session with `textOnly: false`. It asks for the microphone before it connects, so a refused microphone never takes a voice line: `startSession` rejects with a `MicrophoneError`, whose `cause` is the browser's error.
+
+```ts
+const conversation = await Conversation.startSession({
+    token,
+    textOnly: false,
+    audio, // an AudioIO: the microphone in, the agent's voice out
+    onModeChange: ({mode}) => console.log(mode), // listening, thinking or speaking
+    onMessage: (message) => console.log(message), // what the customer said comes with spoken: true
+});
+
+conversation.setMicMuted(true); // the call goes on, and the agent hears silence
+conversation.setVolume({volume: 0.5});
+const level = conversation.getOutputVolume(); // 0 to 1, for a visualizer; getInputVolume() for the microphone
+```
+
+- **Audio:** the call asks for the agent's voice at 24 kHz (`output: "pcm_16000"` asks for 16 kHz), and plays it at the rate the server answers with.
+- **What it sends:** the microphone in 20 ms frames, and playback reports, so the server knows what the customer heard when they speak over the agent. After a network stall it drops the audio the socket couldn't take rather than send it late.
+- **Interruptions:** when the customer speaks over a reply, its audio pauses, then resumes or stops as the server decides. `onAgentResponseCorrection` then gets the part of the reply the customer heard.
+- **Refusals:** before the call starts, `startSession` rejects with a `SessionError`: 4003 when the token doesn't allow voice, 4009 when every line is busy, 4010 when the balance can't cover a minute of voice.
+- **Ending:** `endSession()` hangs up, and the conversation goes on as chat.
+  - A call another connection takes over ends with `onDisconnect` code 4008.
+  - A call that reaches the agent's max duration ends with code 1000 and message `max_duration`. To go on in chat, start a text session with `getResumeToken()`.
+- **Reconnecting:** a call that loses its connection resumes as a call. The reply it was playing is dropped.
 
 ## Messages that fail
 

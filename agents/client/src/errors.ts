@@ -13,3 +13,11 @@ export class MessageError extends Error {
         this.name = "MessageError";
     }
 }
+
+/** The microphone couldn't start: refused, missing or busy. The browser's error is its cause. */
+export class MicrophoneError extends Error {
+    constructor(cause: unknown) {
+        super(`The microphone couldn't start${cause instanceof Error ? ` (${cause.name})` : ""}.`, {cause});
+        this.name = "MicrophoneError";
+    }
+}
