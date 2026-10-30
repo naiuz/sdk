@@ -61,6 +61,17 @@ const level = conversation.getOutputVolume(); // 0 to 1, for a visualizer; getIn
   - A call that reaches the agent's max duration ends with code 1000 and message `max_duration`. To go on in chat, start a text session with `getResumeToken()`.
 - **Reconnecting:** a call that loses its connection resumes as a call. The reply it was playing is dropped.
 
+### A voice call in the browser
+
+`examples/voice-call.html` holds a call with an agent through a local engine, with the agent orb from `@naiuz/agents-vue`:
+
+1. Build the packages: `npm run build` in `agents/`.
+2. Copy the engine's `tests/fixtures/audio/uz-delivery.wav` and `uz-long.wav` beside the page, to stand in for the microphone.
+3. Serve this repository's root, `python3 -m http.server 8766 --bind 127.0.0.1`, and open `http://127.0.0.1:8766/agents/client/examples/voice-call.html`. 127.0.0.1 is a secure context, so the browser lets the page use the microphone.
+4. Paste a voice token from the dashboard (`php artisan agents:preview-token <agent> --user=<id> --voice`), choose the microphone or a recording, and start the call.
+
+The page shows the orb, the agent's state, the transcript with each reply cut to what was heard, each reply's audio received and played, and the server's events. "Speak over the reply" plays `uz-long.wav` over the agent's reply, or over the next one when the agent isn't speaking.
+
 ## Messages that fail
 
 `sendUserMessage` rejects with a `MessageError` that has `clientMessageId`, `retryable` and `code`:
