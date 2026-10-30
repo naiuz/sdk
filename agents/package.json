@@ -16,7 +16,7 @@
     "typecheck": "npm run typecheck --workspaces",
     "lint": "npm run lint --workspaces",
     "test": "npm test --workspaces",
-    "generate": "npm run generate --workspace protocol"
+    "generate": "npm run generate --workspaces --if-present"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

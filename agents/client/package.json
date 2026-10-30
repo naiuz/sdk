@@ -51,7 +51,8 @@
     "build": "tsup",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.build.json",
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "generate": "node scripts/worklet-module.mjs"
   },
   "dependencies": {
     "@naiuz/agents-protocol": "0.1.0"

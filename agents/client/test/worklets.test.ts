@@ -1,5 +1,6 @@
 import {expect, test} from "vitest";
 import {workletSource} from "../src/audio/worklets";
+import {buildWorkletModule} from "../scripts/worklet-module.mjs";
 
 interface Posted {
     message: Record<string, unknown>;
@@ -45,6 +46,11 @@ function processor(sampleRate: number, name: string): Processor {
     if (Made === undefined) throw new Error(`${name} isn't registered`);
     return new Made();
 }
+
+test("the worklet module is a string built with the package, from the DSP and the processors as they are", () => {
+    // Not made from the bundled classes at runtime: an app's bundler may rewrite those, a string it leaves alone.
+    expect(workletSource()).toBe(buildWorkletModule());
+});
 
 test("the worklet module registers both processors", () => {
     expect([...load(48_000).keys()]).toEqual(["naiuz-capture", "naiuz-playback"]);

@@ -15,6 +15,14 @@ export default defineConfig(
         },
     },
     {
+        // The worklet's processors are plain JavaScript for the AudioWorkletGlobalScope, built into the client as a string.
+        files: ["**/*.worklet.js"],
+        extends: [tseslint.configs.disableTypeChecked],
+        languageOptions: {
+            globals: {AudioWorkletProcessor: "readonly", registerProcessor: "readonly", sampleRate: "readonly", Downsampler: "readonly", PlaybackQueue: "readonly", level: "readonly"},
+        },
+    },
+    {
         // Node scripts and examples run as they are, without TypeScript.
         files: ["eslint.config.js", "**/scripts/**/*.mjs", "**/examples/**/*.mjs"],
         extends: [tseslint.configs.disableTypeChecked],
