@@ -1,0 +1,798 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/naiuz/sdk/spec/agents/events.schema.json",
+  "title": "NeuronAI agents protocol 0.1",
+  "description": "The events of the agents WebSocket protocol. protocol.md describes how they are used.",
+  "$defs": {
+    "ClientEvent": {
+      "description": "Every event a client sends.",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/ConversationInitiationClientData"
+        },
+        {
+          "$ref": "#/$defs/ClientUserMessage"
+        },
+        {
+          "$ref": "#/$defs/Pong"
+        }
+      ]
+    },
+    "ServerEvent": {
+      "description": "Every event the server sends.",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/ConversationInitiationMetadata"
+        },
+        {
+          "$ref": "#/$defs/ConversationHistory"
+        },
+        {
+          "$ref": "#/$defs/MessageAck"
+        },
+        {
+          "$ref": "#/$defs/MessageError"
+        },
+        {
+          "$ref": "#/$defs/ServerUserMessage"
+        },
+        {
+          "$ref": "#/$defs/AgentTyping"
+        },
+        {
+          "$ref": "#/$defs/AgentChatResponsePart"
+        },
+        {
+          "$ref": "#/$defs/AgentResponse"
+        },
+        {
+          "$ref": "#/$defs/AgentResponseCorrection"
+        },
+        {
+          "$ref": "#/$defs/OperatorMessage"
+        },
+        {
+          "$ref": "#/$defs/Handoff"
+        },
+        {
+          "$ref": "#/$defs/TurnDebug"
+        },
+        {
+          "$ref": "#/$defs/Ping"
+        },
+        {
+          "$ref": "#/$defs/ConversationEnded"
+        },
+        {
+          "$ref": "#/$defs/ErrorEvent"
+        }
+      ]
+    },
+    "LanguageCode": {
+      "description": "A language the platform speaks.",
+      "enum": [
+        "uz",
+        "ru",
+        "en"
+      ]
+    },
+    "ConversationId": {
+      "type": "string",
+      "pattern": "^conv_[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "ClientMessageId": {
+      "description": "The client's own id for a message, the same on every retry.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,64}$"
+    },
+    "MessageId": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "EventId": {
+      "description": "Counts up per conversation, across turns.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "DateTime": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "Overrides": {
+      "type": "object",
+      "properties": {
+        "first_message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "language": {
+          "$ref": "#/$defs/LanguageCode"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "Features": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "boolean"
+        },
+        "voice": {
+          "type": "boolean"
+        },
+        "debug": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "text",
+        "voice",
+        "debug"
+      ],
+      "additionalProperties": false
+    },
+    "HistoryMessage": {
+      "type": "object",
+      "properties": {
+        "role": {
+          "enum": [
+            "customer",
+            "agent",
+            "operator"
+          ]
+        },
+        "text": {
+          "type": "string"
+        },
+        "at": {
+          "$ref": "#/$defs/DateTime"
+        }
+      },
+      "required": [
+        "role",
+        "text",
+        "at"
+      ],
+      "additionalProperties": false
+    },
+    "TextResponsePart": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "enum": [
+            "start",
+            "delta",
+            "stop"
+          ]
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "text"
+      ],
+      "additionalProperties": false
+    },
+    "Operator": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "avatar_url": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "avatar_url"
+      ],
+      "additionalProperties": false
+    },
+    "TurnTimings": {
+      "type": "object",
+      "properties": {
+        "queue_ms": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "first_token_ms": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "model_ms": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "stt_ms": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "tts_first_chunk_ms": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "total_ms": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "queue_ms",
+        "first_token_ms",
+        "model_ms",
+        "stt_ms",
+        "tts_first_chunk_ms",
+        "total_ms"
+      ],
+      "additionalProperties": false
+    },
+    "UsageItem": {
+      "type": "object",
+      "properties": {
+        "service": {
+          "enum": [
+            "llm",
+            "stt",
+            "tts_v3"
+          ]
+        },
+        "model": {
+          "type": "string"
+        },
+        "source": {
+          "enum": [
+            "neuronai",
+            "external",
+            "custom"
+          ]
+        },
+        "input_tokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "cached_input_tokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "output_tokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "audio_seconds": {
+          "type": "number",
+          "minimum": 0
+        },
+        "characters": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "cost_usd": {
+          "description": "OpenRouter's reported cost, as a decimal string.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "estimated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "service",
+        "model",
+        "source",
+        "input_tokens",
+        "cached_input_tokens",
+        "output_tokens",
+        "audio_seconds",
+        "characters",
+        "cost_usd",
+        "estimated"
+      ],
+      "additionalProperties": false
+    },
+    "ConversationInitiationClientData": {
+      "description": "The client's half of the handshake, its first frame.",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "conversation_initiation_client_data"
+        },
+        "dynamic_variables": {
+          "description": "Values for the agent's variables. Signed values in the token win.",
+          "type": "object",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          }
+        },
+        "overrides": {
+          "$ref": "#/$defs/Overrides"
+        },
+        "text_only": {
+          "type": "boolean"
+        },
+        "user_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 128
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "ClientUserMessage": {
+      "description": "A message the user typed.",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "user_message"
+        },
+        "client_message_id": {
+          "$ref": "#/$defs/ClientMessageId"
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 10000
+        }
+      },
+      "required": [
+        "type",
+        "client_message_id",
+        "text"
+      ],
+      "additionalProperties": false
+    },
+    "Pong": {
+      "description": "The answer to a ping.",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "pong"
+        },
+        "event_id": {
+          "$ref": "#/$defs/EventId"
+        }
+      },
+      "required": [
+        "type",
+        "event_id"
+      ],
+      "additionalProperties": false
+    },
+    "ConversationInitiationMetadata": {
+      "description": "The server's half of the handshake.",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "conversation_initiation_metadata"
+        },
+        "conversation_id": {
+          "$ref": "#/$defs/ConversationId"
+        },
+        "resume_token": {
+          "description": "Reconnects to this conversation. Keep only the newest.",
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "enum": [
+            "new",
+            "ai_handling",
+            "human_handling",
+            "resolved",
+            "reopened",
+            "in_call"
+          ]
+        },
+        "languages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/LanguageCode"
+          },
+          "minItems": 1
+        },
+        "language": {
+          "$ref": "#/$defs/LanguageCode"
+        },
+        "features": {
+          "$ref": "#/$defs/Features"
+        }
+      },
+      "required": [
+        "type",
+        "conversation_id",
+        "resume_token",
+        "status",
+        "languages",
+        "language",
+        "features"
+      ],
+      "additionalProperties": false
+    },
+    "ConversationHistory": {
+      "description": "On a resume: the messages so far, oldest first.",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "conversation_history"
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/HistoryMessage"
+          }
+        }
+      },
+      "required": [
+        "type",
+        "messages"
+      ],
+      "additionalProperties": false
+    },
+    "MessageAck": {
+      "description": "The message is saved.",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "message_ack"
+        },
+        "client_message_id": {
+          "$ref": "#/$defs/ClientMessageId"
+        },
+        "message_id": {
+          "$ref": "#/$defs/MessageId"
+        },
+        "occurred_at": {
+          "$ref": "#/$defs/DateTime"
+        }
+      },
+      "required": [
+        "type",
+        "client_message_id",
+        "message_id",
+        "occurred_at"
+      ],
+      "additionalProperties": false
+    },
+    "MessageError": {
+      "description": "The message wasn't saved. Send it again if retryable.",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "message_error"
+        },
+        "client_message_id": {
+          "$ref": "#/$defs/ClientMessageId"
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "code": {
+          "enum": [
+            "refused",
+            "unavailable",
+            "invalid"
+          ]
+        }
+      },
+      "required": [
+        "type",
+        "client_message_id",
+        "retryable",
+        "code"
+      ],
+      "additionalProperties": false
+    },
+    "ServerUserMessage": {
+      "description": "A message another viewer of the conversation sent.",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "user_message"
+        },
+        "client_message_id": {
+          "$ref": "#/$defs/ClientMessageId"
+        },
+        "message_id": {
+          "$ref": "#/$defs/MessageId"
+        },
+        "text": {
+          "type": "string"
+        },
+        "occurred_at": {
+          "$ref": "#/$defs/DateTime"
+        }
+      },
+      "required": [
+        "type",
+        "client_message_id",
+        "message_id",
+        "text",
+        "occurred_at"
+      ],
+      "additionalProperties": false
+    },
+    "AgentTyping": {
+      "description": "Shown before a text reply.",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "agent_typing"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "AgentChatResponsePart": {
+      "description": "One piece of a streamed reply.",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "agent_chat_response_part"
+        },
+        "event_id": {
+          "$ref": "#/$defs/EventId"
+        },
+        "text_response_part": {
+          "$ref": "#/$defs/TextResponsePart"
+        }
+      },
+      "required": [
+        "type",
+        "event_id",
+        "text_response_part"
+      ],
+      "additionalProperties": false
+    },
+    "AgentResponse": {
+      "description": "The final text of a reply.",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "agent_response"
+        },
+        "event_id": {
+          "$ref": "#/$defs/EventId"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "event_id",
+        "text"
+      ],
+      "additionalProperties": false
+    },
+    "AgentResponseCorrection": {
+      "description": "Replaces what the client has of a reply; an empty text withdraws it.",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "agent_response_correction"
+        },
+        "event_id": {
+          "$ref": "#/$defs/EventId"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "event_id",
+        "text"
+      ],
+      "additionalProperties": false
+    },
+    "OperatorMessage": {
+      "description": "An operator's reply.",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "operator_message"
+        },
+        "event_id": {
+          "$ref": "#/$defs/EventId"
+        },
+        "text": {
+          "type": "string"
+        },
+        "operator": {
+          "$ref": "#/$defs/Operator"
+        }
+      },
+      "required": [
+        "type",
+        "event_id",
+        "text",
+        "operator"
+      ],
+      "additionalProperties": false
+    },
+    "Handoff": {
+      "description": "The conversation passed to operators; the agent stays silent.",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "handoff"
+        },
+        "reason": {
+          "enum": [
+            "agent",
+            "agent_failed",
+            "balance"
+          ]
+        },
+        "mode_outcome": {
+          "enum": [
+            "continue_as_text"
+          ]
+        }
+      },
+      "required": [
+        "type",
+        "reason",
+        "mode_outcome"
+      ],
+      "additionalProperties": false
+    },
+    "TurnDebug": {
+      "description": "For testers only (caps.debug): how a turn ran.",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "turn_debug"
+        },
+        "event_id": {
+          "$ref": "#/$defs/EventId"
+        },
+        "turn_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "step": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "model": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "fallback_used": {
+          "type": "boolean"
+        },
+        "timings": {
+          "$ref": "#/$defs/TurnTimings"
+        },
+        "usage": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/UsageItem"
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "type",
+        "event_id",
+        "turn_id",
+        "step",
+        "model",
+        "fallback_used",
+        "timings",
+        "usage",
+        "warnings"
+      ],
+      "additionalProperties": false
+    },
+    "Ping": {
+      "description": "Answer with a pong carrying the same event id.",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "ping"
+        },
+        "event_id": {
+          "$ref": "#/$defs/EventId"
+        }
+      },
+      "required": [
+        "type",
+        "event_id"
+      ],
+      "additionalProperties": false
+    },
+    "ConversationEnded": {
+      "description": "The conversation ended; the server closes with 1000.",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "conversation_ended"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        }
+      },
+      "required": [
+        "type",
+        "reason"
+      ],
+      "additionalProperties": false
+    },
+    "ErrorEvent": {
+      "description": "A frame the server couldn't use. The socket stays open.",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "error"
+        },
+        "code": {
+          "enum": [
+            "unknown_event",
+            "invalid_event",
+            "internal"
+          ]
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "code",
+        "message"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

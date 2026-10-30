@@ -1,0 +1,135 @@
+{
+  "description": "A reply withdrawn when its turn failed, the holding message, and the handoff.",
+  "token": "session",
+  "frames": [
+    {
+      "from": "client",
+      "frame": {
+        "type": "conversation_initiation_client_data",
+        "text_only": true
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "conversation_initiation_metadata",
+        "conversation_id": "conv_01JB8Z5R4Q6Y2N7K3M9D0F1H3K",
+        "resume_token": "eyJhbGciOiJFZERTQSIsImtpZCI6ImUxIiwidHlwIjoiSldUIn0.eyJjb252IjoiY29udl8wMUpCOFo1UjRRNlkyTjdLM005RDBGMUgzSyIsImp0aSI6Imp0aS0xIn0.c2lnbmF0dXJlLTE",
+        "status": "ai_handling",
+        "languages": [
+          "uz",
+          "ru",
+          "en"
+        ],
+        "language": "uz",
+        "features": {
+          "text": true,
+          "voice": false,
+          "debug": false
+        }
+      }
+    },
+    {
+      "from": "client",
+      "frame": {
+        "type": "user_message",
+        "client_message_id": "c-1",
+        "text": "Narxlari qancha?"
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "message_ack",
+        "client_message_id": "c-1",
+        "message_id": 981,
+        "occurred_at": "2026-10-30T09:15:02.120Z"
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_typing"
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_chat_response_part",
+        "event_id": 2,
+        "text_response_part": {
+          "type": "start",
+          "text": ""
+        }
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_chat_response_part",
+        "event_id": 2,
+        "text_response_part": {
+          "type": "delta",
+          "text": "Narxlar "
+        }
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_response_correction",
+        "event_id": 2,
+        "text": ""
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_chat_response_part",
+        "event_id": 3,
+        "text_response_part": {
+          "type": "start",
+          "text": ""
+        }
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_chat_response_part",
+        "event_id": 3,
+        "text_response_part": {
+          "type": "delta",
+          "text": "Kechirasiz, hozir javob bera olmayman. Xabaringizni jamoamizga yubordim, tez orada shu yerda javob berishadi."
+        }
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_chat_response_part",
+        "event_id": 3,
+        "text_response_part": {
+          "type": "stop",
+          "text": ""
+        }
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_response",
+        "event_id": 3,
+        "text": "Kechirasiz, hozir javob bera olmayman. Xabaringizni jamoamizga yubordim, tez orada shu yerda javob berishadi."
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "handoff",
+        "reason": "agent_failed",
+        "mode_outcome": "continue_as_text"
+      }
+    }
+  ]
+}

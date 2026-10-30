@@ -1,0 +1,133 @@
+{
+  "description": "A new preview conversation: the first message, a question, the streamed answer and a ping.",
+  "token": "session",
+  "frames": [
+    {
+      "from": "client",
+      "frame": {
+        "type": "conversation_initiation_client_data",
+        "dynamic_variables": {
+          "customer_name": "Dilnoza"
+        },
+        "text_only": true
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "conversation_initiation_metadata",
+        "conversation_id": "conv_01JB8Z5R4Q6Y2N7K3M9D0F1H3K",
+        "resume_token": "eyJhbGciOiJFZERTQSIsImtpZCI6ImUxIiwidHlwIjoiSldUIn0.eyJjb252IjoiY29udl8wMUpCOFo1UjRRNlkyTjdLM005RDBGMUgzSyIsImp0aSI6Imp0aS0xIn0.c2lnbmF0dXJlLTE",
+        "status": "ai_handling",
+        "languages": [
+          "uz",
+          "ru",
+          "en"
+        ],
+        "language": "uz",
+        "features": {
+          "text": true,
+          "voice": false,
+          "debug": false
+        }
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_response",
+        "event_id": 1,
+        "text": "Assalomu alaykum, Dilnoza! Sizga qanday yordam bera olaman?"
+      }
+    },
+    {
+      "from": "client",
+      "frame": {
+        "type": "user_message",
+        "client_message_id": "c-1",
+        "text": "Yetkazib berish qancha turadi?"
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "message_ack",
+        "client_message_id": "c-1",
+        "message_id": 981,
+        "occurred_at": "2026-10-30T09:15:02.120Z"
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_typing"
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_chat_response_part",
+        "event_id": 2,
+        "text_response_part": {
+          "type": "start",
+          "text": ""
+        }
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_chat_response_part",
+        "event_id": 2,
+        "text_response_part": {
+          "type": "delta",
+          "text": "Toshkent boʻylab "
+        }
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_chat_response_part",
+        "event_id": 2,
+        "text_response_part": {
+          "type": "delta",
+          "text": "yetkazib berish bepul."
+        }
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_chat_response_part",
+        "event_id": 2,
+        "text_response_part": {
+          "type": "stop",
+          "text": ""
+        }
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_response",
+        "event_id": 2,
+        "text": "Toshkent boʻylab yetkazib berish bepul."
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "ping",
+        "event_id": 1
+      }
+    },
+    {
+      "from": "client",
+      "frame": {
+        "type": "pong",
+        "event_id": 1
+      }
+    }
+  ]
+}

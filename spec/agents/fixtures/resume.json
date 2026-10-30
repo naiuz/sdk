@@ -1,0 +1,73 @@
+{
+  "description": "A resume: the history, another viewer's message and an operator's reply.",
+  "token": "resume",
+  "frames": [
+    {
+      "from": "client",
+      "frame": {
+        "type": "conversation_initiation_client_data",
+        "text_only": true
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "conversation_initiation_metadata",
+        "conversation_id": "conv_01JB8Z5R4Q6Y2N7K3M9D0F1H3K",
+        "resume_token": "eyJhbGciOiJFZERTQSIsImtpZCI6ImUxIiwidHlwIjoiSldUIn0.eyJjb252IjoiY29udl8wMUpCOFo1UjRRNlkyTjdLM005RDBGMUgzSyIsImp0aSI6Imp0aS0yIn0.c2lnbmF0dXJlLTI",
+        "status": "ai_handling",
+        "languages": [
+          "uz",
+          "ru",
+          "en"
+        ],
+        "language": "uz",
+        "features": {
+          "text": true,
+          "voice": false,
+          "debug": false
+        }
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "conversation_history",
+        "messages": [
+          {
+            "role": "customer",
+            "text": "Yetkazib berish qancha turadi?",
+            "at": "2026-10-30T09:15:02.120Z"
+          },
+          {
+            "role": "agent",
+            "text": "Toshkent boʻylab yetkazib berish bepul.",
+            "at": "2026-10-30T09:15:03.480Z"
+          }
+        ]
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "user_message",
+        "client_message_id": "c-7",
+        "message_id": 982,
+        "text": "Rahmat!",
+        "occurred_at": "2026-10-30T09:15:10.000Z"
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "operator_message",
+        "event_id": 5,
+        "text": "Buyurtmangiz yoʻlda.",
+        "operator": {
+          "name": "Aziz",
+          "avatar_url": null
+        }
+      }
+    }
+  ]
+}

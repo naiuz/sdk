@@ -1,0 +1,131 @@
+{
+  "description": "A tester's session: a reply and its turn_debug.",
+  "token": "session",
+  "frames": [
+    {
+      "from": "client",
+      "frame": {
+        "type": "conversation_initiation_client_data",
+        "text_only": true
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "conversation_initiation_metadata",
+        "conversation_id": "conv_01JB8Z5R4Q6Y2N7K3M9D0F1H3K",
+        "resume_token": "eyJhbGciOiJFZERTQSIsImtpZCI6ImUxIiwidHlwIjoiSldUIn0.eyJjb252IjoiY29udl8wMUpCOFo1UjRRNlkyTjdLM005RDBGMUgzSyIsImp0aSI6Imp0aS0xIn0.c2lnbmF0dXJlLTE",
+        "status": "ai_handling",
+        "languages": [
+          "uz",
+          "ru",
+          "en"
+        ],
+        "language": "uz",
+        "features": {
+          "text": true,
+          "voice": false,
+          "debug": true
+        }
+      }
+    },
+    {
+      "from": "client",
+      "frame": {
+        "type": "user_message",
+        "client_message_id": "c-1",
+        "text": "Salom"
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "message_ack",
+        "client_message_id": "c-1",
+        "message_id": 981,
+        "occurred_at": "2026-10-30T09:15:02.120Z"
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_typing"
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_chat_response_part",
+        "event_id": 2,
+        "text_response_part": {
+          "type": "start",
+          "text": ""
+        }
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_chat_response_part",
+        "event_id": 2,
+        "text_response_part": {
+          "type": "delta",
+          "text": "Assalomu alaykum!"
+        }
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_chat_response_part",
+        "event_id": 2,
+        "text_response_part": {
+          "type": "stop",
+          "text": ""
+        }
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_response",
+        "event_id": 2,
+        "text": "Assalomu alaykum!"
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "turn_debug",
+        "event_id": 2,
+        "turn_id": "6f1c2a8e-8f2b-4b7e-9a51-1d2f3c4b5a60",
+        "step": null,
+        "model": "gemma-4-26b-a4b",
+        "fallback_used": false,
+        "timings": {
+          "queue_ms": 12,
+          "first_token_ms": 180,
+          "model_ms": 640,
+          "stt_ms": null,
+          "tts_first_chunk_ms": null,
+          "total_ms": 702
+        },
+        "usage": [
+          {
+            "service": "llm",
+            "model": "gemma-4-26b-a4b",
+            "source": "neuronai",
+            "input_tokens": 812,
+            "cached_input_tokens": 0,
+            "output_tokens": 9,
+            "audio_seconds": 0,
+            "characters": 0,
+            "cost_usd": null,
+            "estimated": false
+          }
+        ],
+        "warnings": []
+      }
+    }
+  ]
+}

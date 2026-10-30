@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/naiuz/sdk/spec/agents/fixture.schema.json",
+  "title": "A recorded agents protocol session",
+  "description": "One connection: the frames in the order they crossed it.",
+  "type": "object",
+  "properties": {
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "token": {
+      "description": "What the client connects with.",
+      "enum": [
+        "session",
+        "resume"
+      ]
+    },
+    "frames": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "from": {
+                "enum": [
+                  "client",
+                  "server"
+                ]
+              },
+              "frame": {
+                "type": "object"
+              },
+              "invalid": {
+                "description": "The frame must fail the schema.",
+                "const": true
+              }
+            },
+            "required": [
+              "from",
+              "frame"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "from": {
+                "const": "server"
+              },
+              "close": {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "integer"
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "code",
+                  "reason"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "from",
+              "close"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      }
+    }
+  },
+  "required": [
+    "description",
+    "token",
+    "frames"
+  ],
+  "additionalProperties": false
+}
