@@ -32,7 +32,7 @@ async function call(): Promise<void> {
   - `mode`: `text` in a text session; in a call, `listening`, `thinking` or `speaking`; null outside a session;
   - `isSpeaking`, while the agent speaks;
   - `micMuted`.
-- **Methods:** `startSession` resolves to the conversation's id, and a second one ends the first. Then `endSession`, `sendUserMessage`, `setMicMuted`, `setVolume`, `getInputVolume`, `getOutputVolume`, `getId` and `getResumeToken`, as on the client.
+- **Methods:** `startSession` resolves to the conversation's id, and a second one ends the first. `endSession` also stops a start still on its way, such as one waiting for the microphone: the status reads `disconnected` at once, and the session closes as soon as it arrives. Then `sendUserMessage`, `setMicMuted`, `setVolume`, `getInputVolume`, `getOutputVolume`, `getId` and `getResumeToken`, as on the client.
 - **The session ends with the component,** when its effect scope does.
 - **Callbacks** are the client's (see [its README](../client/README.md)). They run after the refs have changed.
 - `vue` ^3.5 is a peer dependency.

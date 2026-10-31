@@ -14,6 +14,7 @@ export interface UseConversation {
     micMuted: Readonly<Ref<boolean>>;
     /** Starts a session, ending the one before; resolves to the conversation's id. */
     startSession(options: Omit<SessionOptions, keyof Callbacks>): Promise<string>;
+    /** Ends the session. A start still on its way stops: it shows as disconnected at once, and closes when it arrives. */
     endSession(): Promise<void>;
     sendUserMessage(text: string, options?: SendOptions): Promise<MessageAck>;
     setMicMuted(muted: boolean): void;
@@ -37,6 +38,8 @@ export function useConversation(callbacks: Callbacks = {}): UseConversation {
     let conversation: Conversation | null = null;
     /** Each start's number: a session's callbacks change the refs only while it is the newest. */
     let starts = 0;
+    /** The start still waiting for its session, which endSession() can stop. */
+    let pending: number | null = null;
 
     /** A session's callbacks: the refs change, then the app hears, only while it is the newest. */
     function ownCallbacks(start: number): Callbacks {
@@ -77,6 +80,18 @@ export function useConversation(callbacks: Callbacks = {}): UseConversation {
     }
 
     async function endSession(): Promise<void> {
+        if (pending !== null) {
+            // A start still on its way ends itself when it arrives; until then nothing shows it, and its callbacks are
+            // no longer the app's.
+            pending = null;
+            starts++;
+            status.value = "disconnected";
+            mode.value = null;
+            conversationStatus.value = null;
+            callbacks.onStatusChange?.({status: "disconnected"});
+            callbacks.onDisconnect?.({reason: "user"});
+            return;
+        }
         const ending = conversation;
         conversation = null;
         conversationStatus.value = null;
@@ -85,6 +100,7 @@ export function useConversation(callbacks: Callbacks = {}): UseConversation {
 
     async function startSession(options: Omit<SessionOptions, keyof Callbacks>): Promise<string> {
         const start = ++starts;
+        pending = start;
         // The session being replaced no longer reports its mode or status, so none shows until the new one has its own.
         mode.value = null;
         conversationStatus.value = null;
@@ -93,7 +109,12 @@ export function useConversation(callbacks: Callbacks = {}): UseConversation {
         // Started before the old one ends, so its audio starts inside the caller's gesture, whatever the end takes.
         const starting = Conversation.startSession({...options, ...ownCallbacks(start)});
         void replaced?.endSession();
-        const started = await starting;
+        let started: Conversation;
+        try {
+            started = await starting;
+        } finally {
+            if (pending === start) pending = null;
+        }
         if (start !== starts) {
             // A newer start, or the component's end, came while this one waited.
             await started.endSession();
@@ -107,6 +128,7 @@ export function useConversation(callbacks: Callbacks = {}): UseConversation {
     if (getCurrentScope() !== undefined) {
         onScopeDispose(() => {
             starts++;
+            pending = null;
             void endSession();
         });
     }

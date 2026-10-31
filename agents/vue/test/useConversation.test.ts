@@ -202,6 +202,42 @@ describe("useConversation", () => {
         expect(sockets.socket.readyState).toBe(3);
     });
 
+    test("endSession() stops a start still on its way", async () => {
+        const seen: string[] = [];
+        const {conversation} = inScope({
+            onStatusChange: ({status}) => seen.push(`status ${status}`),
+            onDisconnect: ({reason}) => seen.push(`disconnect ${reason}`),
+        });
+        const sockets = fakeSockets();
+        const starting = conversation.startSession({token: "tok", WebSocket: sockets.factory});
+        starting.catch(() => undefined);
+        await opened(sockets, 1);
+        expect(conversation.status.value).toBe("connecting");
+
+        // Ended while it connects, as when the microphone prompt is still open: nothing shows it from now on.
+        await conversation.endSession();
+        expect([conversation.status.value, conversation.mode.value]).toEqual(["disconnected", null]);
+        expect(seen).toEqual(["status connecting", "status disconnected", "disconnect user"]);
+
+        // It closes once it arrives, and its promise says it was replaced.
+        sockets.socket.open();
+        sockets.socket.serverSends(metadata());
+        await expect(starting).rejects.toThrow(/replaced/);
+        expect(sockets.socket.readyState).toBe(3);
+        expect([conversation.status.value, conversation.getId(), conversation.getResumeToken()]).toEqual(["disconnected", "", null]);
+        expect(seen).toEqual(["status connecting", "status disconnected", "disconnect user"]);
+
+        // The next start is the app's session again.
+        const next = fakeSockets();
+        const again = conversation.startSession({token: "tok-2", WebSocket: next.factory});
+        await opened(next, 1);
+        next.socket.open();
+        next.socket.serverSends(metadata("resume-2"));
+        await again;
+        expect([conversation.status.value, conversation.getResumeToken()]).toEqual(["connected", "resume-2"]);
+        await conversation.endSession();
+    });
+
     test("the app's callbacks still run", async () => {
         const seen: string[] = [];
         const {conversation} = inScope({
