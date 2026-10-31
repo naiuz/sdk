@@ -69,6 +69,18 @@ test("an agents package not yet released holds the first version, and takes its 
     assert.equal(config.plugins, undefined);
 });
 
+test("a release of an agents package moves its version in the workspace's lock too", async () => {
+    const config = await json("release-please-config.json");
+    for (const [path, folder] of [["agents/protocol", "protocol"], ["agents/client", "client"], ["agents/vue", "vue"]]) {
+        // A path from the repository's root, since the lock sits above the package's folder.
+        assert.deepEqual(
+            config.packages[path]["extra-files"],
+            [{type: "json", path: "/agents/package-lock.json", jsonpath: `$.packages.${folder}.version`}],
+            path,
+        );
+    }
+});
+
 test("below 1.0.0, a breaking change bumps an SDK's minor version and anything else its patch, as ^0.1.0 ranges expect", async () => {
     const config = await json("release-please-config.json");
     assert.equal(config["bump-minor-pre-major"], true);

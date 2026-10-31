@@ -254,7 +254,7 @@ jobs:
   agents-npm:
     name: Publish @naiuz/agents to npm
     needs: [agents-npm-build, agents-protocol-npm]
-    if: ${{ !cancelled() && needs.agents-npm-build.result == 'success' }}
+    if: ${{ !cancelled() && needs.agents-npm-build.result == 'success' && needs.agents-protocol-npm.result != 'failure' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     environment:
@@ -330,7 +330,7 @@ jobs:
   agents-vue-npm:
     name: Publish @naiuz/agents-vue to npm
     needs: [agents-vue-npm-build, agents-npm]
-    if: ${{ !cancelled() && needs.agents-vue-npm-build.result == 'success' }}
+    if: ${{ !cancelled() && needs.agents-vue-npm-build.result == 'success' && needs.agents-npm.result != 'failure' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     environment:

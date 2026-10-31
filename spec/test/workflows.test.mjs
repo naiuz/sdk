@@ -302,7 +302,7 @@ test("npm gets @naiuz/sdk once, with provenance, through trusted publishing or t
     assert.equal(release.match(/secrets\.NPM_TOKEN/g)?.length, 4);
 });
 
-test("npm gets each agents package once, with provenance, after the package it depends on", async () => {
+test("npm gets each agents package once, with provenance, after the package it depends on, and never after it failed", async () => {
     const release = await read("release.yml");
     for (const [component, folder, file, after] of [
         ["agents-protocol", "protocol", "naiuz-agents-protocol", null],
@@ -318,7 +318,10 @@ test("npm gets each agents package once, with provenance, after the package it d
 
         const publish = jobText(release, `${component}-npm`);
         const needs = after === null ? `${component}-npm-build` : `\\[${component}-npm-build, ${after}\\]`;
-        assert.match(publish, new RegExp(`needs: ${needs}\\n\\s+if: \\$\\{\\{ !cancelled\\(\\) && needs\\.${component}-npm-build\\.result == 'success' \\}\\}\\n`), component);
+        // A package whose dependency failed to publish waits, since it would name a version npm doesn't have; one
+        // that was skipped, with nothing to release, doesn't hold it back.
+        const waits = after === null ? "" : ` && needs\\.${after}\\.result != 'failure'`;
+        assert.match(publish, new RegExp(`needs: ${needs}\\n\\s+if: \\$\\{\\{ !cancelled\\(\\) && needs\\.${component}-npm-build\\.result == 'success'${waits} \\}\\}\\n`), component);
         assert.match(publish, /permissions:\n\s+id-token: write\n\s+steps:\n/, component);
         assert.doesNotMatch(publish, /actions\/checkout|npm ci|npm run/, component);
         assert.match(publish, new RegExp(`name: npm-${component}\\n`), component);
