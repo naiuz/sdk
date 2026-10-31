@@ -3,7 +3,7 @@ import {BrowserAudio} from "./audio/browser";
 import type {AudioIO} from "./audio/io";
 import {Call} from "./call";
 import {MessageError, MicrophoneError, SessionError} from "./errors";
-import type {DisconnectDetails, MessageAck, Mode, SendOptions, SessionOptions, Status, WebSocketFactory, WebSocketLike} from "./types";
+import type {Callbacks, ConversationStatus, DisconnectDetails, MessageAck, Mode, SendOptions, SessionOptions, Status, WebSocketFactory, WebSocketLike} from "./types";
 
 const DEFAULT_URL = "wss://my.neuronai.uz/api/v1/realtime";
 const OPEN = 1;
@@ -65,6 +65,8 @@ export class Conversation {
     /** This connection's side of the call, from its metadata to its close. */
     private call: Call | null = null;
     private mode: Mode | null = null;
+    /** The status the last metadata gave, so a reconnect reports only a change. */
+    private conversationStatus: ConversationStatus | null = null;
 
     private constructor(private readonly options: SessionOptions) {
         this.WebSocketClass = options.WebSocket ?? (globalThis.WebSocket as unknown as WebSocketFactory);
@@ -213,7 +215,6 @@ export class Conversation {
         } catch {
             return;
         }
-        const o = this.options;
         switch (event.type) {
             case "conversation_initiation_metadata":
                 this.conversationId = event.conversation_id;
@@ -225,16 +226,20 @@ export class Conversation {
                     this.resendOnHistory = true;
                 } else {
                     this.connectedOnce = true;
-                    o.onConnect?.({conversationId: event.conversation_id});
+                    this.emit("onConnect", {conversationId: event.conversation_id, status: event.status});
                     // A call's mode comes with the agent's state.
                     if (this.call === null) this.changeMode("text");
+                }
+                if (event.status !== this.conversationStatus) {
+                    this.conversationStatus = event.status;
+                    this.emit("onConversationStatus", {status: event.status});
                 }
                 this.opening?.resolve();
                 this.opening = null;
                 break;
             case "conversation_history":
                 for (const line of event.messages) if (line.message_id !== null) this.seenMessageIds.add(line.message_id);
-                o.onHistory?.(event.messages);
+                this.emit("onHistory", event.messages);
                 this.settleFromHistory(event.messages);
                 if (this.resendOnHistory) {
                     this.resendOnHistory = false;
@@ -253,34 +258,34 @@ export class Conversation {
                 // This client's own message, or one already shown: a reconnect can deliver either again.
                 if (this.sentIds.has(event.client_message_id) || this.seenMessageIds.has(event.message_id)) break;
                 this.seenMessageIds.add(event.message_id);
-                o.onMessage?.({source: "user", message: event.text, messageId: event.message_id});
+                this.emit("onMessage", {source: "user", message: event.text, messageId: event.message_id});
                 break;
             case "agent_typing":
-                o.onAgentTyping?.();
+                this.emit("onAgentTyping");
                 break;
             case "agent_chat_response_part":
-                o.onAgentChatResponsePart?.({eventId: event.event_id, type: event.text_response_part.type, text: event.text_response_part.text});
+                this.emit("onAgentChatResponsePart", {eventId: event.event_id, type: event.text_response_part.type, text: event.text_response_part.text});
                 break;
             case "agent_response":
-                o.onMessage?.({source: "ai", message: event.text, eventId: event.event_id});
+                this.emit("onMessage", {source: "ai", message: event.text, eventId: event.event_id});
                 break;
             case "agent_response_correction":
-                o.onAgentResponseCorrection?.({eventId: event.event_id, text: event.text});
+                this.emit("onAgentResponseCorrection", {eventId: event.event_id, text: event.text});
                 break;
             case "operator_message":
-                o.onMessage?.({source: "operator", message: event.text, eventId: event.event_id, operator: event.operator});
+                this.emit("onMessage", {source: "operator", message: event.text, eventId: event.event_id, operator: event.operator});
                 break;
             case "handoff":
-                o.onHandoff?.({reason: event.reason});
+                this.emit("onHandoff", {reason: event.reason});
                 break;
             case "turn_debug":
-                o.onDebug?.(event);
+                this.emit("onDebug", event);
                 break;
             case "agent_state":
                 this.changeMode(event.state);
                 break;
             case "user_transcript":
-                o.onMessage?.({source: "user", message: event.text, spoken: true, language: event.language, occurredAt: event.occurred_at});
+                this.emit("onMessage", {source: "user", message: event.text, spoken: true, language: event.language, occurredAt: event.occurred_at});
                 break;
             case "audio_pause":
                 this.call?.pause(event.event_id);
@@ -298,7 +303,7 @@ export class Conversation {
                 this.endedReason = event.reason;
                 break;
             case "error":
-                o.onError?.(event.message, {code: event.code});
+                this.emit("onError", event.message, {code: event.code});
                 break;
             default:
                 // A newer server's event: clients ignore what they don't know.
@@ -410,7 +415,7 @@ export class Conversation {
         this.setStatus("disconnected");
         for (const [clientMessageId, pending] of this.pending) pending.reject(new MessageError(clientMessageId, resumable, "unavailable"));
         this.pending.clear();
-        this.options.onDisconnect?.(details);
+        this.emit("onDisconnect", details);
     }
 
     private disconnectDetails(code: number, reason: string): DisconnectDetails {
@@ -448,7 +453,7 @@ export class Conversation {
     private changeMode(mode: Mode): void {
         if (mode === this.mode) return;
         this.mode = mode;
-        this.options.onModeChange?.({mode});
+        this.emit("onModeChange", {mode});
     }
 
     private sendMessage(clientMessageId: string, text: string): void {
@@ -468,10 +473,21 @@ export class Conversation {
         return timer;
     }
 
+    /** Calls one of the app's callbacks. One that throws is reported, and the client goes on as if it had returned. */
+    private emit<Name extends keyof Callbacks>(name: Name, ...args: Parameters<NonNullable<Callbacks[Name]>>): void {
+        const callback = this.options[name] as ((...given: unknown[]) => void) | undefined;
+        if (callback === undefined) return;
+        try {
+            callback(...args);
+        } catch (error) {
+            reportCallbackError(error);
+        }
+    }
+
     private setStatus(status: Status): void {
         if (status === this.currentStatus) return;
         this.currentStatus = status;
-        this.options.onStatusChange?.({status});
+        this.emit("onStatusChange", {status});
     }
 }
 
@@ -488,4 +504,16 @@ function deferred<T>(): {promise: Promise<T>; resolve: (value: T) => void; rejec
         reject = fail;
     });
     return {promise, resolve, reject};
+}
+
+/** An error an app's callback threw, shown where the runtime shows uncaught errors without stopping the client. */
+function reportCallbackError(error: unknown): void {
+    const report = (globalThis as {reportError?: (error: unknown) => void}).reportError;
+    if (typeof report === "function") {
+        report(error);
+        return;
+    }
+    setTimeout(() => {
+        throw error;
+    });
 }

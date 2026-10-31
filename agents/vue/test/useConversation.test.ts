@@ -41,6 +41,31 @@ describe("useConversation", () => {
         expect(conversation.getId()).toBe("");
     });
 
+    test("mirrors the conversation status as a ref", async () => {
+        const {conversation} = inScope();
+        expect(conversation.conversationStatus.value).toBeNull();
+        const first = fakeSockets();
+        const started = conversation.startSession({token: "tok", WebSocket: first.factory});
+        await opened(first, 1);
+        first.socket.open();
+        first.socket.serverSends(metadata());
+        await started;
+        expect(conversation.conversationStatus.value).toBe("ai_handling");
+
+        // A newer session replaces it: the old one's status no longer reaches the ref.
+        const second = fakeSockets();
+        const replacing = conversation.startSession({token: "tok-2", WebSocket: second.factory});
+        await opened(second, 1);
+        first.socket.serverSends({...metadata("resume-9"), status: "resolved"});
+        second.socket.open();
+        second.socket.serverSends({...metadata("resume-2"), status: "human_handling"});
+        await replacing;
+        expect(conversation.conversationStatus.value).toBe("human_handling");
+
+        await conversation.endSession();
+        expect(conversation.conversationStatus.value).toBeNull();
+    });
+
     test("isSpeaking holds only while the agent speaks", async () => {
         const {conversation} = inScope();
         const sockets = fakeSockets();

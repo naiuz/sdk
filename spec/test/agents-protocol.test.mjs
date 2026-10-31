@@ -42,6 +42,17 @@ test("an unknown event, an extra field or a missing field is refused", () => {
     assert.equal(client({type: "user_message", client_message_id: "c-1", text: ""}), false);
 });
 
+test("a turn_debug says why its turn failed, or null when it went through", () => {
+    const debug = {
+        type: "turn_debug", event_id: 3, turn_id: "0f8fad5b-d9cb-469f-a165-70867728950e", step: null, model: "gemma-4",
+        fallback_used: false, timings: {queue_ms: 4, first_token_ms: 310, model_ms: 900, stt_ms: null, tts_first_chunk_ms: null, total_ms: 950},
+        usage: [], warnings: [],
+    };
+    assert.equal(server({...debug, error_code: null}), true, ajv.errorsText(server.errors));
+    assert.equal(server({...debug, error_code: "model_timeout"}), true, ajv.errorsText(server.errors));
+    assert.equal(server(debug), false);
+});
+
 test("every event the schema defines appears in a fixture, on its side", () => {
     const seen = (side) => new Set(fixtures.flatMap(([, recorded]) => recorded.frames
         .filter((item) => item.from === side && item.frame && item.invalid !== true)

@@ -1,7 +1,10 @@
-import type {AudioFormat, HistoryMessage, LanguageCode, Operator, TurnDebug} from "@naiuz/agents-protocol";
+import type {AudioFormat, ConversationInitiationMetadata, HistoryMessage, LanguageCode, Operator, TurnDebug} from "@naiuz/agents-protocol";
 import type {AudioIO} from "./audio/io";
 
 export type Status = "connecting" | "connected" | "reconnecting" | "disconnected";
+
+/** Who is handling the conversation, as each metadata says: the AI, an operator, or a call, for example. */
+export type ConversationStatus = ConversationInitiationMetadata["status"];
 
 /** A text session's mode is text. A call's is the agent's state: listening, thinking or speaking. */
 export type Mode = "text" | "listening" | "thinking" | "speaking";
@@ -50,7 +53,12 @@ export interface DisconnectDetails {
 }
 
 export interface Callbacks {
-    onConnect?: (details: {conversationId: string}) => void;
+    onConnect?: (details: {conversationId: string; status: ConversationStatus}) => void;
+    /**
+     * The conversation's status from the first metadata, then from any reconnect's that changes it: an operator who
+     * took over while the connection was down, for example.
+     */
+    onConversationStatus?: (change: {status: ConversationStatus}) => void;
     onDisconnect?: (details: DisconnectDetails) => void;
     onStatusChange?: (change: {status: Status}) => void;
     onModeChange?: (change: {mode: Mode}) => void;

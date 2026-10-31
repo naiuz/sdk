@@ -221,6 +221,8 @@ export interface TurnDebug {
     timings: TurnTimings;
     usage: UsageItem[];
     warnings: string[];
+    /** Why the turn failed, for the builder's preview: model_timeout, model_unavailable, model_error, egress_blocked, config_invalid, config_unavailable, secret_missing, turn_expired or internal. Null when the turn went through. Treat a code you don't know as internal. */
+    error_code: string | null;
 }
 
 /** Answer with a pong carrying the same event id. */

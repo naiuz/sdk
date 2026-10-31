@@ -46,7 +46,7 @@ describe("a session", () => {
 
     test("calls onConnect, onModeChange and onStatusChange as it connects", async () => {
         const {calls} = await connected();
-        expect(calls.onConnect).toEqual([[{conversationId: CONVERSATION}]]);
+        expect(calls.onConnect).toEqual([[{conversationId: CONVERSATION, status: "ai_handling"}]]);
         expect(calls.onModeChange).toEqual([[{mode: "text"}]]);
         expect(calls.onStatusChange.map(([change]) => change.status)).toEqual(["connecting", "connected"]);
     });
