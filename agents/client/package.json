@@ -55,6 +55,6 @@
     "generate": "node scripts/worklet-module.mjs"
   },
   "dependencies": {
-    "@naiuz/agents-protocol": "0.1.0"
+    "@naiuz/agents-protocol": "^0.1.0"
   }
 }

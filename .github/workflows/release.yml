@@ -32,6 +32,10 @@ jobs:
       js: ${{ steps.release.outputs['js--tag_name'] }}
       python: ${{ steps.release.outputs['python--tag_name'] }}
       php: ${{ steps.release.outputs['php--tag_name'] }}
+      # The action names a package's outputs by its path.
+      agents-protocol: ${{ steps.release.outputs['agents/protocol--tag_name'] }}
+      agents: ${{ steps.release.outputs['agents/client--tag_name'] }}
+      agents-vue: ${{ steps.release.outputs['agents/vue--tag_name'] }}
     steps:
       # The release app's token, not GITHUB_TOKEN, whose pull requests CI never runs on.
       - name: Get a token from the release app
@@ -128,6 +132,236 @@ jobs:
             echo "npm has @naiuz/sdk $VERSION already."
           else
             npm publish "./naiuz-sdk-$VERSION.tgz"
+          fi
+
+  # The agents packages publish in their dependencies' order: the protocol, the client, then the Vue package. Each
+  # needs the release before it only for ordering; a package's range takes whatever patch release npm has.
+  agents-protocol-npm-build:
+    name: Build @naiuz/agents-protocol for npm
+    needs: release-please
+    if: >-
+      !cancelled() && github.repository == 'naiuz/sdk' && github.ref == 'refs/heads/main' &&
+      (needs.release-please.outputs.agents-protocol != '' || startsWith(inputs.tag, 'agents-protocol-v'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+    env:
+      TAG: ${{ needs.release-please.outputs.agents-protocol || inputs.tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: refs/tags/${{ env.TAG }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check that the tag is a release of agents-protocol
+        id: check
+        run: node .github/scripts/release-check.mjs agents-protocol "$TAG"
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+      # This job holds no publishing credential, and runs no dependency's install script: the build needs none.
+      - run: npm ci --ignore-scripts
+        working-directory: agents
+      - run: npm run build
+        working-directory: agents
+      - run: npm test
+        working-directory: agents
+      - run: npm pack
+        working-directory: agents/protocol
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: npm-agents-protocol
+          path: agents/protocol/naiuz-agents-protocol-*.tgz
+          if-no-files-found: error
+
+  agents-protocol-npm:
+    name: Publish @naiuz/agents-protocol to npm
+    needs: agents-protocol-npm-build
+    if: ${{ !cancelled() && needs.agents-protocol-npm-build.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment:
+      name: npm
+      url: https://www.npmjs.com/package/@naiuz/agents-protocol
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: npm-agents-protocol
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - name: Check for npm 11.5.1 or later, which trusted publishing needs
+        run: |
+          version="$(npm --version)"
+          if [ "$(printf '%s\n' 11.5.1 "$version" | sort -V | head -n 1)" != 11.5.1 ]; then
+            echo "::error title=npm too old::Trusted publishing needs npm 11.5.1 or later, and this runner has $version."
+            exit 1
+          fi
+      - name: Publish, unless npm has this version already
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          VERSION: ${{ needs.agents-protocol-npm-build.outputs.version }}
+        run: |
+          if [ "$(npm view "@naiuz/agents-protocol@$VERSION" version 2>/dev/null)" = "$VERSION" ]; then
+            echo "npm has @naiuz/agents-protocol $VERSION already."
+          else
+            npm publish "./naiuz-agents-protocol-$VERSION.tgz"
+          fi
+
+  agents-npm-build:
+    name: Build @naiuz/agents for npm
+    needs: release-please
+    if: >-
+      !cancelled() && github.repository == 'naiuz/sdk' && github.ref == 'refs/heads/main' &&
+      (needs.release-please.outputs.agents != '' || startsWith(inputs.tag, 'agents-v'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+    env:
+      TAG: ${{ needs.release-please.outputs.agents || inputs.tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: refs/tags/${{ env.TAG }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check that the tag is a release of agents
+        id: check
+        run: node .github/scripts/release-check.mjs agents "$TAG"
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+      # This job holds no publishing credential, and runs no dependency's install script: the build needs none.
+      - run: npm ci --ignore-scripts
+        working-directory: agents
+      - run: npm run build
+        working-directory: agents
+      - run: npm test
+        working-directory: agents
+      - run: npm pack
+        working-directory: agents/client
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: npm-agents
+          path: agents/client/naiuz-agents-*.tgz
+          if-no-files-found: error
+
+  agents-npm:
+    name: Publish @naiuz/agents to npm
+    needs: [agents-npm-build, agents-protocol-npm]
+    if: ${{ !cancelled() && needs.agents-npm-build.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment:
+      name: npm
+      url: https://www.npmjs.com/package/@naiuz/agents
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: npm-agents
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - name: Check for npm 11.5.1 or later, which trusted publishing needs
+        run: |
+          version="$(npm --version)"
+          if [ "$(printf '%s\n' 11.5.1 "$version" | sort -V | head -n 1)" != 11.5.1 ]; then
+            echo "::error title=npm too old::Trusted publishing needs npm 11.5.1 or later, and this runner has $version."
+            exit 1
+          fi
+      - name: Publish, unless npm has this version already
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          VERSION: ${{ needs.agents-npm-build.outputs.version }}
+        run: |
+          if [ "$(npm view "@naiuz/agents@$VERSION" version 2>/dev/null)" = "$VERSION" ]; then
+            echo "npm has @naiuz/agents $VERSION already."
+          else
+            npm publish "./naiuz-agents-$VERSION.tgz"
+          fi
+
+  agents-vue-npm-build:
+    name: Build @naiuz/agents-vue for npm
+    needs: release-please
+    if: >-
+      !cancelled() && github.repository == 'naiuz/sdk' && github.ref == 'refs/heads/main' &&
+      (needs.release-please.outputs.agents-vue != '' || startsWith(inputs.tag, 'agents-vue-v'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+    env:
+      TAG: ${{ needs.release-please.outputs.agents-vue || inputs.tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: refs/tags/${{ env.TAG }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check that the tag is a release of agents-vue
+        id: check
+        run: node .github/scripts/release-check.mjs agents-vue "$TAG"
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+      # This job holds no publishing credential, and runs no dependency's install script: the build needs none.
+      - run: npm ci --ignore-scripts
+        working-directory: agents
+      - run: npm run build
+        working-directory: agents
+      - run: npm test
+        working-directory: agents
+      - run: npm pack
+        working-directory: agents/vue
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: npm-agents-vue
+          path: agents/vue/naiuz-agents-vue-*.tgz
+          if-no-files-found: error
+
+  agents-vue-npm:
+    name: Publish @naiuz/agents-vue to npm
+    needs: [agents-vue-npm-build, agents-npm]
+    if: ${{ !cancelled() && needs.agents-vue-npm-build.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment:
+      name: npm
+      url: https://www.npmjs.com/package/@naiuz/agents-vue
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: npm-agents-vue
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - name: Check for npm 11.5.1 or later, which trusted publishing needs
+        run: |
+          version="$(npm --version)"
+          if [ "$(printf '%s\n' 11.5.1 "$version" | sort -V | head -n 1)" != 11.5.1 ]; then
+            echo "::error title=npm too old::Trusted publishing needs npm 11.5.1 or later, and this runner has $version."
+            exit 1
+          fi
+      - name: Publish, unless npm has this version already
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          VERSION: ${{ needs.agents-vue-npm-build.outputs.version }}
+        run: |
+          if [ "$(npm view "@naiuz/agents-vue@$VERSION" version 2>/dev/null)" = "$VERSION" ]; then
+            echo "npm has @naiuz/agents-vue $VERSION already."
+          else
+            npm publish "./naiuz-agents-vue-$VERSION.tgz"
           fi
 
   pypi-build:

@@ -71,6 +71,21 @@ test("the JavaScript SDK's checks run on Node 20, 22 and 24 when js/ or spec/ ch
     assert.deepEqual([...steps].sort((a, b) => a - b), steps, "in this order");
 });
 
+test("the agents packages' checks run on Node 20, 22 and 24 when agents/ or spec/agents/ changes, generated files included", async () => {
+    const agents = await read("agents.yml");
+    assert.match(agents, /pull_request:\n\s+paths:\n\s+- "agents\/\*\*"\n\s+- "spec\/agents\/\*\*"\n\s+- "\.github\/workflows\/agents\.yml"\n/);
+    assert.match(agents, /push:\n\s+branches: \[main\]\n\s+paths:\n\s+- "agents\/\*\*"\n\s+- "spec\/agents\/\*\*"\n\s+- "\.github\/workflows\/agents\.yml"\n/);
+    assert.match(agents, /node: \[20, 22, 24\]/);
+    assert.match(agents, /node-version: \$\{\{ matrix\.node \}\}/);
+    assert.match(agents, /working-directory: agents\n/);
+    assert.match(agents, /cache-dependency-path: agents\/package-lock\.json/);
+    // The protocol's types and the worklet module are generated and committed: CI fails when they are stale.
+    const steps = ["npm ci", "npm run generate", "git diff --exit-code", "npm run lint", "npm run typecheck", "npm test", "npm run build"]
+        .map((command) => agents.indexOf(`run: ${command}\n`));
+    assert.ok(steps.every((index) => index > 0), "every step is there");
+    assert.deepEqual([...steps].sort((a, b) => a - b), steps, "in this order");
+});
+
 test("the JavaScript SDK's built package runs mocked calls on Node, Bun and Deno", async () => {
     const js = await read("js.yml");
     assert.match(js, /run: npm run build\n\s+- run: node smoke\/runtimes\.mjs\n/);
@@ -220,7 +235,7 @@ test("the release workflow runs on each push to main and by hand, never for a pu
     assert.match(release, /^permissions:\n {2}contents: read\n/m);
     assert.match(release, /^concurrency:\n {2}group: release\n {2}cancel-in-progress: false\n/m);
     // Only naiuz/sdk runs it, not a fork, and no job can hold the concurrency group for GitHub's six hours.
-    assert.equal(release.match(/github\.repository == 'naiuz\/sdk'/g)?.length, 4);
+    assert.equal(release.match(/github\.repository == 'naiuz\/sdk'/g)?.length, 7);
     assert.equal(release.match(/timeout-minutes:/g)?.length, release.match(/runs-on:/g)?.length);
 });
 
@@ -229,21 +244,31 @@ test("release-please runs on the release app's token, so that CI runs on the rel
     assert.match(job, /if: github\.event_name == 'push' && github\.repository == 'naiuz\/sdk'\n/);
     assert.match(job, /client-id: \$\{\{ vars\.RELEASE_APP_CLIENT_ID \}\}\n\s+private-key: \$\{\{ secrets\.RELEASE_APP_PRIVATE_KEY \}\}\n\s+permission-contents: write\n\s+permission-issues: write\n\s+permission-pull-requests: write\n/);
     assert.match(job, /token: \$\{\{ steps\.app\.outputs\.token \}\}\n\s+config-file: release-please-config\.json\n\s+manifest-file: \.release-please-manifest\.json\n/);
-    for (const component of ["js", "python", "php"]) {
-        assert.match(job, new RegExp(`${component}: \\$\\{\\{ steps\\.release\\.outputs\\['${component}--tag_name'\\] \\}\\}\\n`));
+    // The action names each package's outputs by its path, so the agents packages' carry their folder.
+    for (const [output, path] of [
+        ["js", "js"], ["python", "python"], ["php", "php"],
+        ["agents-protocol", "agents/protocol"], ["agents", "agents/client"], ["agents-vue", "agents/vue"],
+    ]) {
+        assert.match(job, new RegExp(`${output}: \\$\\{\\{ steps\\.release\\.outputs\\['${path}--tag_name'\\] \\}\\}\\n`));
     }
 });
 
 test("each SDK's publish takes only a release-please tag of that SDK on main, once its environment's reviewer approves", async () => {
     const release = await read("release.yml");
-    for (const [job, component] of [["npm-build", "js"], ["pypi-build", "python"], ["packagist", "php"]]) {
+    for (const [job, component] of [
+        ["npm-build", "js"], ["pypi-build", "python"], ["packagist", "php"],
+        ["agents-protocol-npm-build", "agents-protocol"], ["agents-npm-build", "agents"], ["agents-vue-npm-build", "agents-vue"],
+    ]) {
         const text = jobText(release, job);
         assert.match(text, new RegExp(`!cancelled\\(\\) && github\\.repository == 'naiuz/sdk' && github\\.ref == 'refs/heads/main' &&\\n\\s+\\(needs\\.release-please\\.outputs\\.${component} != '' \\|\\| startsWith\\(inputs\\.tag, '${component}-v'\\)\\)\\n`), job);
         assert.match(text, new RegExp(`TAG: \\$\\{\\{ needs\\.release-please\\.outputs\\.${component} \\|\\| inputs\\.tag \\}\\}\\n`), job);
         assert.match(text, /ref: refs\/tags\/\$\{\{ env\.TAG \}\}\n\s+fetch-depth: 0\n\s+persist-credentials: false\n/, job);
         assert.match(text, new RegExp(`id: check\\n\\s+run: node \\.github/scripts/release-check\\.mjs ${component} "\\$TAG"\\n`), job);
     }
-    for (const [job, environment] of [["npm", "npm"], ["pypi", "pypi"], ["packagist", "packagist"]]) {
+    for (const [job, environment] of [
+        ["npm", "npm"], ["pypi", "pypi"], ["packagist", "packagist"],
+        ["agents-protocol-npm", "npm"], ["agents-npm", "npm"], ["agents-vue-npm", "npm"],
+    ]) {
         assert.match(jobText(release, job), new RegExp(`environment:\\n\\s+name: ${environment}\\n`), job);
     }
 });
@@ -273,7 +298,33 @@ test("npm gets @naiuz/sdk once, with provenance, through trusted publishing or t
     assert.match(npm, /printf '%s\\n' 11\.5\.1 "\$version" \| sort -V \| head -n 1/);
     assert.match(npm, /NODE_AUTH_TOKEN: \$\{\{ secrets\.NPM_TOKEN \}\}\n\s+VERSION: \$\{\{ needs\.npm-build\.outputs\.version \}\}\n/);
     assert.match(npm, /if \[ "\$\(npm view "@naiuz\/sdk@\$VERSION" version 2>\/dev\/null\)" = "\$VERSION" \]; then\n[\s\S]*else\n\s+npm publish "\.\/naiuz-sdk-\$VERSION\.tgz"\n/);
-    assert.equal(release.match(/secrets\.NPM_TOKEN/g)?.length, 1);
+    // Each npm publish reads the token, and nothing else does.
+    assert.equal(release.match(/secrets\.NPM_TOKEN/g)?.length, 4);
+});
+
+test("npm gets each agents package once, with provenance, after the package it depends on", async () => {
+    const release = await read("release.yml");
+    for (const [component, folder, file, after] of [
+        ["agents-protocol", "protocol", "naiuz-agents-protocol", null],
+        ["agents", "client", "naiuz-agents", "agents-protocol-npm"],
+        ["agents-vue", "vue", "naiuz-agents-vue", "agents-npm"],
+    ]) {
+        const build = jobText(release, `${component}-npm-build`);
+        assert.doesNotMatch(build, /id-token|secrets\./, component);
+        assert.match(build, /outputs:\n\s+version: \$\{\{ steps\.check\.outputs\.version \}\}\n/, component);
+        assert.match(build, /run: npm ci --ignore-scripts\n[\s\S]*run: npm run build\n[\s\S]*run: npm test\n/, component);
+        assert.match(build, new RegExp(`run: npm pack\\n\\s+working-directory: agents/${folder}\\n`), component);
+        assert.match(build, new RegExp(`name: npm-${component}\\n\\s+path: agents/${folder}/${file}-\\*\\.tgz\\n\\s+if-no-files-found: error\\n`), component);
+
+        const publish = jobText(release, `${component}-npm`);
+        const needs = after === null ? `${component}-npm-build` : `\\[${component}-npm-build, ${after}\\]`;
+        assert.match(publish, new RegExp(`needs: ${needs}\\n\\s+if: \\$\\{\\{ !cancelled\\(\\) && needs\\.${component}-npm-build\\.result == 'success' \\}\\}\\n`), component);
+        assert.match(publish, /permissions:\n\s+id-token: write\n\s+steps:\n/, component);
+        assert.doesNotMatch(publish, /actions\/checkout|npm ci|npm run/, component);
+        assert.match(publish, new RegExp(`name: npm-${component}\\n`), component);
+        assert.match(publish, /printf '%s\\n' 11\.5\.1 "\$version" \| sort -V \| head -n 1/, component);
+        assert.match(publish, new RegExp(`if \\[ "\\$\\(npm view "@naiuz/${file.replace("naiuz-", "")}@\\$VERSION" version 2>/dev/null\\)" = "\\$VERSION" \\]; then\\n[\\s\\S]*else\\n\\s+npm publish "\\./${file}-\\$VERSION\\.tgz"\\n`), component);
+    }
 });
 
 test("PyPI gets naiuz built and checked before the approval, then through trusted publishing from the pypi environment", async () => {

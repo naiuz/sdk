@@ -1,0 +1,44 @@
+name: Agents packages
+
+on:
+  pull_request:
+    paths:
+      - "agents/**"
+      - "spec/agents/**"
+      - ".github/workflows/agents.yml"
+  push:
+    branches: [main]
+    paths:
+      - "agents/**"
+      - "spec/agents/**"
+      - ".github/workflows/agents.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Node ${{ matrix.node }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22, 24]
+    defaults:
+      run:
+        working-directory: agents
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: agents/package-lock.json
+      - run: npm ci
+      # The protocol's types and the client's worklet module are generated and committed: a stale one fails here.
+      - run: npm run generate
+      - run: git diff --exit-code
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build

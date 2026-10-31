@@ -38,6 +38,18 @@
       "release-type": "php",
       "component": "php",
       "extra-files": ["src/NeuronAI.php"]
+    },
+    "agents/protocol": {
+      "release-type": "node",
+      "component": "agents-protocol"
+    },
+    "agents/client": {
+      "release-type": "node",
+      "component": "agents"
+    },
+    "agents/vue": {
+      "release-type": "node",
+      "component": "agents-vue"
     }
   }
 }

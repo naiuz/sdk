@@ -23,13 +23,16 @@ const VERSION_FILES = {
     },
 };
 
-test("release-please gives each SDK its own release pull request, changelog and tag, such as js-v0.1.0", async () => {
+test("release-please gives each SDK and agents package its own release pull request, changelog and tag, such as js-v0.1.0", async () => {
     const config = await json("release-please-config.json");
     assert.equal(config["separate-pull-requests"], true);
     assert.equal(config["include-component-in-tag"], true);
     assert.equal(config["include-v-in-tag"], true);
     const packages = Object.entries(config.packages).map(([path, options]) => [path, options["release-type"], options.component]);
-    assert.deepEqual(packages, [["js", "node", "js"], ["python", "python", "python"], ["php", "php", "php"]]);
+    assert.deepEqual(packages, [
+        ["js", "node", "js"], ["python", "python", "python"], ["php", "php", "php"],
+        ["agents/protocol", "node", "agents-protocol"], ["agents/client", "node", "agents"], ["agents/vue", "node", "agents-vue"],
+    ]);
     // Each changelog is CHANGELOG.md in the SDK's own folder, release-please's default.
     for (const options of Object.values(config.packages)) assert.equal(options["changelog-path"], undefined);
 });
@@ -48,6 +51,22 @@ test("each SDK's first release is 0.1.0, with a changelog of what came after the
     const manifest = await json(".release-please-manifest.json");
     assert.deepEqual(Object.keys(manifest), ["js", "python", "php"]);
     for (const version of Object.values(manifest)) assert.match(version, /^\d+\.\d+\.\d+$/);
+});
+
+test("an agents package not yet released holds the first version, and takes its sibling's patch releases by its range", async () => {
+    const config = await json("release-please-config.json");
+    const manifest = await json(".release-please-manifest.json");
+    const lock = await json("agents/package-lock.json");
+    for (const path of ["agents/protocol", "agents/client", "agents/vue"]) {
+        const own = await json(`${path}/package.json`);
+        assert.equal(own.version, manifest[path] ?? config["initial-version"], path);
+        assert.equal(lock.packages[path.replace("agents/", "")].version, own.version, `${path} in agents/package-lock.json`);
+    }
+    // A patch release of the protocol or the client reaches the package above it without a release of its own; a
+    // breaking change bumps the minor version, and the package above has to change with it anyway.
+    assert.equal((await json("agents/client/package.json")).dependencies["@naiuz/agents-protocol"], "^0.1.0");
+    assert.equal((await json("agents/vue/package.json")).dependencies["@naiuz/agents"], "^0.1.0");
+    assert.equal(config.plugins, undefined);
 });
 
 test("below 1.0.0, a breaking change bumps an SDK's minor version and anything else its patch, as ^0.1.0 ranges expect", async () => {

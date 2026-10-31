@@ -79,6 +79,31 @@ test("the release check passes a tag release-please made of an SDK on main, and 
     });
 });
 
+test("the release check knows the agents packages by their components, and reads each one's own folder", async () => {
+    await withDirectory(async (directory) => {
+        const origin = join(directory, "origin");
+        git(directory, "init", "--quiet", "--initial-branch=main", origin);
+        const manifest = {js: "0.1.0", python: "0.1.0", php: "0.1.0", "agents/protocol": "0.1.0", "agents/client": "0.1.0", "agents/vue": "0.1.0"};
+        await commit(origin, {
+            ...versions({manifest}),
+            "agents/protocol/package.json": `${JSON.stringify({name: "@naiuz/agents-protocol", version: "0.1.0"}, null, 2)}\n`,
+            "agents/client/package.json": `${JSON.stringify({name: "@naiuz/agents", version: "0.1.0"}, null, 2)}\n`,
+            "agents/vue/package.json": `${JSON.stringify({name: "@naiuz/agents-vue", version: "0.1.0"}, null, 2)}\n`,
+        }, "chore(main): release agents 0.1.0");
+        for (const tag of ["agents-protocol-v0.1.0", "agents-v0.1.0", "agents-vue-v0.1.0"]) git(origin, "tag", tag);
+        const clone = join(directory, "clone");
+        git(directory, "clone", "--quiet", origin, clone);
+        for (const component of ["agents-protocol", "agents", "agents-vue"]) {
+            git(clone, "checkout", "--quiet", `${component}-v0.1.0`);
+            const result = run(clone, process.execPath, releaseCheck, component, `${component}-v0.1.0`);
+            assert.deepEqual([result.status, result.stdout], [0, "0.1.0\n"], `${component}: ${result.stdout}`);
+        }
+        // The client's tag pattern never takes the protocol's tag, though both begin with "agents".
+        const crossed = run(clone, process.execPath, releaseCheck, "agents", "agents-protocol-v0.1.0");
+        assert.deepEqual([crossed.status, crossed.stdout], [1, '::error title=Not a release::"agents-protocol-v0.1.0" isn\'t a release tag of agents, such as agents-v0.1.0.\n']);
+    });
+});
+
 test("the release check refuses anything else, before anything is published", async () => {
     await withDirectory(async (directory) => {
         const origin = join(directory, "origin");
@@ -100,7 +125,7 @@ test("the release check refuses anything else, before anything is published", as
         const clone = join(directory, "clone");
         git(directory, "clone", "--quiet", origin, clone);
         const refusals = [
-            ["js-v0.1.0", "ruby", "ruby-v0.1.0", '"ruby" isn\'t an SDK: give js, python or php.'],
+            ["js-v0.1.0", "ruby", "ruby-v0.1.0", '"ruby" isn\'t a package this repository releases: give js, python, php, agents-protocol, agents or agents-vue.'],
             ["js-v0.1.0", "js", "python-v0.1.0", '"python-v0.1.0" isn\'t a release tag of js, such as js-v0.1.0.'],
             ["js-v0.1.0", "js", "js-v0.1", '"js-v0.1" isn\'t a release tag of js, such as js-v0.1.0.'],
             ["js-v0.1.0", "js", "js-v0.1.0; rm -rf ~", '"js-v0.1.0; rm -rf ~" isn\'t a release tag of js, such as js-v0.1.0.'],
