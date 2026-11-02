@@ -1,8 +1,8 @@
-# The agents protocol, version 0.1
+# The agents protocol, version 0.2
 
 A client talks to a NeuronAI agent over one WebSocket. This document is the prose spec. The events themselves are defined in [`events.schema.json`](events.schema.json), which is the source of truth. [`fixtures/`](fixtures) holds recorded sessions that the SDKs and the engine both replay.
 
-Version 0.1 covers text conversations and basic voice calls (see [Voice](#voice)). Later 0.x versions add events and fields without changing the ones here.
+Version 0.1 covers text conversations and basic voice calls (see [Voice](#voice)). Version 0.2 adds [client tools](#client-tools). Later 0.x versions add events and fields without changing the ones here.
 
 ## Connecting
 
@@ -22,10 +22,11 @@ The server accepts every connection and then closes it with a [close code](#clos
 
 | Event | Fields |
 |---|---|
-| `conversation_initiation_client_data` | All optional: `dynamic_variables` (values for the agent's variables; signed values in the token win), `overrides` (`first_message`, `language`; only those the token allows), `text_only` (`false` asks for a call; left out, the session is text), `audio` (a call's formats: `input` `pcm_16000`, `output` `pcm_16000` or `pcm_24000`), `user_id` |
+| `conversation_initiation_client_data` | All optional: `dynamic_variables` (values for the agent's variables; signed values in the token win), `overrides` (`first_message`, `language`; only those the token allows), `text_only` (`false` asks for a call; left out, the session is text), `audio` (a call's formats: `input` `pcm_16000`, `output` `pcm_16000` or `pcm_24000`), `user_id`, `client_tools` (the names of the client tools this page runs, at most 32) |
 | `user_message` | `client_message_id`: your own id for the message, `^[A-Za-z0-9_-]{1,64}$`, the same on every retry; `text`: 1 to 10,000 characters |
 | `playback` | `event_id`, `played_ms`: milliseconds of that reply's audio played since its first frame, pauses excluded. Sent every 250 ms while it plays, once when it pauses (on `audio_pause` or `interruption`), and whenever its audio runs out, at its end or early after a stall, so the server knows what was heard |
 | `pong` | `event_id`: the id of the `ping` it answers |
+| `client_tool_result` | `tool_call_id`: the call it answers; `result`: what the tool returned, as text (JSON for anything else), at most 8,000 characters; `is_error`: true when the tool couldn't do it, `result` saying why. The first answer to a call wins |
 
 ## Server events
 
@@ -42,7 +43,8 @@ The server accepts every connection and then closes it with a [close code](#clos
 | `agent_response_correction` | `event_id`, `text`: replaces what you have of that reply. An empty text withdraws it. After an `interruption` it is the reply's final text: nothing more comes for that `event_id` |
 | `operator_message` | `event_id`, `text`, `operator` (`name`, `avatar_url`): an operator's reply |
 | `handoff` | `reason` (`agent`, `agent_failed` or `balance`), `mode_outcome` (`continue_as_text`): operators have the conversation now, and the agent stays silent |
-| `turn_debug` | Only when the token allows debugging: how a turn ran, with its `event_id`, `turn_id`, `step`, `model`, `fallback_used`, `timings`, `usage`, `warnings` and `error_code`: null when the turn went through, otherwise why it failed (`model_timeout`, `model_unavailable`, `model_error`, `egress_blocked`, `config_invalid`, `config_unavailable`, `secret_missing`, `turn_expired` or `internal`; take a code you don't know as `internal`) |
+| `turn_debug` | Only when the token allows debugging: how a turn ran, with its `event_id`, `turn_id`, `step`, `model`, `fallback_used`, `timings`, `usage`, `warnings` and `error_code`: null when the turn went through, otherwise why it failed (`model_timeout`, `model_unavailable`, `model_error`, `egress_blocked`, `config_invalid`, `config_unavailable`, `secret_missing`, `turn_expired` or `internal`; take a code you don't know as `internal`), and `tool_calls`: each tool call of the turn, secrets masked (`kind`, `name`, `arguments`, `result`, `status`, `error_code`, `http_status`, `duration_ms`) |
+| `client_tool_call` | `tool_call_id`, `tool_name`, `parameters` (the values the agent filled), `expects_response`. See [Client tools](#client-tools) |
 | `agent_state` | In a call: `state` (`listening`, `thinking` or `speaking`), which drives the orb |
 | `user_transcript` | In a call: `text`, `language`, `occurred_at`: what the customer said, once their turn ended. Every viewer gets it |
 | `audio_pause` | In a call: `event_id`. The customer started speaking over that reply: pause its playback and keep the buffer |
@@ -150,6 +152,19 @@ The server accepts every connection and then closes it with a [close code](#clos
 ## Unknown events
 
 A newer client may send an event an older server doesn't know. The server answers `error` with `unknown_event` and keeps the connection open, so clients can add events safely. Clients should likewise ignore server events they don't know.
+
+## Client tools
+
+A client tool runs in the customer's page: opening the cart, filling a form, reading what the page shows.
+
+- The page names the client tools it runs in `client_tools`, in its handshake.
+- When the agent calls one, every connection of the conversation gets `client_tool_call`.
+- With `expects_response`:
+  - a page that runs the tool answers `client_tool_result`, with the same `tool_call_id`;
+  - the agent waits for the first answer, up to the tool's timeout, and goes on without one after that.
+- Without `expects_response`, the agent doesn't wait, and an answer is ignored.
+- A call to a tool no connected page named answers "not available" to the agent at once, and the agent goes on without it.
+- The agent reads a result as data, never as instructions.
 
 ## Fixtures
 

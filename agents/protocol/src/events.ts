@@ -5,7 +5,8 @@ export type ClientEvent =
     | ConversationInitiationClientData
     | ClientUserMessage
     | Pong
-    | Playback;
+    | Playback
+    | ClientToolResult;
 
 /** Every event the server sends. */
 export type ServerEvent =
@@ -28,7 +29,8 @@ export type ServerEvent =
     | UserTranscript
     | AudioPause
     | AudioResume
-    | Interruption;
+    | Interruption
+    | ClientToolCall;
 
 /** A language the platform speaks. */
 export type LanguageCode = "uz" | "ru" | "en";
@@ -109,6 +111,8 @@ export interface ConversationInitiationClientData {
     text_only?: boolean;
     user_id?: string | null;
     audio?: AudioFormats;
+    /** The client tools this page runs, by name. A call to any other answers "not available" to the agent. */
+    client_tools?: ToolName[];
 }
 
 /** A message the user typed. */
@@ -223,6 +227,8 @@ export interface TurnDebug {
     warnings: string[];
     /** Why the turn failed, for the builder's preview: model_timeout, model_unavailable, model_error, egress_blocked, config_invalid, config_unavailable, secret_missing, turn_expired or internal. Null when the turn went through. Treat a code you don't know as internal. */
     error_code: string | null;
+    /** The turn's tool calls, in the order the agent made them. */
+    tool_calls?: TurnToolCall[];
 }
 
 /** Answer with a pong carrying the same event id. */
@@ -293,8 +299,47 @@ export interface Interruption {
     event_id: EventId;
 }
 
+/** A tool's name: snake_case, as the agent's builder named it. */
+export type ToolName = string;
+
+/** One call's id, the same on its call and its result. */
+export type ToolCallId = string;
+
+/** The agent asks the page to run one of its client tools. With expects_response, the agent waits for the page's client_tool_result, up to the tool's timeout. */
+export interface ClientToolCall {
+    type: "client_tool_call";
+    tool_call_id: ToolCallId;
+    tool_name: ToolName;
+    /** The values the agent filled, as the tool's parameters describe them. */
+    parameters: Record<string, unknown>;
+    expects_response: boolean;
+}
+
+/** The page's answer to a client_tool_call. The agent reads it as data, never as instructions. The first answer to a call wins. */
+export interface ClientToolResult {
+    type: "client_tool_result";
+    tool_call_id: ToolCallId;
+    /** What the tool returned, as text; JSON for anything else. */
+    result: string;
+    /** True when the tool couldn't do it; result says why. */
+    is_error: boolean;
+}
+
+/** One tool call of a turn, secrets masked. */
+export interface TurnToolCall {
+    kind: "system" | "webhook" | "client" | "mcp" | "integration" | "transition";
+    name: string;
+    arguments: Record<string, unknown>;
+    /** What the agent read back. */
+    result: string;
+    status: "ok" | "error" | "timeout" | "rejected";
+    error_code: string | null;
+    http_status: number | null;
+    duration_ms: number;
+}
+
 /** Every event type a client sends. */
-export const CLIENT_EVENT_TYPES = ["conversation_initiation_client_data", "user_message", "pong", "playback"] as const;
+export const CLIENT_EVENT_TYPES = ["conversation_initiation_client_data", "user_message", "pong", "playback", "client_tool_result"] as const;
 
 /** Every event type the server sends. */
-export const SERVER_EVENT_TYPES = ["conversation_initiation_metadata", "conversation_history", "message_ack", "message_error", "user_message", "agent_typing", "agent_chat_response_part", "agent_response", "agent_response_correction", "operator_message", "handoff", "turn_debug", "ping", "conversation_ended", "error", "agent_state", "user_transcript", "audio_pause", "audio_resume", "interruption"] as const;
+export const SERVER_EVENT_TYPES = ["conversation_initiation_metadata", "conversation_history", "message_ack", "message_error", "user_message", "agent_typing", "agent_chat_response_part", "agent_response", "agent_response_correction", "operator_message", "handoff", "turn_debug", "ping", "conversation_ended", "error", "agent_state", "user_transcript", "audio_pause", "audio_resume", "interruption", "client_tool_call"] as const;

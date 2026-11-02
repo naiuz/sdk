@@ -7,7 +7,7 @@ const SCHEMA = new URL("../../../spec/agents/events.schema.json", import.meta.ur
 const OUT = new URL("../src/events.ts", import.meta.url);
 
 /** Keywords that only constrain values the types already allow, or describe them. */
-const ANNOTATIONS = new Set(["description", "format", "pattern", "minLength", "maxLength", "minItems", "minimum"]);
+const ANNOTATIONS = new Set(["description", "format", "pattern", "minLength", "maxLength", "minItems", "maxItems", "minimum"]);
 const SCALARS = {string: "string", integer: "number", number: "number", boolean: "boolean", null: "null"};
 
 function fail(path, message) {
@@ -70,6 +70,8 @@ function typeOf(schema, path, indent) {
 function objectType(schema, path, indent) {
     checkKeywords(schema, new Set(["type", "properties", "required", "additionalProperties"]), path);
     const properties = Object.entries(schema.properties ?? {});
+    // Any JSON object: a tool's parameters, which the tool's own schema describes.
+    if (properties.length === 0 && schema.additionalProperties === true) return "Record<string, unknown>";
     if (properties.length === 0 && typeof schema.additionalProperties === "object") {
         return `Record<string, ${typeOf(schema.additionalProperties, `${path}/additionalProperties`, indent)}>`;
     }

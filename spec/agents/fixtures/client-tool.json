@@ -1,0 +1,83 @@
+{
+  "description": "A page that runs the client tool open_cart: it declares it, the agent calls it, and the page answers.",
+  "token": "session",
+  "frames": [
+    {
+      "from": "client",
+      "frame": {
+        "type": "conversation_initiation_client_data",
+        "text_only": true,
+        "client_tools": [
+          "open_cart"
+        ]
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "conversation_initiation_metadata",
+        "conversation_id": "conv_01JB8Z5R4Q6Y2N7K3M9D0F1H3K",
+        "resume_token": "eyJhbGciOiJFZERTQSIsImtpZCI6ImUxIiwidHlwIjoiSldUIn0.eyJjb252IjoiY29udl8wMUpCOFo1UjRRNlkyTjdLM005RDBGMUgzSyIsImp0aSI6Imp0aS0xIn0.c2lnbmF0dXJlLTE",
+        "status": "ai_handling",
+        "languages": [
+          "uz",
+          "ru",
+          "en"
+        ],
+        "language": "uz",
+        "features": {
+          "text": true,
+          "voice": false,
+          "debug": false
+        },
+        "audio": null
+      }
+    },
+    {
+      "from": "client",
+      "frame": {
+        "type": "user_message",
+        "client_message_id": "c-1",
+        "text": "Savatimni oching"
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "message_ack",
+        "client_message_id": "c-1",
+        "message_id": 981,
+        "occurred_at": "2026-11-02T09:15:02.120Z"
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "client_tool_call",
+        "tool_call_id": "t-5c1d",
+        "tool_name": "open_cart",
+        "parameters": {
+          "highlight_sku": "A-7"
+        },
+        "expects_response": true
+      }
+    },
+    {
+      "from": "client",
+      "frame": {
+        "type": "client_tool_result",
+        "tool_call_id": "t-5c1d",
+        "result": "{\"items\":2}",
+        "is_error": false
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_response",
+        "event_id": 2,
+        "text": "Savatingizni ochdim: unda 2 ta mahsulot bor."
+      }
+    }
+  ]
+}

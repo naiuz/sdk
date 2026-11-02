@@ -4,7 +4,7 @@ import {tmpdir} from "node:os";
 import {join} from "node:path";
 import {fileURLToPath} from "node:url";
 import {describe, expect, expectTypeOf, test} from "vitest";
-import {CLIENT_EVENT_TYPES, SERVER_EVENT_TYPES, type AudioFormats, type ConversationInitiationMetadata, type ServerEvent} from "../src/index";
+import {CLIENT_EVENT_TYPES, SERVER_EVENT_TYPES, type AudioFormats, type ClientToolCall, type ClientToolResult, type ConversationInitiationClientData, type ConversationInitiationMetadata, type ServerEvent, type TurnDebug} from "../src/index";
 
 interface Schema {
     $defs: Record<string, {oneOf?: {$ref: string}[]; properties?: {type?: {const?: string}}}>;
@@ -25,6 +25,15 @@ describe("the generated types", () => {
     test("name every event of each side", () => {
         expect([...CLIENT_EVENT_TYPES].sort()).toEqual(typesOf("ClientEvent").sort());
         expect([...SERVER_EVENT_TYPES].sort()).toEqual(typesOf("ServerEvent").sort());
+    });
+
+    test("carry the client tool events, protocol 0.2", () => {
+        expect(CLIENT_EVENT_TYPES).toContain("client_tool_result");
+        expect(SERVER_EVENT_TYPES).toContain("client_tool_call");
+        expectTypeOf<ClientToolCall["expects_response"]>().toEqualTypeOf<boolean>();
+        expectTypeOf<ClientToolResult["is_error"]>().toEqualTypeOf<boolean>();
+        expectTypeOf<ConversationInitiationClientData["client_tools"]>().toEqualTypeOf<string[] | undefined>();
+        expectTypeOf<NonNullable<TurnDebug["tool_calls"]>[number]["status"]>().toEqualTypeOf<"ok" | "error" | "timeout" | "rejected">();
     });
 
     test("make a reference or null a nullable type", () => {
