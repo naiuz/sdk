@@ -91,6 +91,8 @@ const conversation = await Conversation.startSession({
 });
 ```
 
+- Name each handler as the tool is named on the agent, in snake_case; a page runs at most 32. `startSession` rejects with a `TypeError` that names a handler it can't declare.
+- With the conversation open in several tabs, a call goes to one of them: the tab the customer last wrote or called from, when it has the handler.
 - The handler gets the values the agent filled.
 - What it returns is what the agent reads: text as it is, anything else as JSON, cut to 8,000 characters.
 - If it throws, the agent learns the call failed, with the error's message.

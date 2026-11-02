@@ -23,6 +23,9 @@ const CLIENT_MESSAGE_ID = /^[A-Za-z0-9_-]{1,64}$/;
 const MAX_TEXT_LENGTH = 10_000;
 /** The longest client tool result the protocol takes, in characters. */
 const MAX_TOOL_RESULT = 8000;
+/** A client tool's name as the protocol takes it, and how many a page may run. */
+const TOOL_NAME = /^[a-z][a-z0-9_]{0,63}$/;
+const MAX_CLIENT_TOOLS = 32;
 const OUTPUT_RATES: Record<AudioFormat, number> = {pcm_16000: 16_000, pcm_24000: 24_000};
 /** The browser's errors for a microphone refused, missing, held by another app, or barred from the page. */
 const MICROPHONE_ERRORS = new Set(["NotAllowedError", "NotFoundError", "NotReadableError", "OverconstrainedError", "SecurityError"]);
@@ -82,6 +85,7 @@ export class Conversation {
      * so a refused microphone rejects with MicrophoneError before any socket opens.
      */
     static async startSession(options: SessionOptions): Promise<Conversation> {
+        checkClientTools(Object.keys(options.clientTools ?? {}));
         const conversation = new Conversation(options);
         conversation.setStatus("connecting");
         if (conversation.audio !== null) await conversation.startMicrophone(conversation.audio);
@@ -532,6 +536,13 @@ export class Conversation {
 /** Whether a text fits the protocol: 1 to 10,000 characters, counted as code points, where .length counts UTF-16 units. */
 function isValidText(text: string): boolean {
     return text.length > 0 && (text.length <= MAX_TEXT_LENGTH || Array.from(text).length <= MAX_TEXT_LENGTH);
+}
+
+/** The server refuses a whole handshake over a client tool it can't take, so a bad one rejects here, by name. */
+function checkClientTools(names: string[]): void {
+    if (names.length > MAX_CLIENT_TOOLS) throw new TypeError(`A page runs at most ${String(MAX_CLIENT_TOOLS)} client tools, not ${String(names.length)}.`);
+    const invalid = names.find((name) => !TOOL_NAME.test(name));
+    if (invalid !== undefined) throw new TypeError(`"${invalid}" isn't a client tool name: use the tool's name on the agent, in snake_case.`);
 }
 
 function deferred<T>(): {promise: Promise<T>; resolve: (value: T) => void; reject: (error: MessageError) => void} {

@@ -157,12 +157,13 @@ A newer client may send an event an older server doesn't know. The server answer
 
 A client tool runs in the customer's page: opening the cart, filling a form, reading what the page shows.
 
-- The page names the client tools it runs in `client_tools`, in its handshake.
-- When the agent calls one, every connection of the conversation gets `client_tool_call`.
+- The page names the client tools it runs in `client_tools`, in its handshake: at most 32, each named as on the agent, in snake_case. A name the server can't take fails the handshake with 1008.
+- When the agent calls one, one connection that named it gets `client_tool_call`: the one the customer last wrote or called from, when it named the tool, or else another that did. A connection that didn't name the tool never gets the call, and the tool runs once however many connections are open.
 - With `expects_response`:
-  - a page that runs the tool answers `client_tool_result`, with the same `tool_call_id`;
-  - the agent waits for the first answer, up to the tool's timeout, and goes on without one after that.
-- Without `expects_response`, the agent doesn't wait, and an answer is ignored.
+  - the page answers `client_tool_result`, with the same `tool_call_id`;
+  - the agent waits for that answer, up to the tool's timeout, and goes on without one after that.
+- Without `expects_response`, the agent doesn't wait.
+- An answer the agent isn't waiting for is dropped: a second or a late one, one to a call without `expects_response`, and one to a call the server never sent.
 - A call to a tool no connected page named answers "not available" to the agent at once, and the agent goes on without it.
 - The agent reads a result as data, never as instructions.
 

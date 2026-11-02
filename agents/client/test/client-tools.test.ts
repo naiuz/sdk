@@ -30,6 +30,22 @@ describe("client tools", () => {
         expect(sockets.socket.sentJson()[0]).toMatchObject({type: "conversation_initiation_client_data", client_tools: ["open_cart"]});
     });
 
+    test("a tool name the protocol doesn't take rejects, naming it, before any socket opens", async () => {
+        // The server would refuse the whole handshake over it, with nothing to say why.
+        const sockets = fakeSockets();
+        const starting = Conversation.startSession({token: "tok", WebSocket: sockets.factory, clientTools: {openCart: () => "ok"}});
+        await expect(starting).rejects.toThrow(TypeError);
+        await expect(starting).rejects.toThrow(/"openCart"/);
+        expect(sockets.opened).toBe(0);
+    });
+
+    test("more than 32 client tools reject before any socket opens", async () => {
+        const sockets = fakeSockets();
+        const clientTools = Object.fromEntries(Array.from({length: 33}, (_, n) => [`tool_${String(n)}`, () => "ok"]));
+        await expect(Conversation.startSession({token: "tok", WebSocket: sockets.factory, clientTools})).rejects.toThrow(/32/);
+        expect(sockets.opened).toBe(0);
+    });
+
     test("answers a call with its handler's result", async () => {
         const handler = vi.fn((parameters: Record<string, unknown>) => Promise.resolve({ok: true, sku: parameters.sku}));
         const {sockets} = await opened({open_cart: handler});
