@@ -74,6 +74,29 @@ const level = conversation.getOutputVolume(); // 0 to 1, for a visualizer; getIn
 
 The page shows the orb, the agent's state, the transcript with each reply cut to what was heard, each reply's audio received and played, and the server's events. "Speak over the reply" plays `uz-long.wav` over the agent's reply, or over the next one when the agent isn't speaking.
 
+## Client tools
+
+A client tool runs in your page, when the agent asks: opening the cart, filling a form, reading what the page shows. Define it on the agent, then give the session a handler for it:
+
+```ts
+const conversation = await Conversation.startSession({
+    token,
+    clientTools: {
+        open_cart: async ({highlight_sku}) => {
+            await cart.open(highlight_sku as string | undefined);
+            return {items: cart.count()};
+        },
+    },
+    onUnhandledClientToolCall: (call) => console.warn("No handler for", call.toolName),
+});
+```
+
+- The handler gets the values the agent filled.
+- What it returns is what the agent reads: text as it is, anything else as JSON, cut to 8,000 characters.
+- If it throws, the agent learns the call failed, with the error's message.
+- When the tool doesn't wait for its result, the agent goes on at once and the return value is ignored.
+- A call to a tool the page has no handler for is answered with an error, and fires `onUnhandledClientToolCall`.
+
 ## Messages that fail
 
 `sendUserMessage` rejects with a `MessageError` that has `clientMessageId`, `retryable` and `code`:

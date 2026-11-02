@@ -1,4 +1,4 @@
-import type {AudioFormat, ConversationInitiationClientData, HistoryMessage, ServerEvent} from "@naiuz/agents-protocol";
+import type {AudioFormat, ClientToolCall, ConversationInitiationClientData, HistoryMessage, ServerEvent} from "@naiuz/agents-protocol";
 import {BrowserAudio} from "./audio/browser";
 import type {AudioIO} from "./audio/io";
 import {Call} from "./call";
@@ -21,6 +21,8 @@ const RETRY_DELAY_MS = 500;
 const SILENCE_MS = 40_000;
 const CLIENT_MESSAGE_ID = /^[A-Za-z0-9_-]{1,64}$/;
 const MAX_TEXT_LENGTH = 10_000;
+/** The longest client tool result the protocol takes, in characters. */
+const MAX_TOOL_RESULT = 8000;
 const OUTPUT_RATES: Record<AudioFormat, number> = {pcm_16000: 16_000, pcm_24000: 24_000};
 /** The browser's errors for a microphone refused, missing, held by another app, or barred from the page. */
 const MICROPHONE_ERRORS = new Set(["NotAllowedError", "NotFoundError", "NotReadableError", "OverconstrainedError", "SecurityError"]);
@@ -200,6 +202,8 @@ export class Conversation {
         frame.text_only = this.audio === null;
         if (this.audio !== null) frame.audio = {input: "pcm_16000", output: this.options.output ?? "pcm_24000"};
         if (userId !== undefined) frame.user_id = userId;
+        const tools = Object.keys(this.options.clientTools ?? {});
+        if (tools.length > 0) frame.client_tools = tools;
         return frame;
     }
 
@@ -277,6 +281,9 @@ export class Conversation {
                 break;
             case "handoff":
                 this.emit("onHandoff", {reason: event.reason});
+                break;
+            case "client_tool_call":
+                this.runClientTool(event);
                 break;
             case "turn_debug":
                 this.emit("onDebug", event);
@@ -456,6 +463,37 @@ export class Conversation {
         this.emit("onModeChange", {mode});
     }
 
+    /** Runs the page's handler for the agent's call, and answers it when the agent waits for the result. */
+    private runClientTool(call: ClientToolCall): void {
+        const answer = (result: string, isError: boolean) => {
+            if (!call.expects_response) return;
+            const cut = Array.from(result).slice(0, MAX_TOOL_RESULT).join("");
+            this.send({type: "client_tool_result", tool_call_id: call.tool_call_id, result: cut, is_error: isError});
+        };
+        const handler = this.options.clientTools?.[call.tool_name];
+        if (handler === undefined) {
+            this.emit("onUnhandledClientToolCall", {
+                toolCallId: call.tool_call_id, toolName: call.tool_name, parameters: call.parameters, expectsResponse: call.expects_response,
+            });
+            answer(`This page has no tool called ${call.tool_name}.`, true);
+            return;
+        }
+        let running: Promise<unknown>;
+        try {
+            running = Promise.resolve(handler(call.parameters));
+        } catch (error) {
+            running = Promise.reject(error instanceof Error ? error : new Error(String(error)));
+        }
+        running.then(
+            (value) => {
+                answer(resultText(value), false);
+            },
+            (error: unknown) => {
+                answer(error instanceof Error ? error.message : String(error), true);
+            },
+        );
+    }
+
     private sendMessage(clientMessageId: string, text: string): void {
         this.send({type: "user_message", client_message_id: clientMessageId, text});
     }
@@ -516,4 +554,17 @@ function reportCallbackError(error: unknown): void {
     setTimeout(() => {
         throw error;
     });
+}
+
+/** JSON.stringify as it behaves: undefined for undefined and functions, though its type says string. */
+const stringify = JSON.stringify as (value: unknown) => string | undefined;
+
+/** A handler's result as the agent reads it: text as it is, anything else as JSON, nothing for what has none. */
+function resultText(value: unknown): string {
+    if (typeof value === "string") return value;
+    try {
+        return stringify(value) ?? "";
+    } catch {
+        return "";
+    }
 }

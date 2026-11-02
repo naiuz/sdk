@@ -21,6 +21,8 @@ export interface Recorded {
 
 export interface ReplayOptions {
     idGenerator?: () => string;
+    /** The page's client tools, for a recording that declares some. */
+    clientTools?: SessionOptions["clientTools"];
     /** A second recorded connection the client reconnects into after the first closes. */
     then?: Recorded;
 }
@@ -77,6 +79,7 @@ export async function replay(first: Recorded, options: ReplayOptions = {}) {
         token: first.token === "session" ? "session-token" : "resume-token-0",
         WebSocket: sockets.factory,
         ...(options.idGenerator === undefined ? {} : {idGenerator: options.idGenerator}),
+        ...(options.clientTools === undefined ? {} : {clientTools: options.clientTools}),
         ...optionsFrom(first.frames[0]?.frame),
         ...callbacks,
     });

@@ -52,6 +52,17 @@ export interface DisconnectDetails {
     message?: string;
 }
 
+/** One of the page's client tools: the agent's values in, what the agent should read back out, or a Promise of it. */
+export type ClientToolHandler = (parameters: Record<string, unknown>) => unknown;
+
+/** A call to a client tool this page has no handler for. */
+export interface UnhandledClientToolCall {
+    toolCallId: string;
+    toolName: string;
+    parameters: Record<string, unknown>;
+    expectsResponse: boolean;
+}
+
 export interface Callbacks {
     onConnect?: (details: {conversationId: string; status: ConversationStatus}) => void;
     /**
@@ -69,6 +80,8 @@ export interface Callbacks {
     onHistory?: (messages: HistoryMessage[]) => void;
     onHandoff?: (handoff: {reason: "agent" | "agent_failed" | "balance"}) => void;
     onDebug?: (event: TurnDebug) => void;
+    /** The agent called a client tool this page has no handler for. A call that expects a response is answered with an error. */
+    onUnhandledClientToolCall?: (call: UnhandledClientToolCall) => void;
     onError?: (message: string, context: {code: string}) => void;
 }
 
@@ -91,4 +104,9 @@ export interface SessionOptions extends Callbacks {
     WebSocket?: WebSocketFactory;
     /** Makes each message's client_message_id. Defaults to crypto.randomUUID. */
     idGenerator?: () => string;
+    /**
+     * The client tools this page runs, by name. A handler gets the agent's values and returns what the agent reads back:
+     * text as it is, anything else as JSON, cut to 8,000 characters. A handler that throws answers with its message.
+     */
+    clientTools?: Record<string, ClientToolHandler>;
 }

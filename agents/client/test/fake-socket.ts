@@ -143,6 +143,7 @@ export function recorder(): {calls: Recorded; callbacks: Required<Callbacks>} {
     const names = [
         "onConnect", "onDisconnect", "onStatusChange", "onModeChange", "onMessage", "onAgentChatResponsePart",
         "onAgentResponseCorrection", "onAgentTyping", "onHistory", "onHandoff", "onDebug", "onError", "onConversationStatus",
+        "onUnhandledClientToolCall",
     ] as const;
     const calls = Object.fromEntries(names.map((name) => [name, []])) as unknown as Recorded;
     const callbacks = Object.fromEntries(names.map((name) => [name, (...args: unknown[]) => {
