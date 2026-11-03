@@ -799,6 +799,13 @@
           "items": {
             "$ref": "#/$defs/TurnToolCall"
           }
+        },
+        "knowledge": {
+          "description": "The passages of the agent's documents the model read, best first.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TurnPassage"
+          }
         }
       },
       "required": [
@@ -1150,6 +1157,47 @@
         "error_code",
         "http_status",
         "duration_ms"
+      ],
+      "additionalProperties": false
+    },
+    "TurnPassage": {
+      "description": "A passage of a document a turn used.",
+      "type": "object",
+      "properties": {
+        "document_id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "document_name": {
+          "type": "string"
+        },
+        "page": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "heading": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "score": {
+          "type": "number"
+        },
+        "excerpt": {
+          "type": "string",
+          "description": "The start of the passage."
+        }
+      },
+      "required": [
+        "document_id",
+        "document_name",
+        "page",
+        "heading",
+        "score",
+        "excerpt"
       ],
       "additionalProperties": false
     }

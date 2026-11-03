@@ -126,7 +126,17 @@
           }
         ],
         "warnings": [],
-        "error_code": null
+        "error_code": null,
+        "knowledge": [
+          {
+            "document_id": 5,
+            "document_name": "Narxlar.pdf",
+            "page": 37,
+            "heading": "Tariflar",
+            "score": 0.98,
+            "excerpt": "Standart tarif uch oy kafolatlanadi."
+          }
+        ]
       }
     }
   ]

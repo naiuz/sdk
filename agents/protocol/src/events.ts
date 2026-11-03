@@ -229,6 +229,8 @@ export interface TurnDebug {
     error_code: string | null;
     /** The turn's tool calls, in the order the agent made them. */
     tool_calls?: TurnToolCall[];
+    /** The passages of the agent's documents the model read, best first. */
+    knowledge?: TurnPassage[];
 }
 
 /** Answer with a pong carrying the same event id. */
@@ -336,6 +338,17 @@ export interface TurnToolCall {
     error_code: string | null;
     http_status: number | null;
     duration_ms: number;
+}
+
+/** A passage of a document a turn used. */
+export interface TurnPassage {
+    document_id: number;
+    document_name: string;
+    page: number | null;
+    heading: string | null;
+    score: number;
+    /** The start of the passage. */
+    excerpt: string;
 }
 
 /** Every event type a client sends. */
