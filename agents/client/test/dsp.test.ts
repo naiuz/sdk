@@ -1,5 +1,6 @@
 import {describe, expect, test} from "vitest";
 import {Downsampler, level, PlaybackQueue} from "../src/audio/dsp";
+import {crossfadeLoop} from "../src/audio/loop";
 
 function tone(rate: number, frequency: number, amplitude: number, ms: number): Float32Array {
     const samples = new Float32Array((rate * ms) / 1000);
@@ -127,4 +128,25 @@ test("level is four times the RMS, at most 1", () => {
     expect(level(new Float32Array(128).fill(0.1))).toBeCloseTo(0.4);
     expect(level(new Float32Array(128).fill(-0.5))).toBe(1);
     expect(level(new Float32Array(0))).toBe(0);
+});
+
+describe("a loop's seam", () => {
+    test("its end fades into what comes just before its start", () => {
+        const samples = Float32Array.from({length: 1_000}, (_, i) => Math.sin(i * 12.9898) * 0.5);
+        const copy = samples.slice();
+
+        crossfadeLoop(samples, 100, 900, 50);
+
+        expect(samples[899]).toBeCloseTo(copy[99] as number);
+        expect(samples[849]).toBeCloseTo(copy[849] as number, 1);
+        expect(samples.slice(100, 850)).toEqual(copy.slice(100, 850));
+    });
+
+    test("it never reads before the sound or past the loop", () => {
+        const samples = new Float32Array(100).fill(0.25);
+
+        crossfadeLoop(samples, 10, 90, 50);
+
+        expect(Array.from(samples).every((sample) => Number.isFinite(sample))).toBe(true);
+    });
 });

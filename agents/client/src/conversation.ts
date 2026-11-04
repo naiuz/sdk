@@ -69,6 +69,8 @@ export class Conversation {
     /** A call's microphone and speaker, kept across reconnects; null for a text session. */
     private readonly audio: AudioIO | null;
     private audioClosed = false;
+    /** Set while a goodbye plays, for an app that ends the call before it's done. */
+    private releaseAudio: (() => void) | null = null;
     /** The server closed normally, so the last of a call's audio plays before it's released. */
     private goodbye = false;
     /** This connection's side of the call, from its metadata to its close. */
@@ -160,6 +162,7 @@ export class Conversation {
         this.endedByUser = true;
         this.call?.stop();
         this.call = null;
+        this.releaseAudio?.();
         const socket = this.socket;
         const open = socket !== null && socket.readyState !== CLOSED;
         if (open) socket.close(1000, "ended");
@@ -363,7 +366,8 @@ export class Conversation {
         if (socket !== this.socket) return;
         this.stopWatchingSilence();
         // The server closes when it reckons a goodbye has played, and this end is behind that.
-        const letItFinish = code === 1000 && !this.endedByUser && this.opening === null;
+        const over = code === 1000 || this.endedReason !== undefined;
+        const letItFinish = over && !this.endedByUser && this.opening === null;
         this.goodbye = letItFinish;
         this.call?.stop(letItFinish);
         this.call = null;
@@ -456,13 +460,18 @@ export class Conversation {
         this.call = new Call(channel, audio, OUTPUT_RATES[formats.output]);
         if (formats.environment !== undefined) {
             const {ambience_url: ambience, volume, phone_filter: phoneFilter} = formats.environment;
-            audio.setEnvironment?.({ambienceUrl: ambience === null ? null : this.fromServer(ambience), volume, phoneFilter});
+            audio.setEnvironment?.({ambienceUrl: ambience === null ? null : this.fromSocket(ambience), volume, phoneFilter});
         }
     }
 
-    /** An address the server gave, relative to its socket's. */
-    private fromServer(path: string): string {
-        return new URL(path, (this.options.serverUrl ?? DEFAULT_URL).replace(/^ws/, "http")).href;
+    /** An address the server gave, relative to its socket's, so a proxy in front changes nothing. */
+    private fromSocket(path: string): string | null {
+        const socket = (this.options.serverUrl ?? DEFAULT_URL).replace(/^ws/, "http").replace(/\/*$/, "/");
+        try {
+            return new URL(path, new URL(socket, (globalThis as {location?: {href: string}}).location?.href)).href;
+        } catch {
+            return null;
+        }
     }
 
     /** The call's audio, until the session is over. */
@@ -473,12 +482,21 @@ export class Conversation {
     /** Releases the microphone and the speaker, once, when the session is over, after a goodbye has played. */
     private closeAudio(letItFinish = false): void {
         const audio = this.audio;
-        if (audio === null || this.audioClosed) return;
-        this.audioClosed = true;
+        if (audio === null || this.audioClosed || this.releaseAudio !== null) return;
+        const release = () => {
+            if (this.audioClosed) return;
+            this.audioClosed = true;
+            this.releaseAudio = null;
+            void audio.close().catch(() => undefined);
+        };
+        this.releaseAudio = release;
         const drained = letItFinish ? audio.drain?.(GOODBYE_LIMIT_MS) : undefined;
-        const release = () => audio.close().catch(() => undefined);
-        if (drained === undefined) void release();
-        else void drained.then(release, release);
+        if (drained === undefined) {
+            release();
+            return;
+        }
+        audio.stopCapture?.();
+        void drained.then(release, release);
     }
 
     private changeMode(mode: Mode): void {

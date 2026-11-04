@@ -10,6 +10,7 @@ export type AudioCall =
     | {call: "drop"}
     | {call: "setEnvironment"; ambienceUrl: string | null; volume: number; phoneFilter: boolean}
     | {call: "drain"; limitMs: number}
+    | {call: "stopCapture"}
     | {call: "setMuted"; muted: boolean}
     | {call: "setVolume"; volume: number}
     | {call: "close"};
@@ -94,6 +95,10 @@ export class FakeAudio implements AudioIO {
 
     /** Set by a test to hold a goodbye open. */
     finishDraining: (() => void) | null = null;
+
+    stopCapture(): void {
+        this.calls.push({call: "stopCapture"});
+    }
 
     drain(limitMs: number): Promise<void> {
         this.calls.push({call: "drain", limitMs});

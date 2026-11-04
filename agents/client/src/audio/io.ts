@@ -29,6 +29,8 @@ export interface AudioIO {
     setEnvironment?(environment: AudioEnvironment): void;
     /** Resolves once what's queued has played, or at the limit, for a goodbye to finish. */
     drain?(limitMs: number): Promise<void>;
+    /** Turns the microphone off while what's playing plays on. */
+    stopCapture?(): void;
     /** The reply being heard, or null. */
     readonly playing: number | null;
     /** Milliseconds of that reply's audio played since its first frame, pauses excluded. */

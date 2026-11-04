@@ -1,5 +1,6 @@
 import {MicrophoneError} from "../errors";
 import type {AudioEnvironment, AudioIO} from "./io";
+import {crossfadeLoop} from "./loop";
 import {workletSource} from "./worklets";
 
 /** The microphone as the agent should hear it: the browser's echo cancelling, noise suppression and gain control, in mono. */
@@ -19,6 +20,9 @@ const PHONE_LOW_HZ = 300;
 const PHONE_HIGH_HZ = 3_400;
 /** What an MP3's encoder pads each end with, which would dip at every repeat. */
 const LOOP_TRIM_S = 0.06;
+const LOOP_FADE_S = 0.02;
+/** The playback worklet reports every 53 ms or so: what was just handed to it isn't in a report yet. */
+const REPORT_GAP_MS = 120;
 
 interface CaptureMessage {
     frame: Int16Array;
@@ -65,6 +69,7 @@ export class BrowserAudio implements AudioIO {
     private ambience: AudioBufferSourceNode | null = null;
     private phoneBand: [BiquadFilterNode, BiquadFilterNode] | null = null;
     private drained: (() => void) | null = null;
+    private handedOverAt = Number.NEGATIVE_INFINITY;
     private closed = false;
 
     constructor(options: BrowserAudioOptions = {}) {
@@ -118,6 +123,7 @@ export class BrowserAudio implements AudioIO {
     }
 
     enqueue(eventId: number, pcm: Int16Array): void {
+        this.handedOverAt = Date.now();
         this.playback?.port.postMessage({enqueue: true, eventId, pcm}, [pcm.buffer]);
     }
 
@@ -142,23 +148,36 @@ export class BrowserAudio implements AudioIO {
             this.phoneBand = band ? [this.bandEdge("highpass", PHONE_LOW_HZ), this.bandEdge("lowpass", PHONE_HIGH_HZ)] : null;
             this.routeVoice();
         }
-        if (environment.ambienceUrl !== null && environment.ambienceUrl !== this.ambienceUrl) {
+        if (environment.ambienceUrl !== this.ambienceUrl) {
+            this.stopAmbience();
             this.ambienceUrl = environment.ambienceUrl;
-            void this.playAmbience(environment.ambienceUrl);
+            if (environment.ambienceUrl !== null) void this.playAmbience(environment.ambienceUrl);
         }
     }
 
     drain(limitMs: number): Promise<void> {
-        if (this.current === null) return Promise.resolve();
+        if (this.current === null && !this.justHandedOver()) return Promise.resolve();
         return new Promise((resolve) => {
             const done = () => {
                 clearTimeout(limit);
+                clearTimeout(unreported);
                 this.drained = null;
                 resolve();
             };
             const limit = setTimeout(done, limitMs);
-            this.drained = done;
+            // By then a report says it's playing, or it never will.
+            const unreported = setTimeout(() => {
+                if (this.current === null) done();
+            }, REPORT_GAP_MS);
+            this.drained = () => {
+                if (!this.justHandedOver()) done();
+            };
         });
+    }
+
+    stopCapture(): void {
+        for (const track of this.opened?.getTracks() ?? []) track.stop();
+        this.input = 0;
     }
 
     get playing(): number | null {
@@ -190,8 +209,7 @@ export class BrowserAudio implements AudioIO {
     close(): Promise<void> {
         this.closed = true;
         this.drained?.();
-        this.ambience?.stop();
-        this.ambience?.disconnect();
+        this.stopAmbience();
         this.ambienceGain.disconnect();
         for (const node of [this.capture, this.playback]) {
             if (node === null) continue;
@@ -236,8 +254,16 @@ export class BrowserAudio implements AudioIO {
             const answer = await fetch(url);
             if (!answer.ok) return;
             const sound = await this.context.decodeAudioData(await answer.arrayBuffer());
-            if (this.closed) return;
+            if (this.closed || this.ambienceUrl !== url) return;
             const source = this.context.createBufferSource();
+            for (let channel = 0; channel < sound.numberOfChannels; channel++) {
+                crossfadeLoop(
+                    sound.getChannelData(channel),
+                    Math.round(LOOP_TRIM_S * sound.sampleRate),
+                    Math.round((sound.duration - LOOP_TRIM_S) * sound.sampleRate),
+                    Math.round(LOOP_FADE_S * sound.sampleRate),
+                );
+            }
             source.buffer = sound;
             source.loop = true;
             source.loopStart = LOOP_TRIM_S;
@@ -246,8 +272,18 @@ export class BrowserAudio implements AudioIO {
             source.start(0, LOOP_TRIM_S);
             this.ambience = source;
         } catch {
-            this.ambienceUrl = null;
+            if (this.ambienceUrl === url) this.ambienceUrl = null;
         }
+    }
+
+    private stopAmbience(): void {
+        this.ambience?.stop();
+        this.ambience?.disconnect();
+        this.ambience = null;
+    }
+
+    private justHandedOver(): boolean {
+        return Date.now() - this.handedOverAt < REPORT_GAP_MS;
     }
 
     private async openMicrophone(): Promise<MediaStream> {

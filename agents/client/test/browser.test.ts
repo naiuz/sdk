@@ -128,7 +128,10 @@ class FakeContext {
         return this.keep(new FakeBufferSource());
     }
 
-    readonly decodeAudioData = vi.fn(() => Promise.resolve({duration: 30}));
+    readonly decodeAudioData = vi.fn(() =>
+        Promise.resolve({duration: 30, sampleRate: 1_000, numberOfChannels: 1, getChannelData: () => this.decoded}),
+    );
+    decoded = new Float32Array(30_000);
 
     private keep<T extends FakeNode>(node: T): T {
         this.made.push(node);
@@ -370,6 +373,46 @@ describe("what plays under the agent", () => {
         expect(gain.gain.value).toBe(0.4);
     });
 
+    test("the loop's seam runs on, with no jump where it comes round", async () => {
+        sound();
+        const {audio, context} = await started();
+        context.decoded = Float32Array.from({length: 30_000}, (_, i) => Math.sin(i * 12.9898) * 0.5);
+        const before = context.decoded[59];
+
+        audio.setEnvironment(CAFE);
+        await loaded();
+
+        // The loop runs from 60 to 29,940 here: its last sample is now the one before its first.
+        expect(context.decoded[29_939]).toBeCloseTo(before as number);
+    });
+
+    test("another background replaces the last, and none stops it", async () => {
+        sound();
+        const {audio, context} = await started();
+        audio.setEnvironment(CAFE);
+        await loaded();
+
+        audio.setEnvironment({...CAFE, ambienceUrl: "https://my.neuronai.uz/api/v1/realtime/ambience/city.mp3"});
+        await loaded();
+        const [cafe, city] = sources(context);
+        expect(cafe?.stopped).toBe(true);
+        expect(city?.stopped).toBe(false);
+
+        audio.setEnvironment({...CAFE, ambienceUrl: null});
+        expect(city?.stopped).toBe(true);
+    });
+
+    test("a sound overtaken while it loaded isn't started", async () => {
+        sound();
+        const {audio, context} = await started();
+
+        audio.setEnvironment(CAFE);
+        audio.setEnvironment({...CAFE, ambienceUrl: null});
+        await loaded();
+
+        expect(sources(context)).toEqual([]);
+    });
+
     test("the same background on a reconnect isn't started twice", async () => {
         sound();
         const {audio, context} = await started();
@@ -501,6 +544,60 @@ describe("a goodbye", () => {
 
         expect(done).toBe(true);
         vi.useRealTimers();
+    });
+
+    test("what was just handed over counts, before the worklet has said so", async () => {
+        vi.useFakeTimers();
+        const audio = new BrowserAudio();
+        await audio.startCapture();
+        audio.startPlayback(24_000);
+        const playback = workletNodes.find((node) => node.name === "naiuz-playback") as FakeWorkletNode;
+        let done = false;
+
+        audio.enqueue(7, new Int16Array(4_800));
+        void audio.drain(2_000).then(() => {
+            done = true;
+        });
+        // A report made before the worklet took the audio still says nothing plays.
+        playback.port.onmessage?.({data: {playing: null, played: {}, ended: [], level: 0}});
+        await vi.advanceTimersByTimeAsync(50);
+        expect(done).toBe(false);
+
+        playback.port.onmessage?.({data: {playing: 7, played: {7: 40}, ended: [], level: 0.5}});
+        await vi.advanceTimersByTimeAsync(200);
+        expect(done).toBe(false);
+
+        playback.port.onmessage?.({data: {playing: null, played: {7: 200}, ended: [7], level: 0}});
+        await vi.advanceTimersByTimeAsync(0);
+        expect(done).toBe(true);
+        vi.useRealTimers();
+    });
+
+    test("audio handed over that never starts doesn't hold the speaker", async () => {
+        vi.useFakeTimers();
+        const audio = new BrowserAudio();
+        await audio.startCapture();
+        audio.startPlayback(24_000);
+        let done = false;
+
+        audio.enqueue(7, new Int16Array(0));
+        void audio.drain(2_000).then(() => {
+            done = true;
+        });
+        await vi.advanceTimersByTimeAsync(300);
+
+        expect(done).toBe(true);
+        vi.useRealTimers();
+    });
+
+    test("the microphone stops on its own, and the speaker stays", async () => {
+        const audio = new BrowserAudio();
+        await audio.startCapture();
+
+        audio.stopCapture();
+
+        expect((contexts.at(-1) as FakeContext).state).not.toBe("closed");
+        expect(microphone.tracks[0]?.stopped).toBe(true);
     });
 
     test("with nothing playing there's nothing to wait for", async () => {

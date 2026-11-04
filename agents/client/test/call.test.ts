@@ -324,7 +324,7 @@ describe("the call's events", () => {
 });
 
 describe("what the metadata says goes under the agent", () => {
-    const ENVIRONMENT = {ambience_url: "/api/v1/realtime/ambience/cafe.mp3", volume: 0.4, phone_filter: true};
+    const ENVIRONMENT = {ambience_url: "ambience/cafe.mp3", volume: 0.4, phone_filter: true};
 
     async function callWith(serverUrl: string | undefined): Promise<FakeAudio> {
         const sockets = fakeSockets();
@@ -360,6 +360,26 @@ describe("what the metadata says goes under the agent", () => {
         expect(audio.calls).toContainEqual(expect.objectContaining({ambienceUrl: "https://my.neuronai.uz/api/v1/realtime/ambience/cafe.mp3"}));
     });
 
+    test("a proxy under a path of its own keeps its path", async () => {
+        const audio = await callWith("wss://shop.example/proxy/agents/");
+
+        expect(audio.calls).toContainEqual(expect.objectContaining({ambienceUrl: "https://shop.example/proxy/agents/ambience/cafe.mp3"}));
+    });
+
+    test("a server address relative to the page goes by the page", async () => {
+        vi.stubGlobal("location", {href: "https://shop.example/help/page"});
+        const audio = await callWith("/api/v1/realtime");
+        vi.unstubAllGlobals();
+
+        expect(audio.calls).toContainEqual(expect.objectContaining({ambienceUrl: "https://shop.example/api/v1/realtime/ambience/cafe.mp3"}));
+    });
+
+    test("an address it can't work out is no background, and the call goes on", async () => {
+        const audio = await callWith("/api/v1/realtime");
+
+        expect(audio.calls).toContainEqual(expect.objectContaining({call: "setEnvironment", ambienceUrl: null, phoneFilter: true}));
+    });
+
     test("a server that says nothing about it plays the agent alone", async () => {
         const {audio} = await call();
 
@@ -382,6 +402,57 @@ describe("how a call ends", () => {
         audio.finishDraining?.();
         await settle();
         expect(audio.calls.at(-1)).toEqual({call: "close"});
+    });
+
+    test("the microphone is off as soon as the call is, while the goodbye plays", async () => {
+        const {audio, socket} = await call();
+        speak(socket, 7, 200);
+
+        socket.serverCloses(1000, "ended");
+        await settle();
+
+        expect(audio.calls).toContainEqual({call: "stopCapture"});
+        expect(audio.calls.some((made) => made.call === "close")).toBe(false);
+    });
+
+    test("during a goodbye the volume still works and the orb still moves", async () => {
+        const {audio, conversation, socket} = await call();
+        speak(socket, 7, 200);
+
+        socket.serverCloses(1000, "ended");
+        await settle();
+        conversation.setVolume({volume: 0.5});
+
+        expect(audio.calls).toContainEqual({call: "setVolume", volume: 0.5});
+        expect(conversation.getOutputVolume()).toBe(audio.outputLevel());
+    });
+
+    test("an app that ends the call during a goodbye has silence at once", async () => {
+        const {audio, conversation, socket} = await call();
+        speak(socket, 7, 200);
+        socket.serverCloses(1000, "ended");
+        await settle();
+
+        await conversation.endSession();
+        await settle();
+
+        expect(audio.calls.at(-1)).toEqual({call: "close"});
+        audio.finishDraining?.();
+        await settle();
+        expect(audio.calls.filter((made) => made.call === "close")).toHaveLength(1);
+    });
+
+    test("a socket that drops after the conversation ended still lets the goodbye play", async () => {
+        const {audio, socket} = await call();
+        speak(socket, 7, 200);
+        socket.serverSends({type: "conversation_ended", reason: "agent"});
+        await settle();
+
+        socket.serverCloses(1006, "");
+        await settle();
+
+        expect(audio.calls.some((made) => made.call === "drop")).toBe(false);
+        expect(audio.calls).toContainEqual({call: "drain", limitMs: 2_000});
     });
 
     test("an app that ends the call has silence at once", async () => {
