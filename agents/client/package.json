@@ -37,6 +37,16 @@
         "default": "./dist/index.cjs"
       }
     },
+    "./orb": {
+      "import": {
+        "types": "./dist/orb/index.d.ts",
+        "default": "./dist/orb/index.js"
+      },
+      "require": {
+        "types": "./dist/orb/index.d.cts",
+        "default": "./dist/orb/index.cjs"
+      }
+    },
     "./package.json": "./package.json"
   },
   "files": [

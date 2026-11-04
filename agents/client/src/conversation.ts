@@ -24,6 +24,9 @@ const RETRY_DELAY_MS = 500;
 const SILENCE_MS = 40_000;
 const CLIENT_MESSAGE_ID = /^[A-Za-z0-9_-]{1,64}$/;
 const MAX_TEXT_LENGTH = 10_000;
+const MAX_UPDATE_LENGTH = 2000;
+/** What a session holds to say when its connection is back. */
+const MAX_HELD_FRAMES = 32;
 /** The longest client tool result the protocol takes, in characters. */
 const MAX_TOOL_RESULT = 8000;
 /** A client tool's name as the protocol takes it, and how many a page may run. */
@@ -77,6 +80,8 @@ export class Conversation {
     /** This connection's side of the call, from its metadata to its close. */
     private call: Call | null = null;
     private mode: Mode | null = null;
+    /** Updates and feedback the page gave while the connection was down. */
+    private readonly held: object[] = [];
     /** The status the last metadata gave, so a reconnect reports only a change. */
     private conversationStatus: ConversationStatus | null = null;
     /** Where the socket goes, and the token it first opens with. */
@@ -147,6 +152,45 @@ export class Conversation {
         return pending.promise;
     }
 
+    /**
+     * Tells the agent something without interrupting it, such as what the customer is looking at. It reads this at its
+     * next turn, as information and never as instructions. A newer update with the same contextId replaces the older
+     * one. Said while the connection is down, it goes out when it's back.
+     */
+    sendContextualUpdate(text: string, options: {contextId?: string} = {}): void {
+        const {contextId} = options;
+        if (text.length === 0 || text.length > MAX_UPDATE_LENGTH) throw new TypeError(`A contextual update takes 1 to ${String(MAX_UPDATE_LENGTH)} characters.`);
+        if (contextId !== undefined && !CLIENT_MESSAGE_ID.test(contextId)) throw new TypeError(`A contextId must match ${String(CLIENT_MESSAGE_ID)}.`);
+        this.sendWhenConnected({type: "contextual_update", text, ...(contextId === undefined ? {} : {context_id: contextId})});
+    }
+
+    /** The customer is typing: a reply that hasn't started holds off for about 2 seconds. Send it every second or so while they type. */
+    sendUserActivity(): void {
+        if (this.currentStatus === "connected") this.send({type: "user_activity"});
+    }
+
+    /** The customer's view of a reply, by its eventId. Null takes it back. Said while the connection is down, it goes out when it's back. */
+    sendFeedback(eventId: number, score: "like" | "dislike" | null): void {
+        if (!Number.isInteger(eventId) || eventId < 1) throw new TypeError("Feedback rates a reply by its eventId.");
+        this.sendWhenConnected({type: "feedback", event_id: eventId, score});
+    }
+
+    /** Moves a call to this microphone without dropping it. When it can't, the call stays on the one it has. Outside a call it does nothing. */
+    async changeInputDevice({deviceId}: {deviceId: string}): Promise<void> {
+        const audio = this.liveAudio();
+        if (audio === null) return;
+        if (audio.changeInputDevice === undefined) throw new Error("This call's audio can't change its microphone.");
+        await audio.changeInputDevice(deviceId);
+    }
+
+    /** Sends the agent's voice to this speaker. Where the browser can't, this rejects and the sound stays where it was. Outside a call it does nothing. */
+    async changeOutputDevice({deviceId}: {deviceId: string}): Promise<void> {
+        const audio = this.liveAudio();
+        if (audio === null) return;
+        if (audio.changeOutputDevice === undefined) throw new Error("This call's audio can't change its speaker.");
+        await audio.changeOutputDevice(deviceId);
+    }
+
     /** Mutes the microphone: the call goes on, and the agent hears silence. Outside a call it does nothing. */
     setMicMuted(muted: boolean): void {
         this.liveAudio()?.setMuted(muted);
@@ -185,6 +229,9 @@ export class Conversation {
     }
 
     private async startMicrophone(audio: AudioIO): Promise<void> {
+        audio.onInputLost = () => {
+            this.emit("onError", "The microphone stopped.", {code: "microphone_lost"});
+        };
         try {
             await audio.startCapture();
         } catch (error) {
@@ -262,6 +309,7 @@ export class Conversation {
                 this.reconnects = 0;
                 this.startCall(event.audio ?? null);
                 this.setStatus("connected");
+                for (const frame of this.held.splice(0)) this.send(frame);
                 if (this.connectedOnce) {
                     this.resendOnHistory = true;
                 } else {
@@ -338,6 +386,13 @@ export class Conversation {
                 break;
             case "interruption":
                 this.call?.interrupt(event.event_id);
+                this.emit("onInterruption", {eventId: event.event_id});
+                break;
+            case "agent_tool_response":
+                this.emit("onAgentToolResponse", {toolName: event.tool_name, toolType: event.tool_type, status: event.status});
+                break;
+            case "language_changed":
+                this.emit("onLanguageChange", {language: event.language});
                 break;
             case "ping":
                 this.send({type: "pong", event_id: event.event_id});
@@ -567,6 +622,15 @@ export class Conversation {
 
     private send(frame: object): void {
         if (this.socket?.readyState === OPEN) this.socket.send(JSON.stringify(frame));
+    }
+
+    private sendWhenConnected(frame: object): void {
+        if (this.finished || this.endedByUser) return;
+        if (this.currentStatus === "connected") {
+            this.send(frame);
+        } else if (this.held.length < MAX_HELD_FRAMES) {
+            this.held.push(frame);
+        }
     }
 
     private later(delay: number, run: () => void): Timer {

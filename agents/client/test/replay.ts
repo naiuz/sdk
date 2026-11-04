@@ -102,6 +102,13 @@ export async function replay(first: Recorded, options: ReplayOptions = {}) {
                 const frame = item.frame ?? {};
                 const expected = ++clientFramesSoFar;
                 const id = String(frame.client_message_id);
+                if (frame.type === "contextual_update") {
+                    conversation?.sendContextualUpdate(String(frame.text), {contextId: String(frame.context_id)});
+                } else if (frame.type === "user_activity") {
+                    conversation?.sendUserActivity();
+                } else if (frame.type === "feedback") {
+                    conversation?.sendFeedback(Number(frame.event_id), frame.score as "like" | "dislike" | null);
+                }
                 if (frame.type === "user_message" && !sentIds.has(id) && conversation !== undefined) {
                     sentIds.add(id);
                     conversation.sendUserMessage(String(frame.text)).then((ack) => acks.push(ack), (error: unknown) => errors.push(error));

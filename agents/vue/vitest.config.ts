@@ -4,7 +4,10 @@ import {defineConfig} from "vitest/config";
 export default defineConfig({
     resolve: {
         // The client's source, so the composable and the client's test fakes share one Conversation.
-        alias: {"@naiuz/agents": fileURLToPath(new URL("../client/src/index.ts", import.meta.url))},
+        alias: {
+            "@naiuz/agents/orb": fileURLToPath(new URL("../client/src/orb/index.ts", import.meta.url)),
+            "@naiuz/agents": fileURLToPath(new URL("../client/src/index.ts", import.meta.url)),
+        },
     },
     test: {
         include: ["test/**/*.test.ts"],

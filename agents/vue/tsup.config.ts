@@ -10,5 +10,5 @@ export default defineConfig({
     platform: "neutral",
     sourcemap: true,
     clean: true,
-    external: ["vue", "@naiuz/agents"],
+    external: ["vue", "@naiuz/agents", "@naiuz/agents/orb"],
 });

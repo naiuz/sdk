@@ -1,4 +1,4 @@
-import type {AudioFormat, ConversationInitiationMetadata, HistoryMessage, LanguageCode, Operator, TurnDebug} from "@naiuz/agents-protocol";
+import type {AgentToolResponse, AudioFormat, ConversationInitiationMetadata, HistoryMessage, LanguageCode, Operator, TurnDebug} from "@naiuz/agents-protocol";
 import type {AudioIO} from "./audio/io";
 
 export type Status = "connecting" | "connected" | "reconnecting" | "disconnected";
@@ -82,6 +82,12 @@ export interface Callbacks {
     onDebug?: (event: TurnDebug) => void;
     /** The agent called a client tool this page has no handler for. A call that expects a response is answered with an error. */
     onUnhandledClientToolCall?: (call: UnhandledClientToolCall) => void;
+    /** The customer spoke over this reply in a call, and its audio stops here. */
+    onInterruption?: (interruption: {eventId: number}) => void;
+    /** A tool the agent is using: its name, its type and how it's going. Never its values or its result. */
+    onAgentToolResponse?: (tool: {toolName: string; toolType: AgentToolResponse["tool_type"]; status: AgentToolResponse["status"]}) => void;
+    /** The agent moved to this language, and what it says from here on is in it. */
+    onLanguageChange?: (change: {language: LanguageCode}) => void;
     onError?: (message: string, context: {code: string}) => void;
 }
 

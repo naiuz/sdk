@@ -26,6 +26,20 @@ export function micSample(n: number): number {
  */
 export class FakeAudio implements AudioIO {
     readonly calls: AudioCall[] = [];
+    inputDevice: string | null = null;
+    outputDevice: string | null = null;
+    /** Makes changing the microphone reject with the error, as a device that's gone does. */
+    inputDeviceError: Error | null = null;
+    onInputLost: (() => void) | null = null;
+    changeInputDevice?: (deviceId: string) => Promise<void> = (deviceId) => {
+        if (this.inputDeviceError !== null) return Promise.reject(this.inputDeviceError);
+        this.inputDevice = deviceId;
+        return Promise.resolve();
+    };
+    changeOutputDevice?: (deviceId: string) => Promise<void> = (deviceId) => {
+        this.outputDevice = deviceId;
+        return Promise.resolve();
+    };
     onFrame: ((pcm: Int16Array) => void) | null = null;
     onPlaybackEnd: ((eventId: number) => void) | null = null;
     private refusal: Error | null = null;

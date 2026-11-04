@@ -29,6 +29,12 @@ export interface AudioIO {
     setEnvironment?(environment: AudioEnvironment): void;
     /** Resolves once what's queued has played, or at the limit, for a goodbye to finish. */
     drain?(limitMs: number): Promise<void>;
+    /** Moves the call to this microphone without dropping it. When it can't, the one it has goes on. */
+    changeInputDevice?(deviceId: string): Promise<void>;
+    /** Sends the agent's voice to this speaker. When it can't, the one it has goes on. */
+    changeOutputDevice?(deviceId: string): Promise<void>;
+    /** The microphone stopped by itself: unplugged, or its permission taken back. The call goes on, with silence. */
+    onInputLost?: (() => void) | null;
     /** Turns the microphone off while what's playing plays on. */
     stopCapture?(): void;
     /** The reply being heard, or null. */

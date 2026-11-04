@@ -1,4 +1,6 @@
 export {Conversation} from "./conversation";
+export {ConversationController} from "./controller";
+export type {ConversationState} from "./controller";
 export {MessageError, MicrophoneError, SessionError, SessionRefusedError} from "./errors";
 export {BrowserAudio} from "./audio/browser";
 export type {BrowserAudioOptions} from "./audio/browser";

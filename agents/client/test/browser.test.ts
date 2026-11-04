@@ -1,10 +1,11 @@
 import {beforeEach, describe, expect, test, vi} from "vitest";
 import type {MockInstance} from "vitest";
-import {BrowserAudio, Conversation} from "../src/index";
+import {BrowserAudio, Conversation, MicrophoneError} from "../src/index";
 import {callMetadata, fakeSockets} from "./fake-socket";
 
 class FakeTrack {
     stopped = false;
+    onended: (() => void) | null = null;
 
     stop(): void {
         this.stopped = true;
@@ -150,6 +151,11 @@ class FakeWorkletNode extends FakeNode {
 
 class FakeElement {
     srcObject: unknown = null;
+    sinkId = "";
+    setSinkId?: (id: string) => Promise<void> = (id) => {
+        this.sinkId = id;
+        return Promise.resolve();
+    };
     paused = true;
     plays = 0;
 
@@ -608,3 +614,73 @@ describe("a goodbye", () => {
     });
 });
 
+describe("changing devices", () => {
+    async function capturing() {
+        const element = new FakeElement();
+        const audio = new BrowserAudio({element: element as unknown as HTMLMediaElement});
+        await audio.startCapture();
+        return {audio, element, context: contexts[0] as unknown as FakeContext};
+    }
+
+    test("moves to the new microphone, with its constraints, and lets go of the old one", async () => {
+        const {audio, context} = await capturing();
+        const oldTrack = microphone.tracks[0] as FakeTrack;
+        const sources = () => context.made.filter((node): node is FakeSource => node instanceof FakeSource);
+        const [oldSource] = sources();
+        const next = new FakeStream();
+        getUserMedia.mockResolvedValueOnce(next);
+
+        await audio.changeInputDevice("mic-2");
+
+        expect(getUserMedia.mock.lastCall?.[0]).toMatchObject({audio: {echoCancellation: true, deviceId: {exact: "mic-2"}}});
+        expect(oldTrack.stopped).toBe(true);
+        expect(oldSource?.disconnected).toBe(true);
+        const newSource = sources().at(-1);
+        expect(newSource?.mediaStream).toBe(next);
+        expect(newSource?.connections).toContain(workletNodes[0]);
+    });
+
+    test("a microphone that's gone leaves the old one working", async () => {
+        const {audio} = await capturing();
+        const oldTrack = microphone.tracks[0] as FakeTrack;
+        getUserMedia.mockRejectedValueOnce(Object.assign(new Error("gone"), {name: "NotFoundError"}));
+
+        await expect(audio.changeInputDevice("mic-2")).rejects.toBeInstanceOf(MicrophoneError);
+
+        expect(oldTrack.stopped).toBe(false);
+    });
+
+    test("a change that comes back after the call closed lets the new microphone go", async () => {
+        const {audio} = await capturing();
+        const next = new FakeStream();
+        let answer: (stream: unknown) => void = () => undefined;
+        getUserMedia.mockReturnValueOnce(new Promise((resolve) => {
+            answer = resolve;
+        }));
+        const changing = audio.changeInputDevice("mic-2");
+        await audio.close();
+        answer(next);
+        await changing;
+        expect((next.tracks[0] as FakeTrack).stopped).toBe(true);
+    });
+
+    test("sends the agent's voice to the chosen speaker", async () => {
+        const {audio, element} = await capturing();
+        await audio.changeOutputDevice("speaker-2");
+        expect(element.sinkId).toBe("speaker-2");
+    });
+
+    test("a browser that can't choose a speaker says so", async () => {
+        const {audio, element} = await capturing();
+        element.setSinkId = undefined;
+        await expect(audio.changeOutputDevice("speaker-2")).rejects.toThrow(/can't choose/);
+    });
+
+    test("says when the microphone stops by itself", async () => {
+        const {audio} = await capturing();
+        const lost = vi.fn();
+        audio.onInputLost = lost;
+        (microphone.tracks[0] as FakeTrack).onended?.();
+        expect(lost).toHaveBeenCalledOnce();
+    });
+});

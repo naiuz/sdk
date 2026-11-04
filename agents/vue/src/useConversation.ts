@@ -1,4 +1,4 @@
-import {Conversation} from "@naiuz/agents";
+import {ConversationController} from "@naiuz/agents";
 import type {Callbacks, ConversationStatus, MessageAck, Mode, SendOptions, SessionOptions, Status} from "@naiuz/agents";
 import {computed, getCurrentScope, onScopeDispose, readonly, shallowRef} from "vue";
 import type {ComputedRef, Ref} from "vue";
@@ -17,10 +17,18 @@ export interface UseConversation {
     /** Ends the session. A start still on its way stops: it shows as disconnected at once, and closes when it arrives. */
     endSession(): Promise<void>;
     sendUserMessage(text: string, options?: SendOptions): Promise<MessageAck>;
+    /** Tells the agent something without interrupting it, as information and never as instructions. */
+    sendContextualUpdate(text: string, options?: {contextId?: string}): void;
+    /** The customer is typing: a reply that hasn't started holds off for about 2 seconds. */
+    sendUserActivity(): void;
+    /** The customer's view of a reply, by its eventId. Null takes it back. */
+    sendFeedback(eventId: number, score: "like" | "dislike" | null): void;
     setMicMuted(muted: boolean): void;
     setVolume(options: {volume: number}): void;
     getInputVolume(): number;
     getOutputVolume(): number;
+    changeInputDevice(options: {deviceId: string}): Promise<void>;
+    changeOutputDevice(options: {deviceId: string}): Promise<void>;
     /** The conversation's id, or "" outside a session. */
     getId(): string;
     getResumeToken(): string | null;
@@ -31,107 +39,21 @@ export interface UseConversation {
  * callbacks run as they would on the client, after the refs have changed.
  */
 export function useConversation(callbacks: Callbacks = {}): UseConversation {
+    const controller = new ConversationController(callbacks);
     const status = shallowRef<Status>("disconnected");
     const mode = shallowRef<Mode | null>(null);
     const micMuted = shallowRef(false);
     const conversationStatus = shallowRef<ConversationStatus | null>(null);
-    let conversation: Conversation | null = null;
-    /** Each start's number: a session's callbacks change the refs only while it is the newest. */
-    let starts = 0;
-    /** The start still waiting for its session, which endSession() can stop. */
-    let pending: number | null = null;
 
-    /** A session's callbacks: the refs change, then the app hears, only while it is the newest. */
-    function ownCallbacks(start: number): Callbacks {
-        const current = () => start === starts;
-        const forwarded = Object.fromEntries(
-            Object.entries(callbacks).map(([name, callback]) => [
-                name,
-                (...args: unknown[]) => {
-                    if (current()) (callback as (...given: unknown[]) => void)(...args);
-                },
-            ]),
-        ) as Callbacks;
-        return {
-            ...forwarded,
-            onStatusChange: (change) => {
-                if (!current()) return;
-                status.value = change.status;
-                callbacks.onStatusChange?.(change);
-            },
-            onModeChange: (change) => {
-                if (!current()) return;
-                mode.value = change.mode;
-                callbacks.onModeChange?.(change);
-            },
-            onConversationStatus: (change) => {
-                if (!current()) return;
-                conversationStatus.value = change.status;
-                callbacks.onConversationStatus?.(change);
-            },
-            onDisconnect: (details) => {
-                if (!current()) return;
-                mode.value = null;
-                conversationStatus.value = null;
-                conversation = null;
-                callbacks.onDisconnect?.(details);
-            },
-        };
-    }
+    controller.subscribe(() => {
+        const state = controller.getSnapshot();
+        status.value = state.status;
+        mode.value = state.mode;
+        conversationStatus.value = state.conversationStatus;
+        micMuted.value = state.micMuted;
+    });
 
-    async function endSession(): Promise<void> {
-        if (pending !== null) {
-            // A start still on its way ends itself when it arrives; until then nothing shows it, and its callbacks are
-            // no longer the app's.
-            pending = null;
-            starts++;
-            status.value = "disconnected";
-            mode.value = null;
-            conversationStatus.value = null;
-            callbacks.onStatusChange?.({status: "disconnected"});
-            callbacks.onDisconnect?.({reason: "user"});
-            return;
-        }
-        const ending = conversation;
-        conversation = null;
-        conversationStatus.value = null;
-        await ending?.endSession();
-    }
-
-    async function startSession(options: Omit<SessionOptions, keyof Callbacks>): Promise<string> {
-        const start = ++starts;
-        pending = start;
-        // The session being replaced no longer reports its mode or status, so none shows until the new one has its own.
-        mode.value = null;
-        conversationStatus.value = null;
-        const replaced = conversation;
-        conversation = null;
-        // Started before the old one ends, so its audio starts inside the caller's gesture, whatever the end takes.
-        const starting = Conversation.startSession({...options, ...ownCallbacks(start)});
-        void replaced?.endSession();
-        let started: Conversation;
-        try {
-            started = await starting;
-        } finally {
-            if (pending === start) pending = null;
-        }
-        if (start !== starts) {
-            // A newer start, or the component's end, came while this one waited.
-            await started.endSession();
-            throw new Error("A newer session replaced this one before it started.");
-        }
-        conversation = started;
-        if (micMuted.value) started.setMicMuted(true);
-        return started.getId();
-    }
-
-    if (getCurrentScope() !== undefined) {
-        onScopeDispose(() => {
-            starts++;
-            pending = null;
-            void endSession();
-        });
-    }
+    if (getCurrentScope() !== undefined) onScopeDispose(controller.dispose);
 
     return {
         status: readonly(status),
@@ -139,20 +61,19 @@ export function useConversation(callbacks: Callbacks = {}): UseConversation {
         isSpeaking: computed(() => mode.value === "speaking"),
         conversationStatus: readonly(conversationStatus),
         micMuted: readonly(micMuted),
-        startSession,
-        endSession,
-        sendUserMessage: (text, options) =>
-            conversation?.sendUserMessage(text, options) ?? Promise.reject(new Error("Start a session before sending a message.")),
-        setMicMuted: (muted) => {
-            micMuted.value = muted;
-            conversation?.setMicMuted(muted);
-        },
-        setVolume: (volume) => {
-            conversation?.setVolume(volume);
-        },
-        getInputVolume: () => conversation?.getInputVolume() ?? 0,
-        getOutputVolume: () => conversation?.getOutputVolume() ?? 0,
-        getId: () => conversation?.getId() ?? "",
-        getResumeToken: () => conversation?.getResumeToken() ?? null,
+        startSession: controller.startSession,
+        endSession: controller.endSession,
+        sendUserMessage: controller.sendUserMessage,
+        sendContextualUpdate: controller.sendContextualUpdate,
+        sendUserActivity: controller.sendUserActivity,
+        sendFeedback: controller.sendFeedback,
+        setMicMuted: controller.setMicMuted,
+        setVolume: controller.setVolume,
+        getInputVolume: controller.getInputVolume,
+        getOutputVolume: controller.getOutputVolume,
+        changeInputDevice: controller.changeInputDevice,
+        changeOutputDevice: controller.changeOutputDevice,
+        getId: controller.getId,
+        getResumeToken: controller.getResumeToken,
     };
 }

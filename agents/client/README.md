@@ -21,7 +21,21 @@ await conversation.endSession();
 ```
 
 - **Callbacks:** `onConnect`, `onDisconnect`, `onStatusChange`, `onModeChange`, `onMessage`, `onAgentChatResponsePart`, `onAgentResponseCorrection`, `onAgentTyping`, `onHistory`, `onHandoff`, `onDebug` and `onError`. Their names follow `@elevenlabs/client` where they mean the same thing.
+- **`ConversationController`** holds a session's state and methods for a framework to sit on: `subscribe`, `getSnapshot`, and everything below. The Vue package is built on it.
 - **Options:** `serverUrl` defaults to `wss://my.neuronai.uz/api/v1/realtime`. `WebSocket` lets another runtime supply its own; the default is `globalThis.WebSocket`, which browsers and Node 22 have. `textOnly`, `output` and `audio` make a call (see [Voice calls](#voice-calls)).
+
+## Telling the agent what's going on
+
+```ts
+conversation.sendContextualUpdate("The customer is on the delivery page.", {contextId: "page"});
+conversation.sendUserActivity();
+conversation.sendFeedback(eventId, "like");
+```
+
+- **`sendContextualUpdate`** interrupts nothing. The agent reads it at its next turn, as information and never as instructions. A newer update with the same `contextId` replaces the older one, and the agent keeps the last 20. Said while the connection is down, it goes out when it's back.
+- **`sendUserActivity`** says the customer is typing: a reply that hasn't started holds off for about 2 seconds, and 8 at most. In a call it puts off the silence check-in. Send it every second or so while they type.
+- **`sendFeedback`** rates a reply by the `eventId` its `onMessage` gave, with `"like"`, `"dislike"`, or `null` to take it back.
+- **`onAgentToolResponse`** says which tool the agent is using and how it's going, never its values or its result. **`onLanguageChange`** says it moved to another language. **`onInterruption`** says the customer spoke over a reply in a call.
 
 ## Starting a session
 
@@ -75,6 +89,7 @@ const level = conversation.getOutputVolume(); // 0 to 1, for a visualizer; getIn
 - **Ending:** `endSession()` hangs up, and the conversation goes on as chat.
   - A call another connection takes over ends with `onDisconnect` code 4008.
   - A call that reaches the agent's max duration ends with code 1000 and message `max_duration`. To go on in chat, start a text session with `getResumeToken()`.
+- **Devices:** `changeInputDevice({deviceId})` moves the call to another microphone without dropping it, and `changeOutputDevice({deviceId})` to another speaker, in browsers that can choose one. When it can't, it rejects and the call stays on what it has. A microphone that stops mid-call calls `onError` with the code `microphone_lost`, and the call goes on.
 - **Reconnecting:** a call that loses its connection resumes as a call. The reply it was playing is dropped.
 
 ### A voice call in the browser

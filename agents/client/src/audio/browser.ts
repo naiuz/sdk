@@ -53,6 +53,7 @@ export class BrowserAudio implements AudioIO {
     private readonly output: MediaStreamAudioDestinationNode;
     /** The microphone stream this opened, and so must stop. */
     private opened: MediaStream | null = null;
+    onInputLost: (() => void) | null = null;
     private moduleUrl: string | null = null;
     private source: MediaStreamAudioSourceNode | null = null;
     private capture: AudioWorkletNode | null = null;
@@ -175,6 +176,27 @@ export class BrowserAudio implements AudioIO {
         });
     }
 
+    async changeInputDevice(deviceId: string): Promise<void> {
+        const before = this.opened;
+        const stream = await this.openMicrophone(deviceId);
+        if (this.closed) {
+            for (const track of stream.getTracks()) track.stop();
+            return;
+        }
+        this.source?.disconnect();
+        for (const track of before?.getTracks() ?? []) {
+            track.onended = null;
+            track.stop();
+        }
+        this.source = this.context.createMediaStreamSource(stream);
+        if (this.capture !== null) this.source.connect(this.capture);
+    }
+
+    async changeOutputDevice(deviceId: string): Promise<void> {
+        if (typeof this.element.setSinkId !== "function") throw new Error("This browser can't choose where sound plays.");
+        await this.element.setSinkId(deviceId);
+    }
+
     stopCapture(): void {
         for (const track of this.opened?.getTracks() ?? []) track.stop();
         this.input = 0;
@@ -286,16 +308,24 @@ export class BrowserAudio implements AudioIO {
         return Date.now() - this.handedOverAt < REPORT_GAP_MS;
     }
 
-    private async openMicrophone(): Promise<MediaStream> {
+    private async openMicrophone(deviceId?: string): Promise<MediaStream> {
         const devices = (globalThis.navigator as Navigator | undefined)?.mediaDevices;
         if (devices === undefined) throw new MicrophoneError(new TypeError("The microphone needs a secure page: https, or localhost."));
+        let stream: MediaStream;
         try {
-            this.opened = await devices.getUserMedia({audio: MICROPHONE});
+            stream = await devices.getUserMedia({audio: deviceId === undefined ? MICROPHONE : {...MICROPHONE, deviceId: {exact: deviceId}}});
         } catch (error) {
             // Refused, missing, held by another app, or a device error: whatever it is, it's the microphone's.
             throw new MicrophoneError(error);
         }
-        return this.opened;
+        // Only a track that stops by itself fires this: the ones this stops don't.
+        for (const track of stream.getTracks()) {
+            track.onended = () => {
+                this.onInputLost?.();
+            };
+        }
+        this.opened = stream;
+        return stream;
     }
 
     /** The worklet module, from the package's own source: an app has nothing to host or configure. */
