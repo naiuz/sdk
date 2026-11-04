@@ -11,10 +11,10 @@ use PHPUnit\Framework\TestCase;
 
 final class WebhooksTest extends TestCase
 {
-    /** @return array{secret: string, now: int, tolerance_seconds: int, cases: list<array{name: string, body: string, header: string, valid: bool}>} */
+    /** @return array{secret: string, now: int, tolerance_seconds: int, cases: list<array{name: string, body: string, header: string, valid: bool, secret?: string}>} */
     private static function vectors(): array
     {
-        /** @var array{secret: string, now: int, tolerance_seconds: int, cases: list<array{name: string, body: string, header: string, valid: bool}>} $vectors */
+        /** @var array{secret: string, now: int, tolerance_seconds: int, cases: list<array{name: string, body: string, header: string, valid: bool, secret?: string}>} $vectors */
         $vectors = json_decode((string) file_get_contents(__DIR__ . '/../../spec/webhooks/signature-vectors.json'), true, 512, JSON_THROW_ON_ERROR);
 
         return $vectors;
@@ -30,12 +30,12 @@ final class WebhooksTest extends TestCase
         }
     }
 
-    /** @return iterable<string, array{string, string}> */
+    /** @return iterable<string, array{string, string, string|null}> */
     public static function badSignatures(): iterable
     {
         foreach (self::vectors()['cases'] as $case) {
             if (! $case['valid']) {
-                yield $case['name'] => [$case['body'], $case['header']];
+                yield $case['name'] => [$case['body'], $case['header'], $case['secret'] ?? null];
             }
         }
     }
@@ -50,13 +50,13 @@ final class WebhooksTest extends TestCase
     }
 
     #[DataProvider('badSignatures')]
-    public function test_it_refuses_a_bad_one(string $body, string $header): void
+    public function test_it_refuses_a_bad_one(string $body, string $header, ?string $secret): void
     {
         $vectors = self::vectors();
 
         $this->expectException(WebhookVerificationException::class);
 
-        (new NeuronAI(['api_key' => 'nai_test']))->webhooks->verify($body, $header, $vectors['secret'], $vectors['tolerance_seconds'], $vectors['now']);
+        (new NeuronAI(['api_key' => 'nai_test']))->webhooks->verify($body, $header, $secret ?? $vectors['secret'], $vectors['tolerance_seconds'], $vectors['now']);
     }
 
     public function test_it_refuses_a_request_with_no_header(): void

@@ -1,4 +1,5 @@
-"""Synthesized speech: the WAV file's bytes, and what the answer's headers say about it."""
+"""Audio: the file's bytes, and what the answer's headers say about it. Speech is a WAV, and a conversation's recording
+is Ogg."""
 
 from __future__ import annotations
 
@@ -27,15 +28,16 @@ class DialogueTurnTiming(BaseModel):
 
 @dataclass(frozen=True, repr=False)
 class SpeechAudio:
-    """Synthesized speech: the WAV file's bytes, and what the answer's headers say about it.
+    """Audio: the file's bytes, and what the answer's headers say about it. Speech is a WAV, and a conversation's
+    recording is Ogg.
 
     A number field is None when the answer lacks its header, and a flag is False.
     """
 
     audio: bytes
-    """The WAV file's bytes."""
+    """The file's bytes."""
     content_type: str
-    """The media type, `audio/wav`."""
+    """The media type: `audio/wav`, or `audio/ogg` for a conversation's recording."""
     cost: float | None
     """The price billed, in credits (`X-Cost`)."""
     character_count: int | None
@@ -53,7 +55,7 @@ class SpeechAudio:
     """The request's ID (`X-Request-Id`), to quote to support."""
 
     def save(self, path: str | os.PathLike[str]) -> None:
-        """Writes the WAV file to `path`, replacing a file already there.
+        """Writes the file to `path`, replacing a file already there.
 
         A write that fails raises NeuronAIError, naming the path and why.
         """

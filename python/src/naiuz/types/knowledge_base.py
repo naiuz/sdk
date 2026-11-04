@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import TypedDict
 
 from .._models import BaseModel, WithRequestId
+from .._uploads import Uploadable
 
 
 class DocumentPairParam(TypedDict):
@@ -44,7 +46,7 @@ class KnowledgeDocument(WithRequestId):
     name: str
     """Its name."""
     kind: str
-    """`file`, `text`, `qa` or a link's kind."""
+    """`pdf`, `docx`, `txt`, `xlsx`, `csv`, `text`, `qa`, `website`, `google_doc` or `google_sheet`."""
     status: str
     """How far reading it has got, such as `processing` or `ready`."""
     failure_reason: str | None
@@ -109,3 +111,60 @@ class KnowledgeDocuments(WithRequestId):
     """The documents."""
     usage: KnowledgeUsage
     """How much of its room they use."""
+
+
+class CreateTextDocumentRequest(TypedDict):
+    """What `knowledge_base.create_text` takes, each as a keyword argument."""
+
+    name: str
+    """The document's name."""
+    text: str
+    """Its text, up to 300,000 characters."""
+
+
+class CreateQaDocumentRequest(TypedDict):
+    """What `knowledge_base.create_qa` takes, each as a keyword argument."""
+
+    name: str
+    """The document's name."""
+    pairs: Sequence[DocumentPairParam]
+    """Up to 2,000 pairs of `question` and `answer`."""
+
+
+class _CreateLinkDocumentFields(TypedDict):
+    url: str
+    """An https address."""
+
+
+class CreateLinkDocumentRequest(_CreateLinkDocumentFields, total=False):
+    """What `knowledge_base.create_link` takes, each as a keyword argument."""
+
+    crawl_scope: str | None
+    """How far to read a website: this `page`, or the whole `site`."""
+    name: str | None
+    """The document's name, up to 255 characters. The address's host when left out."""
+
+
+class _CreateFileDocumentFields(TypedDict):
+    file: Uploadable
+    """A PDF, a Word document, a spreadsheet or a text file."""
+
+
+class CreateFileDocumentRequest(_CreateFileDocumentFields, total=False):
+    """What `knowledge_base.create_file` takes, each as a keyword argument."""
+
+    name: str | None
+    """The document's name, up to 255 characters. The file's when left out."""
+
+
+class UpdateDocumentRequest(TypedDict, total=False):
+    """What `knowledge_base.update` takes, each as a keyword argument."""
+
+    name: str
+    """The document's name."""
+    text: str
+    """A text document's text."""
+    pairs: Sequence[DocumentPairParam]
+    """A questions document's pairs."""
+    crawl_scope: str
+    """How far to read a website: this `page`, or the whole `site`."""

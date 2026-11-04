@@ -12,11 +12,11 @@ interface FileSystem {
 // A variable rather than a literal, so a bundler building for the browser leaves the import alone.
 const FS_MODULE = "node:fs/promises";
 
-/** Synthesized speech: the WAV file's bytes, and what the answer's headers say about it. */
+/** Audio: the file's bytes, and what the answer's headers say about it. Speech is a WAV, and a conversation's recording is Ogg. */
 export class SpeechAudio {
-    /** The WAV file's bytes. */
+    /** The file's bytes. */
     readonly audio: Uint8Array;
-    /** The media type, `audio/wav`. */
+    /** The media type: `audio/wav`, or `audio/ogg` for a conversation's recording. */
     readonly content_type: string;
     /** The price billed, in credits (`X-Cost`); `null` when the answer lacks the header. */
     readonly cost: number | null;
@@ -46,7 +46,7 @@ export class SpeechAudio {
     }
 
     /**
-     * Writes the WAV file to `path`, replacing a file already there. It works
+     * Writes the file to `path`, replacing a file already there. It works
      * on Node, Bun and Deno (with `--allow-write`). Elsewhere, such as in a
      * browser, it rejects with NeuronAIError: use the bytes in `audio`.
      */

@@ -22,7 +22,7 @@ final readonly class Tool extends ApiObject
      * @param list<ToolUser> $used_by The agents that use it.
      * @param bool|null $wait_for_result Whether a client tool's result is waited for.
      * @param int|null $timeout_s How long a client tool has, in seconds.
-     * @param \stdClass|null $config What it calls, with its parameters. Secrets appear by id.
+     * @param \stdClass|null $config For `webhook`: `method` and `url`, with `parameters` holding `path`, `query` and `body` lists, each parameter a `name`, a `source` (`model` for what the agent fills in, `fixed`, `variable` or `secret`), and its `type`, `required` and `description`. Also `headers`, `auth`, `response` and `timeout_s`, from 5 to 120. For `client`: `parameters`, a list of `name`, `type`, `required` and `description`, with `wait_for_result` and `timeout_s`, from 1 to 120. A `client` tool can send `{}`. Secrets appear by id.
      * @param string|null $request_id The request's ID, to quote to support: the answer's `request_id` or
      *     `X-Request-Id` header; null inside a page. It isn't a field: toArray() and json_encode() leave it out.
      */

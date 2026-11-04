@@ -21,10 +21,11 @@ use Naiuz\Types\KnowledgeDocuments;
  * @phpstan-type CreateTextDocumentRequest array{name: string, text: string}
  * @phpstan-type CreateQaDocumentRequest array{name: string, pairs: list<array{question: string, answer: string}>}
  * @phpstan-type CreateLinkDocumentRequest array{url: string, crawl_scope?: string|null, name?: string|null}
- * @phpstan-type CreateFileDocumentRequest array{file: Upload|string, name?: string|null}
+ * @phpstan-type CreateFileDocumentRequest array{file: Uploadable, name?: string|null}
  * @phpstan-type UpdateDocumentRequest array{name?: string, text?: string, pairs?: list<array{question: string, answer: string}>, crawl_scope?: string}
  * @phpstan-type DeleteDocumentParams array{detach?: bool|null}
  * @phpstan-import-type CallOptions from RequestOptions
+ * @phpstan-import-type Uploadable from Upload
  */
 readonly class KnowledgeBase
 {
@@ -67,7 +68,7 @@ readonly class KnowledgeBase
      *
      * @param CreateTextDocumentRequest $params
      *     - name: The document's name.
-     *     - text: Its text.
+     *     - text: Its text, up to 300,000 characters.
      * @param CallOptions $options
      */
     public function createText(array $params, array $options = []): KnowledgeDocument
@@ -99,8 +100,8 @@ readonly class KnowledgeBase
      *
      * @param CreateLinkDocumentRequest $params
      *     - url: An https address.
-     *     - crawl_scope: How far to read a website: `page`, `section` or `site`.
-     *     - name: The document's name. The page's title when left out.
+     *     - crawl_scope: How far to read a website: this `page`, or the whole `site`.
+     *     - name: The document's name, up to 255 characters. The address's host when left out.
      * @param CallOptions $options
      */
     public function createLink(array $params, array $options = []): KnowledgeDocument
@@ -116,7 +117,7 @@ readonly class KnowledgeBase
      *
      * @param CreateFileDocumentRequest $params
      *     - file: A PDF, a Word document, a spreadsheet or a text file.
-     *     - name: The document's name. The file's when left out.
+     *     - name: The document's name, up to 255 characters. The file's when left out.
      * @param CallOptions $options
      */
     public function createFile(array $params, array $options = []): KnowledgeDocument
@@ -134,7 +135,7 @@ readonly class KnowledgeBase
      *     - name: The document's name.
      *     - text: A text document's text.
      *     - pairs: A questions document's pairs.
-     *     - crawl_scope: How far to read a website.
+     *     - crawl_scope: How far to read a website: this `page`, or the whole `site`.
      * @param CallOptions $options
      */
     public function update(int|string $document, array $params = [], array $options = []): KnowledgeDocument
@@ -146,7 +147,7 @@ readonly class KnowledgeBase
     }
 
     /**
-     * Reads a link document again now.
+     * Reads a link document again now, or tries a file that failed again.
      *
      * @param CallOptions $options
      */

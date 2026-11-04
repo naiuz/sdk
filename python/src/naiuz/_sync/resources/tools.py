@@ -62,10 +62,14 @@ class Tools(APIResource):
         """Creates a webhook tool, which calls your systems, or a client tool, which runs in your page.
 
         Args:
-            kind: `webhook` or `client`.
+            kind: A `webhook` our servers call, or a `client` tool your page runs.
             name: Its name: small letters, digits and `_`.
             description: What it does and when to use it, for the model to read.
-            config: What it calls, with its parameters.
+            config: For `webhook`: `method` and `url`, with `parameters` holding `path`, `query` and `body` lists, each
+                parameter a `name`, a `source` (`model` for what the agent fills in, `fixed`, `variable` or `secret`),
+                and its `type`, `required` and `description`. Also `headers`, `auth`, `response` and `timeout_s`, from 5
+                to 120. For `client`: `parameters`, a list of `name`, `type`, `required` and `description`, with
+                `wait_for_result` and `timeout_s`, from 1 to 120. A `client` tool can send `{}`.
             last_test_status: The result of a test this config passed.
         """
         options = RequestOptions(timeout=timeout, max_retries=max_retries, extra_headers=extra_headers)
@@ -91,10 +95,14 @@ class Tools(APIResource):
         Agents that use it get the change when it's saved.
 
         Args:
-            kind: `webhook` or `client`.
+            kind: A `webhook` our servers call, or a `client` tool your page runs.
             name: Its name.
             description: What it does and when to use it.
-            config: What it calls, with its parameters.
+            config: For `webhook`: `method` and `url`, with `parameters` holding `path`, `query` and `body` lists, each
+                parameter a `name`, a `source` (`model` for what the agent fills in, `fixed`, `variable` or `secret`),
+                and its `type`, `required` and `description`. Also `headers`, `auth`, `response` and `timeout_s`, from 5
+                to 120. For `client`: `parameters`, a list of `name`, `type`, `required` and `description`, with
+                `wait_for_result` and `timeout_s`, from 1 to 120. A `client` tool can send `{}`.
             last_test_status: The result of a test this config passed.
         """
         options = RequestOptions(timeout=timeout, max_retries=max_retries, extra_headers=extra_headers)

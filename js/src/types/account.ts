@@ -6,7 +6,9 @@ export interface Balance {
     formatted: string;
     /** The unit of the balance and the prices: `credits`. */
     currency: string;
-    /** The price of one minute of transcription, in `currency`. */
+    /** The price of one second of transcription, in `currency`. */
+    stt_price_per_second: number;
+    /** @deprecated The same rate, times 60: use `stt_price_per_second`. */
     stt_price_per_minute: number;
     /** The price of one character of speech, in `currency`. */
     tts_price_per_char: number;

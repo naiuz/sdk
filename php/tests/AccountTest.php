@@ -14,7 +14,7 @@ use Naiuz\Tests\Support\TestHttp;
 
 final class AccountTest extends TestCase
 {
-    private const BALANCE = ['balance' => 10000, 'formatted' => '10 000 credits', 'currency' => 'credits', 'stt_price_per_minute' => 500, 'tts_price_per_char' => 2.5, 'min_topup' => 5000];
+    private const BALANCE = ['balance' => 10000, 'formatted' => '10 000 credits', 'currency' => 'credits', 'stt_price_per_second' => 0.5, 'stt_price_per_minute' => 500, 'tts_price_per_char' => 2.5, 'min_topup' => 5000];
 
     private const USAGE = [
         'period' => ['days' => 7, 'start' => '2026-09-23', 'end' => '2026-09-29'],

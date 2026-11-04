@@ -1,4 +1,4 @@
-import type {FileUpload} from "./uploads";
+import type {Uploadable} from "./uploads";
 
 /** An agent that uses a document. */
 export interface DocumentUser {
@@ -24,7 +24,7 @@ export interface KnowledgeDocument {
     id: number;
     /** Its name. */
     name: string;
-    /** `file`, `text`, `qa` or a link's kind. */
+    /** `pdf`, `docx`, `txt`, `xlsx`, `csv`, `text`, `qa`, `website`, `google_doc` or `google_sheet`. */
     kind: string;
     /** How far reading it has got, such as `processing` or `ready`. */
     status: string;
@@ -102,7 +102,7 @@ export interface DocumentPairParam {
 export interface CreateTextDocumentRequest {
     /** The document's name. */
     name: string;
-    /** Its text. */
+    /** Its text, up to 300,000 characters. */
     text: string;
 }
 
@@ -118,17 +118,17 @@ export interface CreateQaDocumentRequest {
 export interface CreateLinkDocumentRequest {
     /** An https address. */
     url: string;
-    /** How far to read a website: `page`, `section` or `site`. */
+    /** How far to read a website: this `page`, or the whole `site`. */
     crawl_scope?: string | null;
-    /** The document's name. The page's title when left out. */
+    /** The document's name, up to 255 characters. The address's host when left out. */
     name?: string | null;
 }
 
 /** What `createFileDocument` takes. */
 export interface CreateFileDocumentRequest {
     /** A PDF, a Word document, a spreadsheet or a text file. */
-    file: FileUpload;
-    /** The document's name. The file's when left out. */
+    file: Uploadable;
+    /** The document's name, up to 255 characters. The file's when left out. */
     name?: string | null;
 }
 
@@ -140,7 +140,7 @@ export interface UpdateDocumentRequest {
     text?: string;
     /** A questions document's pairs. */
     pairs?: DocumentPairParam[];
-    /** How far to read a website. */
+    /** How far to read a website: this `page`, or the whole `site`. */
     crawl_scope?: string;
 }
 

@@ -16,6 +16,8 @@ class Balance(WithRequestId):
     """The balance written for people, such as `10 000 credits`."""
     currency: str
     """The unit of the balance and the prices: `credits`."""
+    stt_price_per_second: float
+    """The price of one second of transcription, in `currency`."""
     stt_price_per_minute: float
     """The price of one minute of transcription, in `currency`."""
     tts_price_per_char: float

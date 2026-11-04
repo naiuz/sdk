@@ -125,14 +125,14 @@ def test_a_voice_may_leave_out_category_ref_text_and_created_at_and_have_a_type_
 async def test_update_sends_every_field_it_is_given() -> None:
     api = MockAPI(envelope(voice("v1")))
     await client_for(api).voices.update(
-        "v1", name="Support voice", category="conversational", language="ru", ref_text=None, tags=["support"]
+        "v1", name="Support voice", category="conversational", language="ru", ref_text="Salom", tags=None
     )
     assert body_of(api.requests[0]) == {
         "name": "Support voice",
         "category": "conversational",
         "language": "ru",
-        "ref_text": None,
-        "tags": ["support"],
+        "ref_text": "Salom",
+        "tags": None,
     }
 
 
@@ -201,7 +201,7 @@ async def test_replace_audio_sends_the_new_clip_and_its_transcript_as_multipart_
     api = MockAPI(envelope(voice("v1"), "req-replace"), envelope(voice("v1")))
     client = client_for(api)
     replaced = await client.voices.replace_audio("v1", ref_audio=("new.mp3", CLIP), ref_text="Yangi")
-    change: ReplaceVoiceAudioRequest = {"ref_audio": ("new.m4a", CLIP, "audio/x-m4a"), "ref_text": None}
+    change: ReplaceVoiceAudioRequest = {"ref_audio": ("new.m4a", CLIP, "audio/x-m4a")}
     await client.voices.replace_audio("v1", **change)
     assert replaced.request_id == "req-replace"
     first, second = api.requests

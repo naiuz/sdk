@@ -12,6 +12,17 @@
       "config": {
         "method": "GET",
         "url": "https://api.shop.uz/orders",
+        "parameters": {
+          "query": [
+            {
+              "name": "number",
+              "source": "model",
+              "type": "string",
+              "required": true,
+              "description": "The order's number."
+            }
+          ]
+        },
         "timeout_s": 20
       }
     }
@@ -31,6 +42,17 @@
         "config": {
           "method": "GET",
           "url": "https://api.shop.uz/orders",
+          "parameters": {
+            "query": [
+              {
+                "name": "number",
+                "source": "model",
+                "type": "string",
+                "required": true,
+                "description": "The order's number."
+              }
+            ]
+          },
           "timeout_s": 20
         }
       }
@@ -52,6 +74,17 @@
           "config": {
             "method": "GET",
             "url": "https://api.shop.uz/orders",
+            "parameters": {
+              "query": [
+                {
+                  "name": "number",
+                  "source": "model",
+                  "type": "string",
+                  "required": true,
+                  "description": "The order's number."
+                }
+              ]
+            },
             "timeout_s": 20
           },
           "last_test_at": null,
@@ -74,6 +107,17 @@
       "config": {
         "method": "GET",
         "url": "https://api.shop.uz/orders",
+        "parameters": {
+          "query": [
+            {
+              "name": "number",
+              "source": "model",
+              "type": "string",
+              "required": true,
+              "description": "The order's number."
+            }
+          ]
+        },
         "timeout_s": 20
       },
       "last_test_at": null,

@@ -84,13 +84,13 @@ export interface ListAgentsParams {
 
 /** What `createAgent` takes. */
 export interface CreateAgentRequest {
-    /** The template: `support` or `sales`. */
+    /** The template to start from: `support`, `sales`, or `blank`, which asks nothing. */
     template: string;
     /** The agent's main language: `uz`, `ru` or `en`. */
     language: string;
     /** The agent's name. The template's when left out. */
     name?: string | null;
-    /** The answers to the template's questions, by question. */
+    /** The answers to the template's questions, by question. `support` and `sales` need `business_name`, `offering`, `goal` and `tone`, and `blank` needs none. The Agents page of the docs lists what each one takes. */
     answers?: Record<string, unknown>;
 }
 

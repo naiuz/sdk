@@ -119,7 +119,7 @@ Creates a job, polls it until it has `succeeded` or `failed`, and returns it. Ra
 | Parameter | Type | |
 |---|---|---|
 | `ref_audio` | `Uploadable` | Required. The new clip, in the formats and size a new clone takes. |
-| `ref_text` | `str \| None` | What the new clip says, up to 1000 characters. |
+| `ref_text` | `str` | What the new clip says, up to 1000 characters. |
 
 ### `voices.delete(id) -> None`
 
@@ -255,10 +255,10 @@ Your organization's agents.
 
 | Parameter | Type | |
 |---|---|---|
-| `template` | `str` | Required. The template: `support` or `sales`. |
+| `template` | `str` | Required. The template to start from: `support`, `sales`, or `blank`, which asks nothing. |
 | `language` | `str` | Required. The agent's main language: `uz`, `ru` or `en`. |
 | `name` | `str \| None` | The agent's name. The template's when left out. |
-| `answers` | `Mapping[str, object]` | The answers to the template's questions, by question. |
+| `answers` | `Mapping[str, object]` | The answers to the template's questions, by question. `support` and `sales` need `business_name`, `offering`, `goal` and `tone`, and `blank` needs none. The Agents page of the docs lists what each one takes. |
 
 ### `agents.update(agent, *, base_revision, sections) -> AgentDraftSaved`
 
@@ -366,7 +366,7 @@ The documents agents answer from.
 | Parameter | Type | |
 |---|---|---|
 | `name` | `str` | Required. The document's name. |
-| `text` | `str` | Required. Its text. |
+| `text` | `str` | Required. Its text, up to 300,000 characters. |
 
 ### `knowledge_base.create_qa(*, name, pairs) -> KnowledgeDocument`
 
@@ -384,8 +384,8 @@ The documents agents answer from.
 | Parameter | Type | |
 |---|---|---|
 | `url` | `str` | Required. An https address. |
-| `crawl_scope` | `str \| None` | How far to read a website: `page`, `section` or `site`. |
-| `name` | `str \| None` | The document's name. The page's title when left out. |
+| `crawl_scope` | `str \| None` | How far to read a website: this `page`, or the whole `site`. |
+| `name` | `str \| None` | The document's name, up to 255 characters. The address's host when left out. |
 
 ### `knowledge_base.create_file(*, file, name=) -> KnowledgeDocument`
 
@@ -394,7 +394,7 @@ The documents agents answer from.
 | Parameter | Type | |
 |---|---|---|
 | `file` | `Uploadable` | Required. A PDF, a Word document, a spreadsheet or a text file. |
-| `name` | `str \| None` | The document's name. The file's when left out. |
+| `name` | `str \| None` | The document's name, up to 255 characters. The file's when left out. |
 
 ### `knowledge_base.update(document, *, name=, text=, pairs=, crawl_scope=) -> KnowledgeDocument`
 
@@ -405,11 +405,11 @@ The documents agents answer from.
 | `name` | `str` | The document's name. |
 | `text` | `str` | A text document's text. |
 | `pairs` | `Sequence[DocumentPairParam]` | A questions document's pairs. |
-| `crawl_scope` | `str` | How far to read a website. |
+| `crawl_scope` | `str` | How far to read a website: this `page`, or the whole `site`. |
 
 ### `knowledge_base.refresh(document) -> None`
 
-`POST /knowledge-base/{document}/refresh`. Reads a link document again now.
+`POST /knowledge-base/{document}/refresh`. Reads a link document again now, or tries a file that failed again.
 
 ### `knowledge_base.delete(document, *, detach=None) -> None`
 
@@ -437,10 +437,10 @@ The tools agents can use.
 
 | Parameter | Type | |
 |---|---|---|
-| `kind` | `str` | Required. `webhook` or `client`. |
+| `kind` | `str` | Required. A `webhook` our servers call, or a `client` tool your page runs. |
 | `name` | `str` | Required. Its name: small letters, digits and `_`. |
 | `description` | `str` | Required. What it does and when to use it, for the model to read. |
-| `config` | `Mapping[str, object]` | Required. What it calls, with its parameters. |
+| `config` | `Mapping[str, object]` | Required. For `webhook`: `method` and `url`, with `parameters` holding `path`, `query` and `body` lists, each parameter a `name`, a `source` (`model` for what the agent fills in, `fixed`, `variable` or `secret`), and its `type`, `required` and `description`. Also `headers`, `auth`, `response` and `timeout_s`, from 5 to 120. For `client`: `parameters`, a list of `name`, `type`, `required` and `description`, with `wait_for_result` and `timeout_s`, from 1 to 120. A `client` tool can send `{}`. |
 | `last_test_status` | `str \| None` | The result of a test this config passed. |
 
 ### `tools.update(tool, *, kind, name, description, config, last_test_status=) -> Tool`
@@ -449,10 +449,10 @@ The tools agents can use.
 
 | Parameter | Type | |
 |---|---|---|
-| `kind` | `str` | Required. `webhook` or `client`. |
+| `kind` | `str` | Required. A `webhook` our servers call, or a `client` tool your page runs. |
 | `name` | `str` | Required. Its name. |
 | `description` | `str` | Required. What it does and when to use it. |
-| `config` | `Mapping[str, object]` | Required. What it calls, with its parameters. |
+| `config` | `Mapping[str, object]` | Required. For `webhook`: `method` and `url`, with `parameters` holding `path`, `query` and `body` lists, each parameter a `name`, a `source` (`model` for what the agent fills in, `fixed`, `variable` or `secret`), and its `type`, `required` and `description`. Also `headers`, `auth`, `response` and `timeout_s`, from 5 to 120. For `client`: `parameters`, a list of `name`, `type`, `required` and `description`, with `wait_for_result` and `timeout_s`, from 1 to 120. A `client` tool can send `{}`. |
 | `last_test_status` | `str \| None` | The result of a test this config passed. |
 
 ### `tools.delete(tool, *, detach=None) -> None`

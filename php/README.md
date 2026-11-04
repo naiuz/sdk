@@ -339,7 +339,7 @@ Every method takes an array of options after its own arguments:
 
 Headers go on in this order, each over the ones before: the SDK's own, `default_headers`, the call's Idempotency-Key, then `extra_headers`.
 
-**Left out, or null.** A key you leave out isn't sent. A null is sent as JSON null, which the API reads as "clear it": `$client->voices->update($voiceId, ['ref_text' => null])` removes the transcript, while `$client->voices->update($voiceId, ['name' => 'Support voice'])` leaves it alone. In a multipart upload, a null is left out, since a form has no null. A key a method doesn't take, such as `refText`, is refused before anything is sent, rather than ignored by the API.
+**Left out, or null.** A key you leave out isn't sent. A null is sent as JSON null, which the API reads as "clear it": `$client->voices->update($voiceId, ['tags' => null])` removes the tags, while `$client->voices->update($voiceId, ['name' => 'Support voice'])` leaves it alone. In a multipart upload, a null is left out, since a form has no null. A key a method doesn't take, such as `refText`, is refused before anything is sent, rather than ignored by the API.
 
 ## Types
 

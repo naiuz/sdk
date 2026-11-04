@@ -21,8 +21,8 @@ use Naiuz\Types\VoiceCategory;
  *
  * @phpstan-type ListVoicesParams array{type?: 'stock'|'custom'|null, language?: string|null, limit?: int|null, cursor?: string|null}
  * @phpstan-type CreateVoiceRequest array{name: string, language: SpeechLanguage, ref_audio: Uploadable, ref_text: string, category?: VoiceCategory|value-of<VoiceCategory>, tags?: list<string>|null}
- * @phpstan-type UpdateVoiceRequest array{name?: string, category?: VoiceCategory|value-of<VoiceCategory>, language?: SpeechLanguage, ref_text?: string|null, tags?: list<string>|null}
- * @phpstan-type ReplaceVoiceAudioRequest array{ref_audio: Uploadable, ref_text?: string|null}
+ * @phpstan-type UpdateVoiceRequest array{name?: string, category?: VoiceCategory|value-of<VoiceCategory>, language?: SpeechLanguage, ref_text?: string, tags?: list<string>|null}
+ * @phpstan-type ReplaceVoiceAudioRequest array{ref_audio: Uploadable, ref_text?: string}
  * @phpstan-import-type SpeechLanguage from TtsJobs
  * @phpstan-import-type Uploadable from Upload
  * @phpstan-import-type CallOptions from RequestOptions
@@ -115,7 +115,7 @@ readonly class Voices
      *     - name: the new name, up to 120 characters.
      *     - category: the new category.
      *     - language: the new language. Changing it re-creates the voice.
-     *     - ref_text: the new transcript, up to 1000 characters. Null or '' clears it. Changing it re-creates the
+     *     - ref_text: the new transcript, up to 1000 characters. Changing it re-creates the
      *       voice.
      *     - tags: the new tags, up to 32 characters each. Null or [] clears them, and blank tags are dropped.
      * @param CallOptions $options
@@ -139,7 +139,7 @@ readonly class Voices
      * @param ReplaceVoiceAudioRequest $params
      *     - ref_audio: the new reference clip, in the formats and size a new clone takes: WAV, MP3, OGG or FLAC, at
      *       most 10 MB. A path, or ['stream' => $stream, 'filename' => 'sample.wav'], and optionally 'content_type'.
-     *     - ref_text: what the new clip says, up to 1000 characters. Null sends nothing, as leaving it out does.
+     *     - ref_text: what the new clip says, up to 1000 characters.
      * @param CallOptions $options
      */
     public function replaceAudio(string $id, array $params, array $options = []): Voice

@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any
+from collections.abc import Mapping
+from typing import Any, TypedDict
 
 from .._models import BaseModel, WithRequestId
 
@@ -83,3 +84,42 @@ class AgentSignedUrl(WithRequestId):
     """The link, for the page's `signedUrl`. It works once."""
     expires_at: str
     """When it stops working, 15 minutes on."""
+
+
+class _CreateAgentFields(TypedDict):
+    template: str
+    """The template to start from: `support`, `sales`, or `blank`, which asks nothing."""
+    language: str
+    """The agent's main language: `uz`, `ru` or `en`."""
+
+
+class CreateAgentRequest(_CreateAgentFields, total=False):
+    """What `agents.create` takes, each as a keyword argument."""
+
+    name: str | None
+    """The agent's name. The template's when left out."""
+    answers: Mapping[str, object]
+    """The answers to the template's questions, by question. `support` and `sales` need `business_name`, `offering`,
+    `goal` and `tone`, and `blank` needs none. The Agents page of the docs lists what each one takes.
+    """
+
+
+class UpdateAgentRequest(TypedDict):
+    """What `agents.update` takes, each as a keyword argument."""
+
+    base_revision: int
+    """The `revision` you read."""
+    sections: Mapping[str, object]
+    """The top-level sections of the config to replace, such as `prompt`."""
+
+
+class _PublishAgentFields(TypedDict):
+    base_revision: int
+    """The `revision` you read."""
+
+
+class PublishAgentRequest(_PublishAgentFields, total=False):
+    """What `agents.publish` takes, each as a keyword argument."""
+
+    note: str | None
+    """What changed, for the version history. Up to 140 characters."""

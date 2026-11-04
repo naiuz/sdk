@@ -6,14 +6,18 @@
       "agent": "agent_01JB8Z5R4Q6Y2N7K3M9D0F1H2J"
     },
     "params": {
-      "customer_id": "crm-42"
+      "customer_id": "crm-42",
+      "vars": {
+        "plan": "gold"
+      }
     }
   },
   "request": {
     "method": "GET",
     "path": "/agents/agent_01JB8Z5R4Q6Y2N7K3M9D0F1H2J/signed-url",
     "query": {
-      "customer_id": "crm-42"
+      "customer_id": "crm-42",
+      "vars[plan]": "gold"
     },
     "headers": {
       "authorization": "Bearer nai_test_fixture_key"

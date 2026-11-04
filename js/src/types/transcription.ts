@@ -1,7 +1,7 @@
 import type {Uploadable} from "./uploads";
 
 /** A language transcription takes, by its code. */
-export type TranscriptionLanguage = "uz" | "ru" | "en" | "kk" | "tk" | "tg" | "tr" | "az" | "ja" | "de" | "ko" | (string & {});
+export type TranscriptionLanguage = "auto" | "uz" | "kaa" | "ru" | "en" | "kk" | "tk" | "tg" | "tr" | "az" | "ja" | "de" | "ko" | (string & {});
 
 /** Audio to transcribe, sent as multipart/form-data. */
 export interface CreateTranscriptionRequest {

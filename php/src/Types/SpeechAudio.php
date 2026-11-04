@@ -8,7 +8,7 @@ use Naiuz\Core\Files;
 use Naiuz\Exceptions\NeuronAIException;
 
 /**
- * Synthesized speech: the WAV file's bytes, and what the answer's headers say about it.
+ * Audio: the file's bytes, and what the answer's headers say about it. Speech is a WAV, and a conversation's recording is Ogg.
  *
  * A number is null when the answer lacks its header, and a flag is false. var_dump() and print_r() show the audio's
  * size, not its bytes.
@@ -16,8 +16,8 @@ use Naiuz\Exceptions\NeuronAIException;
 readonly class SpeechAudio
 {
     /**
-     * @param string $audio The WAV file's bytes.
-     * @param string $content_type The media type, `audio/wav`.
+     * @param string $audio The file's bytes.
+     * @param string $content_type The media type: `audio/wav`, or `audio/ogg` for a conversation's recording.
      * @param float|null $cost The price billed, in credits (`X-Cost`).
      * @param int|null $character_count The characters billed (`X-Character-Count`): an emotion tag counts as one.
      * @param float|null $balance Your balance after the charge, in credits (`X-Balance`).
@@ -41,7 +41,7 @@ readonly class SpeechAudio
     ) {}
 
     /**
-     * Writes the WAV file to $path, replacing a file already there.
+     * Writes the file to $path, replacing a file already there.
      *
      * @throws NeuronAIException naming the path and why, when it can't be written
      */

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import re
 import time
 from collections.abc import Mapping, Sequence
 
@@ -14,6 +15,8 @@ from ..._response import read_envelope, read_nothing
 from ...types.webhooks import CreatedWebhookEndpoint, WebhookEndpoint, WebhookEvent
 from .._io import Page, paginate, to_raw
 from .._resource import APIResource
+
+_TIMESTAMP = re.compile(r"[0-9]{1,20}")
 
 
 class Webhooks(APIResource):
@@ -136,18 +139,24 @@ class Webhooks(APIResource):
             tolerance_seconds: How old a signature may be.
             now: The time to check it against, in seconds since the epoch. Now by default.
         """
-        raw = body.encode() if isinstance(body, str) else body
-        parts = [part.strip().split("=", 1) for part in (signature or "").split(",")]
-        timestamp = next((part[1] for part in parts if len(part) == 2 and part[0] == "t"), "")
-        candidates = [part[1] for part in parts if len(part) == 2 and part[0] == "v1"]
-        if not (timestamp.isascii() and timestamp.isdigit()) or not candidates:
+        if not secret:
+            raise WebhookVerificationError("There's no signing secret to check against.")
+        raw = body.encode(errors="replace") if isinstance(body, str) else body
+        parts = [part.strip().partition("=") for part in (signature or "").split(",")]
+        timestamps = [value for name, _, value in parts if name == "t"]
+        candidates = [value for name, _, value in parts if name == "v1"]
+        if len(timestamps) != 1 or not _TIMESTAMP.fullmatch(timestamps[0]) or not candidates:
             raise WebhookVerificationError("The signature header isn't one we send.")
+        timestamp = timestamps[0]
         if abs((time.time() if now is None else now) - int(timestamp)) > tolerance_seconds:
             raise WebhookVerificationError("The signature is too old, or from the future.")
-        expected = hmac.new(secret.encode(), timestamp.encode() + b"." + raw, hashlib.sha256).hexdigest()
-        if not any(hmac.compare_digest(expected, candidate) for candidate in candidates):
+        expected = hmac.new(secret.encode(), timestamp.encode() + b"." + raw, hashlib.sha256).hexdigest().encode()
+        if not any(hmac.compare_digest(expected, candidate.encode(errors="replace")) for candidate in candidates):
             raise WebhookVerificationError("The signature doesn't match the body.")
-        return WebhookEvent.model_validate_json(raw)
+        try:
+            return WebhookEvent.model_validate_json(raw)
+        except ValueError as error:
+            raise WebhookVerificationError("The signed body isn't an event.") from error
 
 
 class WebhooksWithRawResponse:

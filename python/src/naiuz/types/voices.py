@@ -46,7 +46,7 @@ class UpdateVoiceRequest(TypedDict, total=False):
     """The new category."""
     language: SpeechLanguage
     """The new language. Changing it re-creates the voice."""
-    ref_text: str | None
+    ref_text: str
     """The new transcript, up to 1000 characters. None or "" clears it. Changing it re-creates the voice."""
     tags: Sequence[str] | None
     """The new tags, up to 32 characters each. None or [] clears them, and blank tags are dropped."""
@@ -81,5 +81,5 @@ class ReplaceVoiceAudioRequest(_ReplaceVoiceAudioFields, total=False):
     """A voice clone's new reference clip, sent as multipart/form-data: the keyword arguments of
     `voices.replace_audio`."""
 
-    ref_text: str | None
+    ref_text: str
     """What the new clip says, up to 1000 characters."""

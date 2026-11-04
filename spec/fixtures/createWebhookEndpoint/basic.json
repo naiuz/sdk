@@ -5,6 +5,7 @@
     "params": {
       "url": "https://shop.uz/hooks/neuronai",
       "events": [
+        "conversation.message.created",
         "conversation.ended"
       ]
     }
@@ -20,6 +21,7 @@
       "json": {
         "url": "https://shop.uz/hooks/neuronai",
         "events": [
+          "conversation.message.created",
           "conversation.ended"
         ]
       }
@@ -39,6 +41,7 @@
             "url": "https://shop.uz/hooks/neuronai",
             "host": "shop.uz",
             "events": [
+              "conversation.message.created",
               "conversation.ended"
             ],
             "status": "active",
@@ -59,6 +62,7 @@
         "url": "https://shop.uz/hooks/neuronai",
         "host": "shop.uz",
         "events": [
+          "conversation.message.created",
           "conversation.ended"
         ],
         "status": "active",

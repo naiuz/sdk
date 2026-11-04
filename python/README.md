@@ -30,7 +30,7 @@ answer = client.chat.completions.create(
 print(answer.choices[0].message.content)
 ```
 
-`AsyncNeuronAI` has the same resources and methods, each awaited:
+`AsyncNeuronAI` has the same resources and methods, each awaited but `webhooks.verify`, which asks the API nothing:
 
 ```python
 import asyncio
@@ -344,7 +344,7 @@ Every method takes these keyword arguments besides its own:
 
 Headers go on in this order, each over the ones before: the SDK's own, `default_headers`, the call's Idempotency-Key, then `extra_headers`.
 
-**Left out, or None.** An optional field defaults to `NOT_GIVEN`, and a field you don't pass isn't sent. None sends JSON null, which the API reads as "clear it": `client.voices.update(voice_id, ref_text=None)` removes the transcript, while `client.voices.update(voice_id, name="Support voice")` leaves it alone. In a multipart upload, None is left out like `NOT_GIVEN`, since a form has no null.
+**Left out, or None.** An optional field defaults to `NOT_GIVEN`, and a field you don't pass isn't sent. None sends JSON null, which the API reads as "clear it": `client.voices.update(voice_id, tags=None)` removes the tags, while `client.voices.update(voice_id, name="Support voice")` leaves it alone. In a multipart upload, None is left out like `NOT_GIVEN`, since a form has no null.
 
 ## Types
 

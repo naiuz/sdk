@@ -18,6 +18,7 @@ export {
     RateLimitError,
     InternalServerError,
     WaitTimeoutError,
+    WebhookVerificationError,
     type APIErrorInit,
 } from "./errors";
 export type * from "./types/errors";

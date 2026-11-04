@@ -30,19 +30,19 @@ export interface Tool {
     wait_for_result: boolean | null;
     /** How long a client tool has, in seconds. */
     timeout_s: number | null;
-    /** What it calls, with its parameters. Secrets appear by id. */
+    /** For `webhook`: `method` and `url`, with `parameters` holding `path`, `query` and `body` lists, each parameter a `name`, a `source` (`model` for what the agent fills in, `fixed`, `variable` or `secret`), and its `type`, `required` and `description`. Also `headers`, `auth`, `response` and `timeout_s`, from 5 to 120. For `client`: `parameters`, a list of `name`, `type`, `required` and `description`, with `wait_for_result` and `timeout_s`, from 1 to 120. A `client` tool can send `{}`. Secrets appear by id. */
     config?: Record<string, unknown>;
 }
 
 /** What `updateTool` takes. */
 export interface SaveToolRequest {
-    /** `webhook` or `client`. */
+    /** A `webhook` our servers call, or a `client` tool your page runs. */
     kind: string;
     /** Its name. */
     name: string;
     /** What it does and when to use it. */
     description: string;
-    /** What it calls, with its parameters. */
+    /** For `webhook`: `method` and `url`, with `parameters` holding `path`, `query` and `body` lists, each parameter a `name`, a `source` (`model` for what the agent fills in, `fixed`, `variable` or `secret`), and its `type`, `required` and `description`. Also `headers`, `auth`, `response` and `timeout_s`, from 5 to 120. For `client`: `parameters`, a list of `name`, `type`, `required` and `description`, with `wait_for_result` and `timeout_s`, from 1 to 120. A `client` tool can send `{}`. */
     config: Record<string, unknown>;
     /** The result of a test this config passed. */
     last_test_status?: string | null;

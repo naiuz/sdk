@@ -117,7 +117,7 @@ Creates a job, polls it until it has `succeeded` or `failed`, and returns it. Th
 | Key | Type | |
 |---|---|---|
 | `ref_audio` | `Uploadable` | Required. The new clip, in the formats and size a new clone takes. |
-| `ref_text` | `string\|null` | What the new clip says, up to 1000 characters. |
+| `ref_text` | `string` | What the new clip says, up to 1000 characters. |
 
 ### `voices->delete(string $id, array $options = []): void`
 
@@ -249,10 +249,10 @@ Your organization's agents.
 
 | Key | Type | |
 |---|---|---|
-| `template` | `string` | Required. The template: `support` or `sales`. |
+| `template` | `string` | Required. The template to start from: `support`, `sales`, or `blank`, which asks nothing. |
 | `language` | `string` | Required. The agent's main language: `uz`, `ru` or `en`. |
 | `name` | `string\|null` | The agent's name. The template's when left out. |
-| `answers` | `array<string, mixed>` | The answers to the template's questions, by question. |
+| `answers` | `array<string, mixed>` | The answers to the template's questions, by question. `support` and `sales` need `business_name`, `offering`, `goal` and `tone`, and `blank` needs none. The Agents page of the docs lists what each one takes. |
 
 ### `agents->update(string $agent, array $params, array $options = []): AgentDraftSaved`
 
@@ -360,7 +360,7 @@ The documents agents answer from.
 | Key | Type | |
 |---|---|---|
 | `name` | `string` | Required. The document's name. |
-| `text` | `string` | Required. Its text. |
+| `text` | `string` | Required. Its text, up to 300,000 characters. |
 
 ### `knowledgeBase->createQa(array $params, array $options = []): KnowledgeDocument`
 
@@ -378,8 +378,8 @@ The documents agents answer from.
 | Key | Type | |
 |---|---|---|
 | `url` | `string` | Required. An https address. |
-| `crawl_scope` | `string\|null` | How far to read a website: `page`, `section` or `site`. |
-| `name` | `string\|null` | The document's name. The page's title when left out. |
+| `crawl_scope` | `string\|null` | How far to read a website: this `page`, or the whole `site`. |
+| `name` | `string\|null` | The document's name, up to 255 characters. The address's host when left out. |
 
 ### `knowledgeBase->createFile(array $params, array $options = []): KnowledgeDocument`
 
@@ -388,7 +388,7 @@ The documents agents answer from.
 | Key | Type | |
 |---|---|---|
 | `file` | `Upload\|string` | Required. A PDF, a Word document, a spreadsheet or a text file. |
-| `name` | `string\|null` | The document's name. The file's when left out. |
+| `name` | `string\|null` | The document's name, up to 255 characters. The file's when left out. |
 
 ### `knowledgeBase->update(int|string $document, array $params = [], array $options = []): KnowledgeDocument`
 
@@ -399,11 +399,11 @@ The documents agents answer from.
 | `name` | `string` | The document's name. |
 | `text` | `string` | A text document's text. |
 | `pairs` | `list<array>` | A questions document's pairs. |
-| `crawl_scope` | `string` | How far to read a website. |
+| `crawl_scope` | `string` | How far to read a website: this `page`, or the whole `site`. |
 
 ### `knowledgeBase->refresh(int|string $document, array $options = []): void`
 
-`POST /knowledge-base/{document}/refresh`. Reads a link document again now.
+`POST /knowledge-base/{document}/refresh`. Reads a link document again now, or tries a file that failed again.
 
 ### `knowledgeBase->delete(int|string $document, array $query = [], array $options = []): void`
 
@@ -431,10 +431,10 @@ The tools agents can use.
 
 | Key | Type | |
 |---|---|---|
-| `kind` | `string` | Required. `webhook` or `client`. |
+| `kind` | `string` | Required. A `webhook` our servers call, or a `client` tool your page runs. |
 | `name` | `string` | Required. Its name: small letters, digits and `_`. |
 | `description` | `string` | Required. What it does and when to use it, for the model to read. |
-| `config` | `array<string, mixed>` | Required. What it calls, with its parameters. |
+| `config` | `array<string, mixed>` | Required. For `webhook`: `method` and `url`, with `parameters` holding `path`, `query` and `body` lists, each parameter a `name`, a `source` (`model` for what the agent fills in, `fixed`, `variable` or `secret`), and its `type`, `required` and `description`. Also `headers`, `auth`, `response` and `timeout_s`, from 5 to 120. For `client`: `parameters`, a list of `name`, `type`, `required` and `description`, with `wait_for_result` and `timeout_s`, from 1 to 120. A `client` tool can send `{}`. |
 | `last_test_status` | `string\|null` | The result of a test this config passed. |
 
 ### `tools->update(int|string $tool, array $params, array $options = []): Tool`
@@ -443,10 +443,10 @@ The tools agents can use.
 
 | Key | Type | |
 |---|---|---|
-| `kind` | `string` | Required. `webhook` or `client`. |
+| `kind` | `string` | Required. A `webhook` our servers call, or a `client` tool your page runs. |
 | `name` | `string` | Required. Its name. |
 | `description` | `string` | Required. What it does and when to use it. |
-| `config` | `array<string, mixed>` | Required. What it calls, with its parameters. |
+| `config` | `array<string, mixed>` | Required. For `webhook`: `method` and `url`, with `parameters` holding `path`, `query` and `body` lists, each parameter a `name`, a `source` (`model` for what the agent fills in, `fixed`, `variable` or `secret`), and its `type`, `required` and `description`. Also `headers`, `auth`, `response` and `timeout_s`, from 5 to 120. For `client`: `parameters`, a list of `name`, `type`, `required` and `description`, with `wait_for_result` and `timeout_s`, from 1 to 120. A `client` tool can send `{}`. |
 | `last_test_status` | `string\|null` | The result of a test this config passed. |
 
 ### `tools->delete(int|string $tool, array $query = [], array $options = []): void`

@@ -73,10 +73,12 @@ class AsyncAgents(AsyncAPIResource):
         The model fits its prompt to your answers, and `personalized` says when it couldn't.
 
         Args:
-            template: The template: `support` or `sales`.
+            template: The template to start from: `support`, `sales`, or `blank`, which asks nothing.
             language: The agent's main language: `uz`, `ru` or `en`.
             name: The agent's name. The template's when left out.
-            answers: The answers to the template's questions, by question.
+            answers: The answers to the template's questions, by question. `support` and `sales` need `business_name`,
+                `offering`, `goal` and `tone`, and `blank` needs none. The Agents page of the docs lists what each one
+                takes.
         """
         options = RequestOptions(timeout=timeout, max_retries=max_retries, extra_headers=extra_headers)
         body = given(template=template, language=language, name=name, answers=answers)

@@ -7,7 +7,7 @@ from typing import Literal, TypedDict
 from .._models import BaseModel, WithRequestId
 from .._uploads import Uploadable
 
-TranscriptionLanguage = Literal["uz", "ru", "en", "kk", "tk", "tg", "tr", "az", "ja", "de", "ko"]
+TranscriptionLanguage = Literal["auto", "uz", "kaa", "ru", "en", "kk", "tk", "tg", "tr", "az", "ja", "de", "ko"]
 """A language transcription takes, by its code."""
 
 

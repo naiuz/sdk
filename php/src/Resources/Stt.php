@@ -17,7 +17,7 @@ use Naiuz\Types\Transcription;
 /**
  * Speech to text.
  *
- * @phpstan-type TranscriptionLanguage 'uz'|'ru'|'en'|'kk'|'tk'|'tg'|'tr'|'az'|'ja'|'de'|'ko'
+ * @phpstan-type TranscriptionLanguage 'auto'|'uz'|'kaa'|'ru'|'en'|'kk'|'tk'|'tg'|'tr'|'az'|'ja'|'de'|'ko'
  * @phpstan-type CreateTranscriptionRequest array{file: Uploadable, language: TranscriptionLanguage}
  * @phpstan-import-type Uploadable from Upload
  * @phpstan-import-type IdempotentCallOptions from RequestOptions

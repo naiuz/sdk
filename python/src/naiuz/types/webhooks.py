@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any
+from collections.abc import Sequence
+from typing import Any, TypedDict
 
 from .._models import BaseModel, WithRequestId
 
@@ -59,3 +60,23 @@ class CreatedWebhookEndpoint(WithRequestId):
     """The endpoint."""
     secret: str
     """The signing secret: the only time it's shown, so store it now."""
+
+
+class CreateWebhookEndpointRequest(TypedDict):
+    """What `webhooks.create` takes, each as a keyword argument."""
+
+    url: str
+    """A public https address."""
+    events: Sequence[str]
+    """`conversation.message.created` and `conversation.ended`."""
+
+
+class UpdateWebhookEndpointRequest(TypedDict, total=False):
+    """What `webhooks.update` takes, each as a keyword argument."""
+
+    url: str
+    """A public https address."""
+    events: Sequence[str]
+    """What it hears of."""
+    enabled: bool
+    """On or off. Turning it on sends what was waiting."""

@@ -52,8 +52,8 @@ export interface UpdateVoiceRequest {
     category?: VoiceCategory;
     /** The new language. Changing it re-creates the voice. */
     language?: SpeechLanguage;
-    /** The new transcript, up to 1000 characters. `null` or `""` clears it. Changing it re-creates the voice. */
-    ref_text?: string | null;
+    /** The new transcript, up to 1000 characters. Changing it re-creates the voice. */
+    ref_text?: string;
     /** The new tags, up to 32 characters each. `null` or `[]` clears them, and blank tags are dropped. */
     tags?: string[] | null;
 }
@@ -83,5 +83,5 @@ export interface ReplaceVoiceAudioRequest {
     /** The new reference clip, in the formats and size a new clone takes: WAV, MP3, OGG or FLAC, at most 10 MB. */
     ref_audio: Uploadable;
     /** What the new clip says, up to 1000 characters. */
-    ref_text?: string | null;
+    ref_text?: string;
 }

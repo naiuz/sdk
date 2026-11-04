@@ -109,7 +109,7 @@ class AsyncVoices(AsyncAPIResource):
         name: str | NotGiven = NOT_GIVEN,
         category: VoiceCategory | NotGiven = NOT_GIVEN,
         language: SpeechLanguage | NotGiven = NOT_GIVEN,
-        ref_text: str | NotGiven | None = NOT_GIVEN,
+        ref_text: str | NotGiven = NOT_GIVEN,
         tags: Sequence[str] | NotGiven | None = NOT_GIVEN,
         timeout: float | None = None,
         max_retries: int | None = None,
@@ -125,7 +125,7 @@ class AsyncVoices(AsyncAPIResource):
             name: The new name, up to 120 characters.
             category: The new category.
             language: The new language. Changing it re-creates the voice.
-            ref_text: The new transcript, up to 1000 characters. None or "" clears it. Changing it re-creates the
+            ref_text: The new transcript, up to 1000 characters. Changing it re-creates the
                 voice.
             tags: The new tags, up to 32 characters each. None or [] clears them, and blank tags are dropped.
         """
@@ -141,7 +141,7 @@ class AsyncVoices(AsyncAPIResource):
         id: str,
         *,
         ref_audio: Uploadable,
-        ref_text: str | NotGiven | None = NOT_GIVEN,
+        ref_text: str | NotGiven = NOT_GIVEN,
         timeout: float | None = None,
         max_retries: int | None = None,
         extra_headers: Mapping[str, str] | None = None,
@@ -158,7 +158,7 @@ class AsyncVoices(AsyncAPIResource):
             ref_audio: The new reference clip, in the formats and size a new clone takes: WAV, MP3, OGG or FLAC, at
                 most 10 MB. A path, a `(filename, content)` or `(filename, content, content_type)` tuple, or a binary
                 file object with a name.
-            ref_text: What the new clip says, up to 1000 characters. None sends nothing, as leaving it out does.
+            ref_text: What the new clip says, up to 1000 characters.
         """
         options = RequestOptions(timeout=timeout, max_retries=max_retries, extra_headers=extra_headers)
         form = Form(given(ref_audio=ref_audio, ref_text=ref_text), files=("ref_audio",))

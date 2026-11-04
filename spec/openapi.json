@@ -7180,22 +7180,22 @@
         ],
         "parameters": [
           {
-            "name": "vars[]",
+            "name": "vars",
             "in": "query",
+            "description": "Values for the agent's `{{variables}}` that the page can't change, such as `vars[plan]=gold`. They travel in the link, so they're not secret.",
+            "style": "deepObject",
             "schema": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
+              "type": "object",
+              "additionalProperties": {}
+            },
+            "explode": true
           },
           {
             "name": "customer_id",
             "in": "query",
+            "description": "Your own id for this customer. Their conversations then share one contact.",
             "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 128
+              "type": "string"
             }
           },
           {
@@ -7303,8 +7303,70 @@
               }
             }
           },
+          "404": {
+            "description": "The agent isn't published, is paused, or isn't in this organization: `not_found`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identifies this request. A JSON body carries it as `request_id` too; quote it to support.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A variable's name or value is invalid (`invalid_request`): `error.param` names it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identifies this request. A JSON body carries it as `request_id` too; quote it to support.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
           "429": {
-            "description": "Too many requests: the per-minute rate limit is used up (`rate_limit_exceeded`). Wait `Retry-After` seconds, then retry.",
+            "description": "The agent has reached its limit of conversations for the day (`daily_limit_reached`). Too many requests: the per-minute rate limit is used up (`rate_limit_exceeded`). Wait `Retry-After` seconds, then retry.",
             "content": {
               "application/json": {
                 "schema": {
@@ -7388,17 +7450,17 @@
           {
             "lang": "typescript",
             "label": "TypeScript SDK",
-            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\n// Make it on your server. It opens one conversation, within 15 minutes.\nconst link = await client.agents.signedUrl(\"<agent-id>\", {customer_id: \"crm-42\"});\n\nconsole.log(link.signed_url);"
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\n// Make it on your server. It opens one conversation, within 15 minutes.\nconst link = await client.agents.signedUrl(\"<agent-id>\", {customer_id: \"crm-42\", vars: {plan: \"gold\"}});\n\nconsole.log(link.signed_url);"
           },
           {
             "lang": "python",
             "label": "Python SDK",
-            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\n# Make it on your server. It opens one conversation, within 15 minutes.\nlink = client.agents.signed_url(\"<agent-id>\", customer_id=\"crm-42\")\n\nprint(link.signed_url)"
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\n# Make it on your server. It opens one conversation, within 15 minutes.\nlink = client.agents.signed_url(\"<agent-id>\", customer_id=\"crm-42\", vars={\"plan\": \"gold\"})\n\nprint(link.signed_url)"
           },
           {
             "lang": "php",
             "label": "PHP SDK",
-            "source": "$client = new \\Naiuz\\NeuronAI();\n\n// Make it on your server. It opens one conversation, within 15 minutes.\n$link = $client->agents->signedUrl('<agent-id>', ['customer_id' => 'crm-42']);\n\necho $link->signed_url, PHP_EOL;"
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n// Make it on your server. It opens one conversation, within 15 minutes.\n$link = $client->agents->signedUrl('<agent-id>', [\n    'customer_id' => 'crm-42',\n    'vars' => ['plan' => 'gold'],\n]);\n\necho $link->signed_url, PHP_EOL;"
           }
         ]
       }
@@ -7415,14 +7477,15 @@
           {
             "name": "search",
             "in": "query",
+            "description": "Part of the agent's name.",
             "schema": {
-              "type": "string",
-              "maxLength": 100
+              "type": "string"
             }
           },
           {
             "name": "status",
             "in": "query",
+            "description": "Only those in this state.",
             "schema": {
               "type": "string",
               "enum": [
@@ -7435,18 +7498,17 @@
           {
             "name": "limit",
             "in": "query",
+            "description": "How many, from 1 to 100 (50 by default).",
             "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
+              "type": "integer"
             }
           },
           {
             "name": "cursor",
             "in": "query",
+            "description": "A page's `next_cursor`, to start from the page after it.",
             "schema": {
-              "type": "integer",
-              "minimum": 1
+              "type": "string"
             }
           }
         ],
@@ -7589,7 +7651,38 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), the client IP is not in its allowlist (`ip_not_allowed`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identifies this request. A JSON body carries it as `request_id` too; quote it to support.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A parameter is invalid (`invalid_request`): `error.param` names it.",
             "content": {
               "application/json": {
                 "schema": {
@@ -7726,6 +7819,7 @@
           "Agents"
         ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -7733,12 +7827,22 @@
                 "properties": {
                   "template": {
                     "type": "string",
-                    "description": "The template: `support` or `sales`.",
+                    "description": "The template to start from. `blank` asks nothing.",
+                    "enum": [
+                      "support",
+                      "sales",
+                      "blank"
+                    ],
                     "example": "support"
                   },
                   "language": {
                     "type": "string",
-                    "description": "The agent's main language: `uz`, `ru` or `en`.",
+                    "description": "The agent's main language.",
+                    "enum": [
+                      "uz",
+                      "ru",
+                      "en"
+                    ],
                     "example": "uz"
                   },
                   "name": {
@@ -7747,7 +7851,7 @@
                   },
                   "answers": {
                     "type": "object",
-                    "description": "The answers to the template's questions, by question.",
+                    "description": "The answers to the template's questions, by question. `support` and `sales` need `business_name`, `offering`, `goal` and `tone`, and `blank` needs none. The Agents page of the docs lists what each one takes.",
                     "additionalProperties": {}
                   }
                 },
@@ -7836,7 +7940,7 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), the client IP is not in its allowlist (`ip_not_allowed`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -7987,17 +8091,17 @@
           {
             "lang": "typescript",
             "label": "TypeScript SDK",
-            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nconst agent = await client.agents.create({\n    template: \"support\",\n    language: \"uz\",\n    name: \"Yordam\",\n    answers: {business: \"Bodom Mebel\"},\n});\n\nconsole.log(agent.id);"
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nconst agent = await client.agents.create({\n    template: \"support\",\n    language: \"uz\",\n    name: \"Yordam\",\n    answers: {\n        business_name: \"Bodom Mebel\",\n        offering: \"Uy va ofis mebeli, Toshkent boʻylab yetkazib berish bilan\",\n        goal: \"resolve\",\n        tone: \"friendly\",\n    },\n});\n\nconsole.log(agent.id);"
           },
           {
             "lang": "python",
             "label": "Python SDK",
-            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\nagent = client.agents.create(\n    template=\"support\",\n    language=\"uz\",\n    name=\"Yordam\",\n    answers={\"business\": \"Bodom Mebel\"},\n)\n\nprint(agent.id)"
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\nagent = client.agents.create(\n    template=\"support\",\n    language=\"uz\",\n    name=\"Yordam\",\n    answers={\n        \"business_name\": \"Bodom Mebel\",\n        \"offering\": \"Uy va ofis mebeli, Toshkent boʻylab yetkazib berish bilan\",\n        \"goal\": \"resolve\",\n        \"tone\": \"friendly\",\n    },\n)\n\nprint(agent.id)"
           },
           {
             "lang": "php",
             "label": "PHP SDK",
-            "source": "$client = new \\Naiuz\\NeuronAI();\n\n$agent = $client->agents->create([\n    'template' => 'support',\n    'language' => 'uz',\n    'name' => 'Yordam',\n    'answers' => ['business' => 'Bodom Mebel'],\n]);\n\necho $agent->id, PHP_EOL;"
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n$agent = $client->agents->create([\n    'template' => 'support',\n    'language' => 'uz',\n    'name' => 'Yordam',\n    'answers' => [\n        'business_name' => 'Bodom Mebel',\n        'offering' => 'Uy va ofis mebeli, Toshkent boʻylab yetkazib berish bilan',\n        'goal' => 'resolve',\n        'tone' => 'friendly',\n    ],\n]);\n\necho $agent->id, PHP_EOL;"
           }
         ]
       }
@@ -8159,7 +8263,38 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), the client IP is not in its allowlist (`ip_not_allowed`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identifies this request. A JSON body carries it as `request_id` too; quote it to support.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such agent in this organization: `not_found`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -8307,6 +8442,7 @@
           }
         ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -8319,7 +8455,7 @@
                   },
                   "sections": {
                     "type": "object",
-                    "description": "The top-level sections of the config to replace.",
+                    "description": "The top-level sections of the config to replace, each whole: `name`, `timezone`, `languages`, `prompt`, `model`, `variables`, `conversation`, `tools`, `knowledge`, `workflow`, `guardrails`, `analysis`, `security` or `privacy`. `knowledge` holds `documents`, each an `id` and a `usage` of `search` or `always`. `tools` holds `system` and `attached`, each `attached` a `type` of `tool` and an `id`.",
                     "additionalProperties": {}
                   }
                 },
@@ -8412,7 +8548,69 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), the client IP is not in its allowlist (`ip_not_allowed`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identifies this request. A JSON body carries it as `request_id` too; quote it to support.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such agent in this organization: `not_found`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identifies this request. A JSON body carries it as `request_id` too; quote it to support.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Someone changed it since the `revision` you read (`conflict`): read it again.",
             "content": {
               "application/json": {
                 "schema": {
@@ -8593,6 +8791,7 @@
           }
         ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -8703,7 +8902,69 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), the client IP is not in its allowlist (`ip_not_allowed`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identifies this request. A JSON body carries it as `request_id` too; quote it to support.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such agent in this organization: `not_found`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identifies this request. A JSON body carries it as `request_id` too; quote it to support.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Someone changed it since the `revision` you read (`conflict`): read it again.",
             "content": {
               "application/json": {
                 "schema": {
@@ -8873,6 +9134,7 @@
           "Conversations"
         ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -9045,6 +9307,37 @@
               }
             }
           },
+          "404": {
+            "description": "The agent isn't published, is paused, or isn't in this organization: `not_found`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identifies this request. A JSON body carries it as `request_id` too; quote it to support.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
           "422": {
             "description": "The request failed validation: `invalid_request`. `error.param` names the first invalid field and `error.message` gives its message; `error.fields` maps every invalid field, a nested one by its dotted path, to its first message.",
             "content": {
@@ -9176,7 +9469,7 @@
           {
             "lang": "php",
             "label": "PHP SDK",
-            "source": "$client = new \\Naiuz\\NeuronAI();\n\n$conversation = $client->conversations->create([\n    'agent_id' => 'agent_01JB8Z5R4Q6Y2N7K3M9D0F1H2J',\n    'contact' => ['external_id' => 'crm-42', 'name' => 'Dilnoza', 'phone' => '+998901234567'],\n    'variables' => ['plan' => 'gold'],\n]);\n\necho $conversation->id, ' ', $conversation->status, PHP_EOL;"
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n$conversation = $client->conversations->create([\n    'agent_id' => 'agent_01JB8Z5R4Q6Y2N7K3M9D0F1H2J',\n    'contact' => [\n        'external_id' => 'crm-42',\n        'name' => 'Dilnoza',\n        'phone' => '+998901234567',\n    ],\n    'variables' => ['plan' => 'gold'],\n]);\n\necho $conversation->id, ' ', $conversation->status, PHP_EOL;"
           }
         ]
       },
@@ -9191,14 +9484,15 @@
           {
             "name": "agent_id",
             "in": "query",
+            "description": "Only this agent's.",
             "schema": {
-              "type": "string",
-              "pattern": "^agent_[0-9A-HJKMNP-TV-Z]{26}$"
+              "type": "string"
             }
           },
           {
             "name": "status",
             "in": "query",
+            "description": "Only those in this status, such as `resolved`.",
             "schema": {
               "$ref": "#/components/schemas/ConversationStatus"
             }
@@ -9206,18 +9500,17 @@
           {
             "name": "cursor",
             "in": "query",
+            "description": "A page's `next_cursor`, to start from the page after it.",
             "schema": {
-              "type": "integer",
-              "minimum": 1
+              "type": "string"
             }
           },
           {
             "name": "limit",
             "in": "query",
+            "description": "How many, from 1 to 100 (50 by default).",
             "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
+              "type": "integer"
             }
           }
         ],
@@ -9390,7 +9683,38 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), the client IP is not in its allowlist (`ip_not_allowed`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identifies this request. A JSON body carries it as `request_id` too; quote it to support.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A parameter is invalid (`invalid_request`): `error.param` names it.",
             "content": {
               "application/json": {
                 "schema": {
@@ -9540,6 +9864,7 @@
           }
         ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -9663,6 +9988,68 @@
                 "schema": {
                   "type": "string",
                   "format": "uuid"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such conversation in this organization: `not_found`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identifies this request. A JSON body carries it as `request_id` too; quote it to support.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "This conversation takes its customer's messages from its own channel (`conflict`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identifies this request. A JSON body carries it as `request_id` too; quote it to support.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
                 }
               }
             }
@@ -9808,26 +10195,25 @@
           {
             "name": "after",
             "in": "query",
+            "description": "The message to read on from.",
             "schema": {
-              "type": "integer",
-              "minimum": 0
+              "type": "integer"
             }
           },
           {
             "name": "limit",
             "in": "query",
+            "description": "How many, from 1 to 100 (50 by default).",
             "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
+              "type": "integer"
             }
           },
           {
             "name": "cursor",
             "in": "query",
+            "description": "A page's `next_cursor`, to start from the page after it.",
             "schema": {
-              "type": "integer",
-              "minimum": 0
+              "type": "string"
             }
           },
           {
@@ -9956,6 +10342,68 @@
                 "schema": {
                   "type": "string",
                   "format": "uuid"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such conversation in this organization: `not_found`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identifies this request. A JSON body carries it as `request_id` too; quote it to support.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A parameter is invalid (`invalid_request`): `error.param` names it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identifies this request. A JSON body carries it as `request_id` too; quote it to support.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
                 }
               }
             }
@@ -10258,7 +10706,38 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), the client IP is not in its allowlist (`ip_not_allowed`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identifies this request. A JSON body carries it as `request_id` too; quote it to support.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such conversation in this organization: `not_found`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -10518,7 +10997,38 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), the client IP is not in its allowlist (`ip_not_allowed`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identifies this request. A JSON body carries it as `request_id` too; quote it to support.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such conversation in this organization: `not_found`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -10707,6 +11217,45 @@
               }
             }
           },
+          "206": {
+            "description": "The part of the recording a `Range` header asked for.",
+            "content": {
+              "audio/ogg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            },
+            "headers": {
+              "X-Content-Type-Options": {
+                "description": "Sent as `nosniff`, so a browser plays it as what it says it is.",
+                "schema": {
+                  "type": "string",
+                  "const": "nosniff"
+                }
+              },
+              "X-Request-Id": {
+                "description": "Identifies this request. A JSON body carries it as `request_id` too; quote it to support.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
           "401": {
             "description": "The API key is missing or not recognized (`invalid_api_key`), revoked (`api_key_revoked`), disabled (`api_key_disabled`) or expired (`api_key_expired`).",
             "content": {
@@ -10727,7 +11276,7 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), the client IP is not in its allowlist (`ip_not_allowed`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -10759,6 +11308,37 @@
           },
           "404": {
             "description": "No recording, or one past its time: `not_found`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identifies this request. A JSON body carries it as `request_id` too; quote it to support.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "416": {
+            "description": "The `Range` header asked for a part past the recording's end (`invalid_request`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -11160,7 +11740,7 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), the client IP is not in its allowlist (`ip_not_allowed`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -11542,7 +12122,38 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), the client IP is not in its allowlist (`ip_not_allowed`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identifies this request. A JSON body carries it as `request_id` too; quote it to support.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such document in this organization: `not_found`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -11724,7 +12335,11 @@
                   },
                   "crawl_scope": {
                     "type": "string",
-                    "description": "How far to read a website."
+                    "description": "How far to read a website: this `page`, or the whole `site`.",
+                    "enum": [
+                      "site",
+                      "page"
+                    ]
                   }
                 }
               }
@@ -11964,7 +12579,38 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), the client IP is not in its allowlist (`ip_not_allowed`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identifies this request. A JSON body carries it as `request_id` too; quote it to support.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such document in this organization: `not_found`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -12195,7 +12841,69 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), the client IP is not in its allowlist (`ip_not_allowed`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identifies this request. A JSON body carries it as `request_id` too; quote it to support.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such document in this organization: `not_found`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identifies this request. A JSON body carries it as `request_id` too; quote it to support.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Agents use it (`conflict`), and the message names them. Send `detach=true` to take it off them.",
             "content": {
               "application/json": {
                 "schema": {
@@ -12334,6 +13042,7 @@
           "Knowledge base"
         ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -12341,12 +13050,12 @@
                 "properties": {
                   "name": {
                     "type": "string",
-                    "description": "The document's name.",
+                    "description": "The document's name, up to 255 characters.",
                     "example": "Delivery"
                   },
                   "text": {
                     "type": "string",
-                    "description": "Its text.",
+                    "description": "Its text, up to 300,000 characters.",
                     "example": "We deliver across Tashkent for free."
                   }
                 },
@@ -12591,7 +13300,7 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), the client IP is not in its allowlist (`ip_not_allowed`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -12766,6 +13475,7 @@
           "Knowledge base"
         ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -12773,7 +13483,7 @@
                 "properties": {
                   "name": {
                     "type": "string",
-                    "description": "The document's name.",
+                    "description": "The document's name, up to 255 characters.",
                     "example": "Common questions"
                   },
                   "pairs": {
@@ -13037,7 +13747,7 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), the client IP is not in its allowlist (`ip_not_allowed`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -13207,6 +13917,7 @@
           "Knowledge base"
         ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -13219,11 +13930,15 @@
                   },
                   "crawl_scope": {
                     "type": "string",
-                    "description": "How far to read a website: `page`, `section` or `site`."
+                    "description": "How far to read a website: this `page`, or the whole `site`.",
+                    "enum": [
+                      "site",
+                      "page"
+                    ]
                   },
                   "name": {
                     "type": "string",
-                    "description": "The document's name. The page's title when left out."
+                    "description": "The document's name, up to 255 characters. The address's host when left out."
                   }
                 },
                 "required": [
@@ -13466,7 +14181,7 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), the client IP is not in its allowlist (`ip_not_allowed`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -13636,6 +14351,7 @@
           "Knowledge base"
         ],
         "requestBody": {
+          "required": true,
           "content": {
             "multipart/form-data": {
               "schema": {
@@ -13648,7 +14364,7 @@
                   },
                   "name": {
                     "type": "string",
-                    "description": "The document's name. The file's when left out."
+                    "description": "The document's name, up to 255 characters. The file's when left out."
                   }
                 },
                 "required": [
@@ -13891,7 +14607,7 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), the client IP is not in its allowlist (`ip_not_allowed`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -14055,8 +14771,8 @@
     "/v1/knowledge-base/{document}/refresh": {
       "post": {
         "operationId": "refreshDocument",
-        "description": "Reads a link document again now.",
-        "summary": "Read a link again",
+        "description": "Reads a link document again now, or tries a file that failed again.",
+        "summary": "Read a document again",
         "tags": [
           "Knowledge base"
         ],
@@ -14116,7 +14832,69 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), the client IP is not in its allowlist (`ip_not_allowed`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identifies this request. A JSON body carries it as `request_id` too; quote it to support.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such document in this organization: `not_found`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identifies this request. A JSON body carries it as `request_id` too; quote it to support.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "It's neither a link nor a file that failed (`invalid_request`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -14407,7 +15185,7 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), the client IP is not in its allowlist (`ip_not_allowed`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -14544,6 +15322,7 @@
           "Tools"
         ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -14551,7 +15330,11 @@
                 "properties": {
                   "kind": {
                     "type": "string",
-                    "description": "`webhook` or `client`.",
+                    "description": "A `webhook` our servers call, or a `client` tool your page runs.",
+                    "enum": [
+                      "webhook",
+                      "client"
+                    ],
                     "example": "webhook"
                   },
                   "name": {
@@ -14566,12 +15349,18 @@
                   },
                   "config": {
                     "type": "object",
-                    "description": "What it calls, with its parameters.",
+                    "description": "For `webhook`: `method` and `url`, with `parameters` holding `path`, `query` and `body` lists, each parameter a `name`, a `source` (`model` for what the agent fills in, `fixed`, `variable` or `secret`), and its `type`, `required` and `description`. Also `headers`, `auth`, `response` and `timeout_s`, from 5 to 120. For `client`: `parameters`, a list of `name`, `type`, `required` and `description`, with `wait_for_result` and `timeout_s`, from 1 to 120. A `client` tool can send `{}`.",
                     "additionalProperties": {}
                   },
                   "last_test_status": {
                     "type": "string",
-                    "description": "The result of a test this config passed: `ok`, `error`, `timeout` or `rejected`."
+                    "description": "The result of a test this config passed.",
+                    "enum": [
+                      "ok",
+                      "error",
+                      "timeout",
+                      "rejected"
+                    ]
                   }
                 },
                 "required": [
@@ -14732,7 +15521,7 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), the client IP is not in its allowlist (`ip_not_allowed`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -14883,17 +15672,17 @@
           {
             "lang": "typescript",
             "label": "TypeScript SDK",
-            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nconst tool = await client.tools.create({\n    kind: \"webhook\",\n    name: \"check_order\",\n    description: \"Finds an order by its number.\",\n    config: {method: \"GET\", url: \"https://api.shop.uz/orders\", timeout_s: 20},\n});\n\nconsole.log(tool.id, tool.name);"
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nconst tool = await client.tools.create({\n    kind: \"webhook\",\n    name: \"check_order\",\n    description: \"Finds an order by its number.\",\n    config: {\n        method: \"GET\",\n        url: \"https://api.shop.uz/orders\",\n        parameters: {\n            query: [\n                {name: \"number\", source: \"model\", type: \"string\", required: true, description: \"The order's number.\"},\n            ],\n        },\n        timeout_s: 20,\n    },\n});\n\nconsole.log(tool.id, tool.name);"
           },
           {
             "lang": "python",
             "label": "Python SDK",
-            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\ntool = client.tools.create(\n    kind=\"webhook\",\n    name=\"check_order\",\n    description=\"Finds an order by its number.\",\n    config={\"method\": \"GET\", \"url\": \"https://api.shop.uz/orders\", \"timeout_s\": 20},\n)\n\nprint(tool.id, tool.name)"
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\ntool = client.tools.create(\n    kind=\"webhook\",\n    name=\"check_order\",\n    description=\"Finds an order by its number.\",\n    config={\n        \"method\": \"GET\",\n        \"url\": \"https://api.shop.uz/orders\",\n        \"parameters\": {\n            \"query\": [\n                {\"name\": \"number\", \"source\": \"model\", \"type\": \"string\", \"required\": True, \"description\": \"The order's number.\"},\n            ],\n        },\n        \"timeout_s\": 20,\n    },\n)\n\nprint(tool.id, tool.name)"
           },
           {
             "lang": "php",
             "label": "PHP SDK",
-            "source": "$client = new \\Naiuz\\NeuronAI();\n\n$tool = $client->tools->create([\n    'kind' => 'webhook',\n    'name' => 'check_order',\n    'description' => 'Finds an order by its number.',\n    'config' => ['method' => 'GET', 'url' => 'https://api.shop.uz/orders', 'timeout_s' => 20],\n]);\n\necho $tool->id, ' ', $tool->name, PHP_EOL;"
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n$tool = $client->tools->create([\n    'kind' => 'webhook',\n    'name' => 'check_order',\n    'description' => 'Finds an order by its number.',\n    'config' => [\n        'method' => 'GET',\n        'url' => 'https://api.shop.uz/orders',\n        'parameters' => [\n            'query' => [\n                ['name' => 'number', 'source' => 'model', 'type' => 'string', 'required' => true, 'description' => 'The order\\'s number.'],\n            ],\n        ],\n        'timeout_s' => 20,\n    ],\n]);\n\necho $tool->id, ' ', $tool->name, PHP_EOL;"
           }
         ]
       }
@@ -15065,7 +15854,38 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), the client IP is not in its allowlist (`ip_not_allowed`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identifies this request. A JSON body carries it as `request_id` too; quote it to support.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such tool in this organization: `not_found`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -15213,6 +16033,7 @@
           }
         ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -15220,7 +16041,11 @@
                 "properties": {
                   "kind": {
                     "type": "string",
-                    "description": "`webhook` or `client`.",
+                    "description": "A `webhook` our servers call, or a `client` tool your page runs.",
+                    "enum": [
+                      "webhook",
+                      "client"
+                    ],
                     "example": "webhook"
                   },
                   "name": {
@@ -15235,12 +16060,18 @@
                   },
                   "config": {
                     "type": "object",
-                    "description": "What it calls, with its parameters.",
+                    "description": "For `webhook`: `method` and `url`, with `parameters` holding `path`, `query` and `body` lists, each parameter a `name`, a `source` (`model` for what the agent fills in, `fixed`, `variable` or `secret`), and its `type`, `required` and `description`. Also `headers`, `auth`, `response` and `timeout_s`, from 5 to 120. For `client`: `parameters`, a list of `name`, `type`, `required` and `description`, with `wait_for_result` and `timeout_s`, from 1 to 120. A `client` tool can send `{}`.",
                     "additionalProperties": {}
                   },
                   "last_test_status": {
                     "type": "string",
-                    "description": "The result of a test this config passed."
+                    "description": "The result of a test this config passed.",
+                    "enum": [
+                      "ok",
+                      "error",
+                      "timeout",
+                      "rejected"
+                    ]
                   }
                 },
                 "required": [
@@ -15401,7 +16232,38 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), the client IP is not in its allowlist (`ip_not_allowed`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identifies this request. A JSON body carries it as `request_id` too; quote it to support.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such tool in this organization: `not_found`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -15547,17 +16409,17 @@
           {
             "lang": "typescript",
             "label": "TypeScript SDK",
-            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nconst tool = await client.tools.update(\"<tool-id>\", {\n    kind: \"webhook\",\n    name: \"check_order\",\n    description: \"Finds an order by its number.\",\n    config: {method: \"GET\", url: \"https://api.shop.uz/orders\", timeout_s: 20},\n});\n\nconsole.log(tool.name, tool.target);"
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nconst tool = await client.tools.update(\"<tool-id>\", {\n    kind: \"webhook\",\n    name: \"check_order\",\n    description: \"Finds an order by its number.\",\n    config: {\n        method: \"GET\",\n        url: \"https://api.shop.uz/orders\",\n        parameters: {\n            query: [\n                {name: \"number\", source: \"model\", type: \"string\", required: true, description: \"The order's number.\"},\n            ],\n        },\n        timeout_s: 20,\n    },\n});\n\nconsole.log(tool.name, tool.target);"
           },
           {
             "lang": "python",
             "label": "Python SDK",
-            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\ntool = client.tools.update(\n    \"<tool-id>\",\n    kind=\"webhook\",\n    name=\"check_order\",\n    description=\"Finds an order by its number.\",\n    config={\"method\": \"GET\", \"url\": \"https://api.shop.uz/orders\", \"timeout_s\": 20},\n)\n\nprint(tool.name, tool.target)"
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\ntool = client.tools.update(\n    \"<tool-id>\",\n    kind=\"webhook\",\n    name=\"check_order\",\n    description=\"Finds an order by its number.\",\n    config={\n        \"method\": \"GET\",\n        \"url\": \"https://api.shop.uz/orders\",\n        \"parameters\": {\n            \"query\": [\n                {\"name\": \"number\", \"source\": \"model\", \"type\": \"string\", \"required\": True, \"description\": \"The order's number.\"},\n            ],\n        },\n        \"timeout_s\": 20,\n    },\n)\n\nprint(tool.name, tool.target)"
           },
           {
             "lang": "php",
             "label": "PHP SDK",
-            "source": "$client = new \\Naiuz\\NeuronAI();\n\n$tool = $client->tools->update('<tool-id>', [\n    'kind' => 'webhook',\n    'name' => 'check_order',\n    'description' => 'Finds an order by its number.',\n    'config' => ['method' => 'GET', 'url' => 'https://api.shop.uz/orders', 'timeout_s' => 20],\n]);\n\necho $tool->name, ' ', $tool->target, PHP_EOL;"
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n$tool = $client->tools->update('<tool-id>', [\n    'kind' => 'webhook',\n    'name' => 'check_order',\n    'description' => 'Finds an order by its number.',\n    'config' => [\n        'method' => 'GET',\n        'url' => 'https://api.shop.uz/orders',\n        'parameters' => [\n            'query' => [\n                ['name' => 'number', 'source' => 'model', 'type' => 'string', 'required' => true, 'description' => 'The order\\'s number.'],\n            ],\n        ],\n        'timeout_s' => 20,\n    ],\n]);\n\necho $tool->name, ' ', $tool->target, PHP_EOL;"
           }
         ]
       },
@@ -15632,7 +16494,69 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), the client IP is not in its allowlist (`ip_not_allowed`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identifies this request. A JSON body carries it as `request_id` too; quote it to support.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such tool in this organization: `not_found`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identifies this request. A JSON body carries it as `request_id` too; quote it to support.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Agents use it (`conflict`), and the message names them. Send `detach=true` to take it off them.",
             "content": {
               "application/json": {
                 "schema": {
@@ -15909,7 +16833,7 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), the client IP is not in its allowlist (`ip_not_allowed`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -16046,6 +16970,7 @@
           "Webhooks"
         ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -16058,9 +16983,13 @@
                   },
                   "events": {
                     "type": "array",
-                    "description": "`conversation.message.created` and `conversation.ended`.",
+                    "description": "What to send it.",
                     "items": {
-                      "type": "string"
+                      "type": "string",
+                      "enum": [
+                        "conversation.message.created",
+                        "conversation.ended"
+                      ]
                     }
                   }
                 },
@@ -16213,7 +17142,7 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), the client IP is not in its allowlist (`ip_not_allowed`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -16364,17 +17293,17 @@
           {
             "lang": "typescript",
             "label": "TypeScript SDK",
-            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\n// The secret signs every event, and you only see it now.\nconst created = await client.webhooks.create({\n    url: \"https://shop.uz/hooks/neuronai\",\n    events: [\"conversation.ended\"],\n});\n\nconsole.log(created.endpoint.id, created.secret);"
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\n// The secret signs every event, and you only see it now.\nconst created = await client.webhooks.create({\n    url: \"https://shop.uz/hooks/neuronai\",\n    events: [\"conversation.message.created\", \"conversation.ended\"],\n});\n\nconsole.log(created.endpoint.id, created.secret);"
           },
           {
             "lang": "python",
             "label": "Python SDK",
-            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\n# The secret signs every event, and you only see it now.\ncreated = client.webhooks.create(\n    url=\"https://shop.uz/hooks/neuronai\",\n    events=[\"conversation.ended\"],\n)\n\nprint(created.endpoint.id, created.secret)"
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\n# The secret signs every event, and you only see it now.\ncreated = client.webhooks.create(\n    url=\"https://shop.uz/hooks/neuronai\",\n    events=[\"conversation.message.created\", \"conversation.ended\"],\n)\n\nprint(created.endpoint.id, created.secret)"
           },
           {
             "lang": "php",
             "label": "PHP SDK",
-            "source": "$client = new \\Naiuz\\NeuronAI();\n\n// The secret signs every event, and you only see it now.\n$created = $client->webhooks->create([\n    'url' => 'https://shop.uz/hooks/neuronai',\n    'events' => ['conversation.ended'],\n]);\n\necho $created->endpoint->id, ' ', $created->secret, PHP_EOL;"
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n// The secret signs every event, and you only see it now.\n$created = $client->webhooks->create([\n    'url' => 'https://shop.uz/hooks/neuronai',\n    'events' => ['conversation.message.created', 'conversation.ended'],\n]);\n\necho $created->endpoint->id, ' ', $created->secret, PHP_EOL;"
           }
         ]
       }
@@ -16527,7 +17456,38 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), the client IP is not in its allowlist (`ip_not_allowed`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identifies this request. A JSON body carries it as `request_id` too; quote it to support.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such endpoint in this organization: `not_found`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -16686,9 +17646,13 @@
                   },
                   "events": {
                     "type": "array",
-                    "description": "`conversation.message.created` and `conversation.ended`.",
+                    "description": "What to send it.",
                     "items": {
-                      "type": "string"
+                      "type": "string",
+                      "enum": [
+                        "conversation.message.created",
+                        "conversation.ended"
+                      ]
                     }
                   },
                   "enabled": {
@@ -16829,7 +17793,38 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), the client IP is not in its allowlist (`ip_not_allowed`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identifies this request. A JSON body carries it as `request_id` too; quote it to support.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such endpoint in this organization: `not_found`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -17052,7 +18047,38 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), the client IP is not in its allowlist (`ip_not_allowed`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identifies this request. A JSON body carries it as `request_id` too; quote it to support.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such endpoint in this organization: `not_found`.",
             "content": {
               "application/json": {
                 "schema": {

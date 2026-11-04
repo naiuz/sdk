@@ -8,10 +8,12 @@ export class NeuronAIError extends Error {
     override name = "NeuronAIError";
 }
 
-/** The API could not be reached, or the connection failed before a whole answer arrived: DNS, TLS, or a refused, reset or dropped connection. */
 /** A webhook's signature didn't check out: answer 400 and do nothing with the body. */
-export class WebhookVerificationError extends NeuronAIError {}
+export class WebhookVerificationError extends NeuronAIError {
+    override name = "WebhookVerificationError";
+}
 
+/** The API could not be reached, or the connection failed before a whole answer arrived: DNS, TLS, or a refused, reset or dropped connection. */
 export class APIConnectionError extends NeuronAIError {
     override name = "APIConnectionError";
 

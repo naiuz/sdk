@@ -7,17 +7,30 @@ import pytest
 
 from naiuz import AsyncNeuronAI, NeuronAI
 from naiuz.types import (
+    CreateAgentRequest,
     CreateApiKeyRequest,
     CreateChatCompletionRequest,
+    CreateConversationMessageRequest,
+    CreateConversationRequest,
     CreateEmbeddingRequest,
+    CreateFileDocumentRequest,
+    CreateLinkDocumentRequest,
+    CreateQaDocumentRequest,
+    CreateTextDocumentRequest,
     CreateTranscriptionRequest,
     CreateVoiceRequest,
+    CreateWebhookEndpointRequest,
+    PublishAgentRequest,
     ReplaceVoiceAudioRequest,
     RerankRequest,
+    SaveToolRequest,
     SynthesizeDialogueRequest,
     SynthesizeSpeechRequest,
+    UpdateAgentRequest,
     UpdateApiKeyRequest,
+    UpdateDocumentRequest,
     UpdateVoiceRequest,
+    UpdateWebhookEndpointRequest,
 )
 from tests.helpers import KEY
 
@@ -37,6 +50,20 @@ REQUEST_TYPES: list[tuple[Any, str]] = [
     (CreateChatCompletionRequest, "chat.completions.create"),
     (CreateEmbeddingRequest, "embeddings.create"),
     (RerankRequest, "rerank.create"),
+    (CreateAgentRequest, "agents.create"),
+    (UpdateAgentRequest, "agents.update"),
+    (PublishAgentRequest, "agents.publish"),
+    (CreateConversationRequest, "conversations.create"),
+    (CreateConversationMessageRequest, "conversations.messages.create"),
+    (CreateTextDocumentRequest, "knowledge_base.create_text"),
+    (CreateQaDocumentRequest, "knowledge_base.create_qa"),
+    (CreateLinkDocumentRequest, "knowledge_base.create_link"),
+    (CreateFileDocumentRequest, "knowledge_base.create_file"),
+    (UpdateDocumentRequest, "knowledge_base.update"),
+    (SaveToolRequest, "tools.create"),
+    (SaveToolRequest, "tools.update"),
+    (CreateWebhookEndpointRequest, "webhooks.create"),
+    (UpdateWebhookEndpointRequest, "webhooks.update"),
 ]
 
 

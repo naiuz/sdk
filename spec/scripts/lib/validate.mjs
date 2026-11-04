@@ -178,6 +178,14 @@ export function createValidator({document, operations, fixtureSchema}) {
         const query = fixture.request.query ?? {};
         const declared = new Map(parametersOf(document, entry).filter((parameter) => parameter.in === "query").map((parameter) => [parameter.name, parameter]));
         for (const [name, text] of Object.entries(query)) {
+            // A map travels as one parameter per key: vars[plan]=gold.
+            const member = /^([^[\]]+)\[([^[\]]+)\]$/.exec(name);
+            const map = member ? declared.get(member[1]) : undefined;
+            if (map?.style === "deepObject") {
+                const schema = follow(document, map.schema, `${map.pointer}/schema`);
+                problems.push(...against(schema.pointer, {[member[2]]: text}, `request.query.${name}`));
+                continue;
+            }
             const parameter = declared.get(name);
             if (!parameter) {
                 problems.push(`request.query.${name} is not a query parameter of ${fixture.operationId}`);
@@ -189,7 +197,11 @@ export function createValidator({document, operations, fixtureSchema}) {
         if (!entry.operation.requestBody) {
             const params = fixture.call.params ?? {};
             for (const [name, value] of Object.entries(params)) if (value === null) problems.push(`call.params.${name} is null: leave a query parameter out rather than passing null`);
-            const sent = Object.fromEntries(Object.entries(params).map(([name, value]) => [name, String(value)]));
+            const sent = Object.fromEntries(
+                Object.entries(params).flatMap(([name, value]) =>
+                    declared.get(name)?.style === "deepObject" ? Object.entries(value).map(([key, member]) => [`${name}[${key}]`, String(member)]) : [[name, String(value)]],
+                ),
+            );
             if (!sameJson(sent, query)) problems.push("request.query must equal call.params, each value as a string: the SDK sends the caller's query as it is");
         } else if (Object.keys(query).length > 0) {
             problems.push(`${fixture.operationId} takes its parameters in the body, not the query`);

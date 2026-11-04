@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any, TypedDict
 
 from .._models import BaseModel, WithRequestId
@@ -116,3 +117,26 @@ class ConversationTranscript(WithRequestId):
     """Oldest first."""
     truncated: bool
     """Whether a very long one stopped short."""
+
+
+class _CreateConversationFields(TypedDict):
+    agent_id: str
+    """The agent that answers."""
+
+
+class CreateConversationRequest(_CreateConversationFields, total=False):
+    """What `conversations.create` takes, each as a keyword argument."""
+
+    contact: ConversationContactParam
+    """Who it's with."""
+    variables: Mapping[str, str | int | float | bool]
+    """Values for the agent's `{{variables}}`."""
+
+
+class CreateConversationMessageRequest(TypedDict):
+    """What `conversations.messages.create` takes, each as a keyword argument."""
+
+    client_message_id: str
+    """Your own id for this message: letters, digits, `_` and `-`, up to 64. Sending it again stores it once."""
+    text: str
+    """What the customer said, up to 10,000 characters."""

@@ -12,9 +12,13 @@ GOOD = [case for case in VECTORS["cases"] if case["valid"]]
 BAD = [case for case in VECTORS["cases"] if not case["valid"]]
 
 
-def verify(body: str | bytes, header: str | None) -> Any:
+def verify(body: str | bytes, header: str | None, secret: str | None = None) -> Any:
     return NeuronAI(api_key=KEY).webhooks.verify(
-        body, header, VECTORS["secret"], now=VECTORS["now"], tolerance_seconds=VECTORS["tolerance_seconds"]
+        body,
+        header,
+        VECTORS["secret"] if secret is None else secret,
+        now=VECTORS["now"],
+        tolerance_seconds=VECTORS["tolerance_seconds"],
     )
 
 
@@ -34,7 +38,7 @@ def test_it_takes_the_body_as_bytes(case: dict[str, str]) -> None:
 @pytest.mark.parametrize("case", BAD, ids=lambda case: case["name"])
 def test_it_refuses_a_bad_one(case: dict[str, str]) -> None:
     with pytest.raises(WebhookVerificationError):
-        verify(case["body"], case["header"])
+        verify(case["body"], case["header"], case.get("secret"))
 
 
 def test_it_refuses_a_request_with_no_header() -> None:

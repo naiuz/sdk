@@ -109,8 +109,8 @@ final class VoicesTest extends TestCase
     public function test_update_sends_every_field_it_is_given_a_category_case_as_its_value(): void
     {
         $api = new MockClient(Replies::envelope(self::voice('v1')));
-        Clients::on($api)->voices->update('v1', ['name' => 'Support voice', 'category' => VoiceCategory::Conversational, 'language' => 'ru', 'ref_text' => null, 'tags' => ['support']]);
-        self::assertSame('{"name":"Support voice","category":"conversational","language":"ru","ref_text":null,"tags":["support"]}', (string) $api->requests[0]->getBody());
+        Clients::on($api)->voices->update('v1', ['name' => 'Support voice', 'category' => VoiceCategory::Conversational, 'language' => 'ru', 'ref_text' => 'Salom', 'tags' => null]);
+        self::assertSame('{"name":"Support voice","category":"conversational","language":"ru","ref_text":"Salom","tags":null}', (string) $api->requests[0]->getBody());
     }
 
     public function test_update_refuses_a_key_it_doesn_t_take_such_as_a_camel_case_one_sending_nothing(): void

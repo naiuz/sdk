@@ -46,7 +46,7 @@ export class KnowledgeBase {
         return this.#http.request({method: "PUT", path: "/knowledge-base/{document}", pathParams: {document: String(document)}, body: params, retry: "safe", options}, readEnvelope<KnowledgeDocument>);
     }
 
-    /** Reads a link document again now. */
+    /** Reads a link document again now, or tries a file that failed again. */
     refresh(document: string | number, options?: RequestOptions): APIPromise<void> {
         return this.#http.request({method: "POST", path: "/knowledge-base/{document}/refresh", pathParams: {document: String(document)}, retry: "safe", options}, readNoContent);
     }

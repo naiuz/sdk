@@ -14,7 +14,7 @@ final readonly class KnowledgeDocument extends ApiObject
     /**
      * @param int $id The document's id.
      * @param string $name Its name.
-     * @param string $kind `file`, `text`, `qa` or a link's kind.
+     * @param string $kind `pdf`, `docx`, `txt`, `xlsx`, `csv`, `text`, `qa`, `website`, `google_doc` or `google_sheet`.
      * @param string $status How far reading it has got, such as `processing` or `ready`.
      * @param string|null $failure_reason Why reading it failed.
      * @param bool $searchable Whether agents can find it.

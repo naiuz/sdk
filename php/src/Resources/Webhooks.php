@@ -117,17 +117,21 @@ readonly class Webhooks
      */
     public function verify(string $body, ?string $signature, string $secret, int $toleranceSeconds = 300, ?int $now = null): WebhookEvent
     {
-        $timestamp = null;
+        if ($secret === '') {
+            throw new WebhookVerificationException("There's no signing secret to check against.");
+        }
+        $timestamps = [];
         $candidates = [];
         foreach (explode(',', $signature ?? '') as $part) {
             [$name, $value] = array_pad(explode('=', trim($part), 2), 2, '');
             if ($name === 't') {
-                $timestamp = $value;
+                $timestamps[] = $value;
             } elseif ($name === 'v1') {
                 $candidates[] = $value;
             }
         }
-        if ($timestamp === null || preg_match('/^\d+$/D', $timestamp) !== 1 || $candidates === []) {
+        $timestamp = $timestamps[0] ?? '';
+        if (count($timestamps) !== 1 || preg_match('/^\d{1,20}$/D', $timestamp) !== 1 || $candidates === []) {
             throw new WebhookVerificationException("The signature header isn't one we send.");
         }
         if (abs(($now ?? time()) - (int) $timestamp) > $toleranceSeconds) {
@@ -136,12 +140,22 @@ readonly class Webhooks
         $expected = hash_hmac('sha256', $timestamp . '.' . $body, $secret);
         foreach ($candidates as $candidate) {
             if (hash_equals($expected, $candidate)) {
-                $event = json_decode($body, false, 512, JSON_THROW_ON_ERROR);
-
-                return WebhookEvent::from($event instanceof \stdClass ? $event : new \stdClass());
+                return self::event($body);
             }
         }
 
         throw new WebhookVerificationException("The signature doesn't match the body.");
+    }
+
+    /** The event in a body whose signature checked out. */
+    private static function event(string $body): WebhookEvent
+    {
+        try {
+            $event = json_decode($body, false, 512, JSON_THROW_ON_ERROR);
+
+            return WebhookEvent::from($event instanceof \stdClass ? $event : new \stdClass());
+        } catch (\JsonException|\UnexpectedValueException $error) {
+            throw new WebhookVerificationException("The signed body isn't an event.", previous: $error);
+        }
     }
 }

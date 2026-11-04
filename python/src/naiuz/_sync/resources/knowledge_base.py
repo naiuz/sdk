@@ -63,7 +63,7 @@ class KnowledgeBase(APIResource):
 
         Args:
             name: The document's name.
-            text: Its text.
+            text: Its text, up to 300,000 characters.
         """
         options = RequestOptions(timeout=timeout, max_retries=max_retries, extra_headers=extra_headers)
         body = given(name=name, text=text)
@@ -104,8 +104,8 @@ class KnowledgeBase(APIResource):
 
         Args:
             url: An https address.
-            crawl_scope: How far to read a website: `page`, `section` or `site`.
-            name: The document's name. The page's title when left out.
+            crawl_scope: How far to read a website: this `page`, or the whole `site`.
+            name: The document's name, up to 255 characters. The address's host when left out.
         """
         options = RequestOptions(timeout=timeout, max_retries=max_retries, extra_headers=extra_headers)
         body = given(url=url, crawl_scope=crawl_scope, name=name)
@@ -125,7 +125,7 @@ class KnowledgeBase(APIResource):
 
         Args:
             file: A PDF, a Word document, a spreadsheet or a text file.
-            name: The document's name. The file's when left out.
+            name: The document's name, up to 255 characters. The file's when left out.
         """
         options = RequestOptions(timeout=timeout, max_retries=max_retries, extra_headers=extra_headers)
         fields = given(file=file, name=name)
@@ -153,7 +153,7 @@ class KnowledgeBase(APIResource):
             name: The document's name.
             text: A text document's text.
             pairs: A questions document's pairs.
-            crawl_scope: How far to read a website.
+            crawl_scope: How far to read a website: this `page`, or the whole `site`.
         """
         options = RequestOptions(timeout=timeout, max_retries=max_retries, extra_headers=extra_headers)
         body = given(name=name, text=text, pairs=pairs, crawl_scope=crawl_scope)
@@ -175,7 +175,7 @@ class KnowledgeBase(APIResource):
         max_retries: int | None = None,
         extra_headers: Mapping[str, str] | None = None,
     ) -> None:
-        """Reads a link document again now."""
+        """Reads a link document again now, or tries a file that failed again."""
         options = RequestOptions(timeout=timeout, max_retries=max_retries, extra_headers=extra_headers)
         request = APIRequest(
             "POST",

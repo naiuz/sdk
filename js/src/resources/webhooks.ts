@@ -1,3 +1,4 @@
+import {isRecord} from "../core/json";
 import type {APIPromise} from "../core/api-promise";
 import type {HttpClient, RequestOptions} from "../core/http";
 import {requestPage, type PagePromise} from "../core/pagination";
@@ -22,6 +23,20 @@ function hexToBytes(hex: string): Uint8Array<ArrayBuffer> {
 }
 
 /** The addresses that hear of what agents and operators say. */
+/** The event in a body whose signature checked out. */
+function readEvent(bytes: Uint8Array): WebhookEvent {
+    let event: unknown;
+    try {
+        event = JSON.parse(new TextDecoder().decode(bytes));
+    } catch {
+        event = null;
+    }
+    if (!isRecord(event) || typeof event.id !== "string" || typeof event.type !== "string" || typeof event.created_at !== "string" || !isRecord(event.data)) {
+        throw new WebhookVerificationError("The signed body isn't an event.");
+    }
+    return event as unknown as WebhookEvent;
+}
+
 export class Webhooks {
     readonly #http: HttpClient;
 
@@ -61,23 +76,34 @@ export class Webhooks {
      * with the body. A signature older than `toleranceSeconds` (300 by default)
      * is refused, so a recorded delivery can't be played back later.
      */
-    async verify(body: string, signature: string | null | undefined, secret: string, options: VerifyWebhookOptions = {}): Promise<WebhookEvent> {
+    async verify(body: string | Uint8Array, signature: string | null | undefined, secret: string, options: VerifyWebhookOptions = {}): Promise<WebhookEvent> {
         const {toleranceSeconds = 300, now = Date.now() / 1000} = options;
-        const parts = (signature ?? "").split(",").map((part) => part.trim().split("="));
-        const timestamp = parts.find(([name]) => name === "t")?.[1] ?? "";
+        if (secret === "") {
+            throw new WebhookVerificationError("There's no signing secret to check against.");
+        }
+        const parts = (signature ?? "").split(",").map((part) => {
+            const equals = part.indexOf("=");
+            return equals === -1 ? [part.trim(), ""] : [part.slice(0, equals).trim(), part.slice(equals + 1).trim()];
+        });
+        const timestamps = parts.filter(([name]) => name === "t").map(([, value]) => value ?? "");
         const signatures = parts.filter(([name]) => name === "v1").map(([, value]) => value ?? "");
-        if (!/^\d+$/.test(timestamp) || signatures.length === 0) {
+        const timestamp = timestamps[0] ?? "";
+        if (timestamps.length !== 1 || !/^\d{1,20}$/.test(timestamp) || signatures.length === 0) {
             throw new WebhookVerificationError("The signature header isn't one we send.");
         }
         if (Math.abs(now - Number(timestamp)) > toleranceSeconds) {
             throw new WebhookVerificationError("The signature is too old, or from the future.");
         }
         const encoder = new TextEncoder();
+        const bytes = typeof body === "string" ? encoder.encode(body) : body;
+        const prefix = encoder.encode(`${timestamp}.`);
+        const signed = new Uint8Array(prefix.length + bytes.length);
+        signed.set(prefix);
+        signed.set(bytes, prefix.length);
         const key = await crypto.subtle.importKey("raw", encoder.encode(secret), {name: "HMAC", hash: "SHA-256"}, false, ["verify"]);
-        const signed = encoder.encode(`${timestamp}.${body}`);
         for (const candidate of signatures) {
             if (/^[0-9a-f]{64}$/.test(candidate) && (await crypto.subtle.verify("HMAC", key, hexToBytes(candidate), signed))) {
-                return JSON.parse(body) as WebhookEvent;
+                return readEvent(bytes);
             }
         }
         throw new WebhookVerificationError("The signature doesn't match the body.");
