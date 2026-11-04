@@ -6,7 +6,10 @@ export type ClientEvent =
     | ClientUserMessage
     | Pong
     | Playback
-    | ClientToolResult;
+    | ClientToolResult
+    | ContextualUpdate
+    | UserActivity
+    | Feedback;
 
 /** Every event the server sends. */
 export type ServerEvent =
@@ -30,7 +33,9 @@ export type ServerEvent =
     | AudioPause
     | AudioResume
     | Interruption
-    | ClientToolCall;
+    | ClientToolCall
+    | AgentToolResponse
+    | LanguageChanged;
 
 /** A language the platform speaks. */
 export type LanguageCode = "uz" | "ru" | "en";
@@ -377,8 +382,42 @@ export interface TurnPassage {
     excerpt: string;
 }
 
+/** Something the page wants the agent to know, such as what the customer is looking at. It interrupts nothing, and the agent reads it as information, never as instructions. A newer update with the same context_id replaces the older one. */
+export interface ContextualUpdate {
+    type: "contextual_update";
+    text: string;
+    /** Your own id for what this update is about. Left out, the update stands on its own. */
+    context_id?: string;
+}
+
+/** The customer is typing, so the agent holds off for about 2 seconds. */
+export interface UserActivity {
+    type: "user_activity";
+}
+
+/** The customer's view of a reply, by its event_id. A null score takes it back. */
+export interface Feedback {
+    type: "feedback";
+    event_id: EventId;
+    score: "like" | "dislike" | null;
+}
+
+/** A tool the agent is using: its name, its type and how it's going. Never its values or its result. */
+export interface AgentToolResponse {
+    type: "agent_tool_response";
+    tool_name: string;
+    tool_type: "system" | "webhook" | "client" | "mcp" | "integration" | "transfer";
+    status: "running" | "done" | "failed";
+}
+
+/** The agent moved to this language, and what it says from here on is in it. */
+export interface LanguageChanged {
+    type: "language_changed";
+    language: LanguageCode;
+}
+
 /** Every event type a client sends. */
-export const CLIENT_EVENT_TYPES = ["conversation_initiation_client_data", "user_message", "pong", "playback", "client_tool_result"] as const;
+export const CLIENT_EVENT_TYPES = ["conversation_initiation_client_data", "user_message", "pong", "playback", "client_tool_result", "contextual_update", "user_activity", "feedback"] as const;
 
 /** Every event type the server sends. */
-export const SERVER_EVENT_TYPES = ["conversation_initiation_metadata", "conversation_history", "message_ack", "message_error", "user_message", "agent_typing", "agent_chat_response_part", "agent_response", "agent_response_correction", "operator_message", "handoff", "turn_debug", "ping", "conversation_ended", "error", "agent_state", "user_transcript", "audio_pause", "audio_resume", "interruption", "client_tool_call"] as const;
+export const SERVER_EVENT_TYPES = ["conversation_initiation_metadata", "conversation_history", "message_ack", "message_error", "user_message", "agent_typing", "agent_chat_response_part", "agent_response", "agent_response_correction", "operator_message", "handoff", "turn_debug", "ping", "conversation_ended", "error", "agent_state", "user_transcript", "audio_pause", "audio_resume", "interruption", "client_tool_call", "agent_tool_response", "language_changed"] as const;

@@ -21,6 +21,15 @@
         },
         {
           "$ref": "#/$defs/ClientToolResult"
+        },
+        {
+          "$ref": "#/$defs/ContextualUpdate"
+        },
+        {
+          "$ref": "#/$defs/UserActivity"
+        },
+        {
+          "$ref": "#/$defs/Feedback"
         }
       ]
     },
@@ -89,6 +98,12 @@
         },
         {
           "$ref": "#/$defs/ClientToolCall"
+        },
+        {
+          "$ref": "#/$defs/AgentToolResponse"
+        },
+        {
+          "$ref": "#/$defs/LanguageChanged"
         }
       ]
     },
@@ -1280,6 +1295,123 @@
         "heading",
         "score",
         "excerpt"
+      ],
+      "additionalProperties": false
+    },
+    "ContextualUpdate": {
+      "description": "Something the page wants the agent to know, such as what the customer is looking at. It interrupts nothing, and the agent reads it as information, never as instructions. A newer update with the same context_id replaces the older one.",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "contextual_update"
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "context_id": {
+          "description": "Your own id for what this update is about. Left out, the update stands on its own.",
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{1,64}$"
+        }
+      },
+      "required": [
+        "type",
+        "text"
+      ],
+      "additionalProperties": false
+    },
+    "UserActivity": {
+      "description": "The customer is typing, so the agent holds off for about 2 seconds.",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "user_activity"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "Feedback": {
+      "description": "The customer's view of a reply, by its event_id. A null score takes it back.",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "feedback"
+        },
+        "event_id": {
+          "$ref": "#/$defs/EventId"
+        },
+        "score": {
+          "enum": [
+            "like",
+            "dislike",
+            null
+          ]
+        }
+      },
+      "required": [
+        "type",
+        "event_id",
+        "score"
+      ],
+      "additionalProperties": false
+    },
+    "AgentToolResponse": {
+      "description": "A tool the agent is using: its name, its type and how it's going. Never its values or its result.",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "agent_tool_response"
+        },
+        "tool_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "tool_type": {
+          "enum": [
+            "system",
+            "webhook",
+            "client",
+            "mcp",
+            "integration",
+            "transfer"
+          ]
+        },
+        "status": {
+          "enum": [
+            "running",
+            "done",
+            "failed"
+          ]
+        }
+      },
+      "required": [
+        "type",
+        "tool_name",
+        "tool_type",
+        "status"
+      ],
+      "additionalProperties": false
+    },
+    "LanguageChanged": {
+      "description": "The agent moved to this language, and what it says from here on is in it.",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "language_changed"
+        },
+        "language": {
+          "$ref": "#/$defs/LanguageCode"
+        }
+      },
+      "required": [
+        "type",
+        "language"
       ],
       "additionalProperties": false
     }

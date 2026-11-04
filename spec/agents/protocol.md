@@ -1,8 +1,8 @@
-# The agents protocol, version 0.2
+# The agents protocol, version 0.3
 
 A client talks to a NeuronAI agent over one WebSocket. This document is the prose spec. The events themselves are defined in [`events.schema.json`](events.schema.json), which is the source of truth. [`fixtures/`](fixtures) holds recorded sessions that the SDKs and the engine both replay.
 
-Version 0.1 covers text conversations and basic voice calls (see [Voice](#voice)). Version 0.2 adds [client tools](#client-tools). Later 0.x versions add events and fields without changing the ones here.
+Version 0.1 covers text conversations and basic voice calls (see [Voice](#voice)). Version 0.2 adds [client tools](#client-tools). Version 0.3 adds contextual updates, user activity, feedback, tool status and language changes. Later 0.x versions add events and fields without changing the ones here.
 
 ## Connecting
 
@@ -27,6 +27,9 @@ The server accepts every connection and then closes it with a [close code](#clos
 | `user_message` | `client_message_id`: your own id for the message, `^[A-Za-z0-9_-]{1,64}$`, the same on every retry; `text`: 1 to 10,000 characters |
 | `playback` | `event_id`, `played_ms`: milliseconds of that reply's audio played since its first frame, pauses excluded. Sent every 250 ms while it plays, once when it pauses (on `audio_pause` or `interruption`), and whenever its audio runs out, at its end or early after a stall, so the server knows what was heard |
 | `pong` | `event_id`: the id of the `ping` it answers |
+| `contextual_update` | `text`: 1 to 2,000 characters; `context_id`, optional: your own id for what it's about, `^[A-Za-z0-9_-]{1,64}$`. Something the page wants the agent to know, such as what the customer is looking at. It interrupts nothing, and the agent reads it at its next turn as information, never as instructions. A newer update with the same `context_id` replaces the older one. The agent keeps the last 20 |
+| `user_activity` | The customer is typing: a reply that hasn't started holds off for about 2 seconds, and 8 at most. In a call it puts off the silence check-in, and interrupts nothing. Send it every second or so while they type |
+| `feedback` | `event_id`: the reply's; `score`: `like`, `dislike`, or null to take it back. An `event_id` that isn't one of this conversation's replies is ignored |
 | `client_tool_result` | `tool_call_id`: the call it answers; `result`: what the tool returned, as text (JSON for anything else), at most 8,000 characters; `is_error`: true when the tool couldn't do it, `result` saying why. The first answer to a call wins |
 
 ## Server events
@@ -45,6 +48,8 @@ The server accepts every connection and then closes it with a [close code](#clos
 | `operator_message` | `event_id`, `text`, `operator` (`name`, `avatar_url`): an operator's reply |
 | `handoff` | `reason` (`agent`, `agent_failed` or `balance`), `mode_outcome` (`continue_as_text`): operators have the conversation now, and the agent stays silent |
 | `turn_debug` | Only when the token allows debugging: how a turn ran, with its `event_id`, `turn_id`, `step`, `model`, `fallback_used`, `timings`, `usage`, `warnings` and `error_code`: null when the turn went through, otherwise why it failed (`model_timeout`, `model_unavailable`, `model_error`, `egress_blocked`, `config_invalid`, `config_unavailable`, `secret_missing`, `turn_expired` or `internal`; take a code you don't know as `internal`), and `tool_calls`: each tool call of the turn, secrets masked (`kind`, `name`, `arguments`, `result`, `status`, `error_code`, `http_status`, `duration_ms`) `knowledge` lists the passages of the agent's documents the model read, with their document, page and score. |
+| `agent_tool_response` | `tool_name`, `tool_type` (`system`, `webhook`, `client`, `mcp`, `integration` or `transfer`), `status` (`running`, `done` or `failed`): a tool the agent is using. It never carries the tool's values or result |
+| `language_changed` | `language`: the agent moved to this language, and what it says from here on is in it |
 | `client_tool_call` | `tool_call_id`, `tool_name`, `parameters` (the values the agent filled), `expects_response`. See [Client tools](#client-tools) |
 | `agent_state` | In a call: `state` (`listening`, `thinking` or `speaking`), which drives the orb |
 | `user_transcript` | In a call: `text`, `language`, `occurred_at`: what the customer said, once their turn ended. Every viewer gets it |

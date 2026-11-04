@@ -1,0 +1,106 @@
+{
+  "description": "A page that tells the agent what the customer is looking at, holds it off while they type, and rates the reply. The agent uses a tool and moves to Russian.",
+  "token": "session",
+  "frames": [
+    {
+      "from": "client",
+      "frame": {
+        "type": "conversation_initiation_client_data",
+        "text_only": true
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "conversation_initiation_metadata",
+        "conversation_id": "conv_01JB8Z5R4Q6Y2N7K3M9D0F1H3K",
+        "resume_token": "eyJhbGciOiJFZERTQSIsImtpZCI6ImUxIiwidHlwIjoiSldUIn0.eyJjb252IjoiY29udl8wMUpCOFo1UjRRNlkyTjdLM005RDBGMUgzSyIsImp0aSI6Imp0aS0xIn0.c2lnbmF0dXJlLTE",
+        "status": "ai_handling",
+        "languages": [
+          "uz",
+          "ru",
+          "en"
+        ],
+        "language": "uz",
+        "features": {
+          "text": true,
+          "voice": false,
+          "debug": false
+        },
+        "audio": null
+      }
+    },
+    {
+      "from": "client",
+      "frame": {
+        "type": "contextual_update",
+        "text": "The customer is on the delivery page.",
+        "context_id": "page"
+      }
+    },
+    {
+      "from": "client",
+      "frame": {
+        "type": "user_activity"
+      }
+    },
+    {
+      "from": "client",
+      "frame": {
+        "type": "user_message",
+        "client_message_id": "c-1",
+        "text": "Доставка сколько стоит?"
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "message_ack",
+        "client_message_id": "c-1",
+        "message_id": 101,
+        "occurred_at": "2026-11-04T10:00:00.000Z"
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_tool_response",
+        "tool_name": "check_delivery",
+        "tool_type": "webhook",
+        "status": "running"
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_tool_response",
+        "tool_name": "check_delivery",
+        "tool_type": "webhook",
+        "status": "done"
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "language_changed",
+        "language": "ru"
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_response",
+        "event_id": 2,
+        "text": "По Ташкенту доставка бесплатная."
+      }
+    },
+    {
+      "from": "client",
+      "frame": {
+        "type": "feedback",
+        "event_id": 2,
+        "score": "like"
+      }
+    }
+  ]
+}
