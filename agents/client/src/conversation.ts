@@ -1,9 +1,10 @@
-import type {AudioFormat, AudioFormats, ClientToolCall, ConversationInitiationClientData, HistoryMessage, ServerEvent} from "@naiuz/agents-protocol";
+import type {AudioFormat, AudioFormats, ClientToolCall, ConversationInitiationClientData, HistoryMessage, Overrides, ServerEvent} from "@naiuz/agents-protocol";
 import {BrowserAudio} from "./audio/browser";
 import type {AudioIO} from "./audio/io";
 import {Call} from "./call";
 import {MessageError, MicrophoneError, SessionError} from "./errors";
-import type {Callbacks, ConversationStatus, DisconnectDetails, MessageAck, Mode, SendOptions, SessionOptions, Status, WebSocketFactory, WebSocketLike} from "./types";
+import {requestSession} from "./session";
+import type {Callbacks, ConversationStatus, DisconnectDetails, MessageAck, Mode, SendOptions, SessionOptions, SessionOverrides, Status, WebSocketFactory, WebSocketLike} from "./types";
 
 const DEFAULT_URL = "wss://my.neuronai.uz/api/v1/realtime";
 /** How long the last of a call's audio can keep the speaker, about what the server sends ahead and more. */
@@ -78,12 +79,20 @@ export class Conversation {
     private mode: Mode | null = null;
     /** The status the last metadata gave, so a reconnect reports only a change. */
     private conversationStatus: ConversationStatus | null = null;
+    /** Where the socket goes, and the token it first opens with. */
+    private serverUrl: string;
+    private sessionToken: string;
 
     private constructor(private readonly options: SessionOptions) {
+        // Before anything starts, so a link that isn't one costs nothing.
+        const link = options.signedUrl === undefined ? null : new URL(options.signedUrl);
+        this.sessionToken = options.token ?? link?.searchParams.get("token") ?? "";
+        if (link !== null) link.search = "";
+        this.serverUrl = link?.href ?? options.serverUrl ?? DEFAULT_URL;
         this.WebSocketClass = options.WebSocket ?? (globalThis.WebSocket as unknown as WebSocketFactory);
         this.nextId = options.idGenerator ?? (() => globalThis.crypto.randomUUID());
         // Made here, before startSession's first await, so its context starts inside the caller's gesture.
-        this.audio = options.textOnly === false ? (options.audio ?? new BrowserAudio()) : null;
+        this.audio = (options.overrides?.textOnly ?? options.textOnly) === false ? (options.audio ?? new BrowserAudio()) : null;
     }
 
     /**
@@ -92,12 +101,17 @@ export class Conversation {
      */
     static async startSession(options: SessionOptions): Promise<Conversation> {
         checkClientTools(Object.keys(options.clientTools ?? {}));
+        if ([options.token, options.agentId, options.signedUrl].filter((start) => start !== undefined).length !== 1) {
+            throw new TypeError("A session starts from exactly one of token, agentId or signedUrl.");
+        }
         const conversation = new Conversation(options);
         conversation.setStatus("connecting");
         if (conversation.audio !== null) await conversation.startMicrophone(conversation.audio);
+        // After the microphone, since this token lasts a minute and the browser's prompt can take longer.
+        if (options.agentId !== undefined) await conversation.askForSession(options.agentId);
         await new Promise<void>((resolve, reject) => {
             conversation.opening = {resolve, reject};
-            conversation.connect(options.token);
+            conversation.connect(conversation.sessionToken);
         });
         return conversation;
     }
@@ -181,8 +195,21 @@ export class Conversation {
         }
     }
 
+    private async askForSession(agentId: string): Promise<void> {
+        const {apiUrl, fetch, serverUrl} = this.options;
+        try {
+            const session = await requestSession(agentId, this.audio !== null, apiUrl, fetch);
+            this.sessionToken = session.token;
+            this.serverUrl = serverUrl ?? session.url;
+        } catch (error) {
+            this.closeAudio();
+            this.setStatus("disconnected");
+            throw error;
+        }
+    }
+
     private connect(token: string): void {
-        const socket = new this.WebSocketClass(`${this.options.serverUrl ?? DEFAULT_URL}?token=${encodeURIComponent(token)}`);
+        const socket = new this.WebSocketClass(`${this.serverUrl}?token=${encodeURIComponent(token)}`);
         socket.binaryType = "arraybuffer";
         this.socket = socket;
         socket.onopen = () => {
@@ -205,11 +232,7 @@ export class Conversation {
         const {dynamicVariables, overrides, userId} = this.options;
         const frame: ConversationInitiationClientData = {type: "conversation_initiation_client_data"};
         if (dynamicVariables !== undefined) frame.dynamic_variables = dynamicVariables;
-        if (overrides !== undefined) {
-            frame.overrides = {};
-            if (overrides.firstMessage !== undefined) frame.overrides.first_message = overrides.firstMessage;
-            if (overrides.language !== undefined) frame.overrides.language = overrides.language;
-        }
+        if (overrides !== undefined) frame.overrides = protocolOverrides(overrides);
         frame.text_only = this.audio === null;
         if (this.audio !== null) frame.audio = {input: "pcm_16000", output: this.options.output ?? "pcm_24000"};
         if (userId !== undefined) frame.user_id = userId;
@@ -374,7 +397,7 @@ export class Conversation {
         this.resendOnHistory = false;
         if (this.opening !== null) {
             if (!this.endedByUser && REOPENABLE.has(code) && this.reconnects < RECONNECT_ATTEMPTS) {
-                this.reconnect(socket, this.options.token);
+                this.reconnect(socket, this.sessionToken);
                 return;
             }
             this.opening.reject(new SessionError(code, reason));
@@ -466,7 +489,7 @@ export class Conversation {
 
     /** An address the server gave, relative to its socket's, so a proxy in front changes nothing. */
     private fromSocket(path: string): string | null {
-        const socket = (this.options.serverUrl ?? DEFAULT_URL).replace(/^ws/, "http").replace(/\/*$/, "/");
+        const socket = this.serverUrl.replace(/^ws/, "http").replace(/\/*$/, "/");
         try {
             return new URL(path, new URL(socket, (globalThis as {location?: {href: string}}).location?.href)).href;
         } catch {
@@ -577,6 +600,13 @@ function isValidText(text: string): boolean {
 }
 
 /** The server refuses a whole handshake over a client tool it can't take, so a bad one rejects here, by name. */
+function protocolOverrides({firstMessage, textOnly, ...same}: SessionOverrides): Overrides {
+    const overrides: Overrides = same;
+    if (firstMessage !== undefined) overrides.first_message = firstMessage;
+    if (textOnly !== undefined) overrides.text_only = textOnly;
+    return overrides;
+}
+
 function checkClientTools(names: string[]): void {
     if (names.length > MAX_CLIENT_TOOLS) throw new TypeError(`A page runs at most ${String(MAX_CLIENT_TOOLS)} client tools, not ${String(names.length)}.`);
     const invalid = names.find((name) => !TOOL_NAME.test(name));

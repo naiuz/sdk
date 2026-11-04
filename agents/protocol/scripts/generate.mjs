@@ -7,7 +7,7 @@ const SCHEMA = new URL("../../../spec/agents/events.schema.json", import.meta.ur
 const OUT = new URL("../src/events.ts", import.meta.url);
 
 /** Keywords that only constrain values the types already allow, or describe them. */
-const ANNOTATIONS = new Set(["description", "format", "pattern", "minLength", "maxLength", "minItems", "maxItems", "minimum"]);
+const ANNOTATIONS = new Set(["description", "format", "pattern", "minLength", "maxLength", "minItems", "maxItems", "minimum", "maximum"]);
 const SCALARS = {string: "string", integer: "number", number: "number", boolean: "boolean", null: "null"};
 
 function fail(path, message) {

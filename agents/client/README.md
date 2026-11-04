@@ -6,7 +6,7 @@ The client for NeuronAI agents. It talks to an agent over the [agents protocol](
 import {Conversation} from "@naiuz/agents";
 
 const conversation = await Conversation.startSession({
-    token, // a session token from NeuronAI, which your backend or the dashboard gets
+    agentId: "agent_01JB8Z5R4Q6Y2N7K3M9D0F1H2J",
     onMessage: ({source, message}) => console.log(source, message),
     onAgentChatResponsePart: ({type, text}) => {
         if (type === "delta") process.stdout.write(text);
@@ -22,6 +22,18 @@ await conversation.endSession();
 
 - **Callbacks:** `onConnect`, `onDisconnect`, `onStatusChange`, `onModeChange`, `onMessage`, `onAgentChatResponsePart`, `onAgentResponseCorrection`, `onAgentTyping`, `onHistory`, `onHandoff`, `onDebug` and `onError`. Their names follow `@elevenlabs/client` where they mean the same thing.
 - **Options:** `serverUrl` defaults to `wss://my.neuronai.uz/api/v1/realtime`. `WebSocket` lets another runtime supply its own; the default is `globalThis.WebSocket`, which browsers and Node 22 have. `textOnly`, `output` and `audio` make a call (see [Voice calls](#voice-calls)).
+
+## Starting a session
+
+A session starts from exactly one of these:
+
+- **`agentId`,** for a public agent, on a page of one of its allowed websites. The client asks for the session itself, and a call asks after the microphone. A refusal rejects with a `SessionRefusedError`, whose `code` says why: `origin_not_allowed`, `private_agent`, `daily_limit_reached`, `insufficient_balance` or `not_found`, or `unavailable` when the server couldn't answer.
+- **`signedUrl`,** a link your server makes with an API key, for any of your agents. It opens one connection, within 15 minutes. A second use rejects with a `SessionError`, 4003 `link_used`.
+- **`token`,** a session token from your backend or the dashboard, or a resume token.
+
+`apiUrl` is where `agentId` asks, and defaults to `https://my.neuronai.uz`.
+
+`overrides` changes `prompt`, `firstMessage`, `language`, `voice`, `model` or `textOnly` for this session. The agent's Security tab allows each one, all are off by default, and one it doesn't allow closes the session with 4003.
 
 ## Voice calls
 

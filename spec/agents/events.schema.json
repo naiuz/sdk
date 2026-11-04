@@ -125,6 +125,12 @@
     "Overrides": {
       "type": "object",
       "properties": {
+        "prompt": {
+          "description": "Added to the agent's prompt for this session.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100000
+        },
         "first_message": {
           "type": "string",
           "minLength": 1,
@@ -132,6 +138,51 @@
         },
         "language": {
           "$ref": "#/$defs/LanguageCode"
+        },
+        "voice": {
+          "description": "A voice the organization can use.",
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z0-9_]+:[A-Za-z0-9_.-]+$"
+            },
+            "speed": {
+              "type": "number",
+              "minimum": 0.7,
+              "maximum": 1.2
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "model": {
+          "description": "A model the organization can choose. A customer's own endpoint can't be named.",
+          "type": "object",
+          "properties": {
+            "source": {
+              "enum": [
+                "neuronai",
+                "external"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            }
+          },
+          "required": [
+            "source",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "text_only": {
+          "description": "Decides whether the session is text or a call, over the frame's own text_only.",
+          "type": "boolean"
         }
       },
       "required": [],

@@ -6,6 +6,14 @@ export class SessionError extends Error {
     }
 }
 
+/** The server wouldn't give a session for the agent's id: its code and message say why, such as origin_not_allowed. */
+export class SessionRefusedError extends Error {
+    constructor(readonly code: string, readonly status: number, message: string) {
+        super(message);
+        this.name = "SessionRefusedError";
+    }
+}
+
 /** A message the server didn't save. */
 export class MessageError extends Error {
     constructor(readonly clientMessageId: string, readonly retryable: boolean, readonly code: string) {

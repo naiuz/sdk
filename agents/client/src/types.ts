@@ -85,14 +85,35 @@ export interface Callbacks {
     onError?: (message: string, context: {code: string}) => void;
 }
 
+/** What a session may change about its agent, each only when the agent allows it. */
+export interface SessionOverrides {
+    /** Added to the agent's prompt for this session. */
+    prompt?: string;
+    firstMessage?: string;
+    language?: LanguageCode;
+    /** A voice the organization can use. */
+    voice?: {id: string; speed?: number};
+    /** A model the organization can choose. A customer's own endpoint can't be named. */
+    model?: {source: "neuronai" | "external"; id: string};
+    /** Decides whether the session is text or a call, over textOnly. */
+    textOnly?: boolean;
+}
+
+/** How a session starts is exactly one of token, agentId or signedUrl. */
 export interface SessionOptions extends Callbacks {
     /** A session token from NeuronAI, or a resume token the server gave this conversation. */
-    token: string;
-    /** Defaults to wss://my.neuronai.uz/api/v1/realtime. */
+    token?: string;
+    /** A public agent's id, for a page on one of its allowed websites. A refusal rejects with a SessionRefusedError. */
+    agentId?: string;
+    /** A link your server made with an API key. It opens one connection, within 15 minutes. */
+    signedUrl?: string;
+    /** Where agentId asks for a session. Defaults to https://my.neuronai.uz. */
+    apiUrl?: string;
+    /** The socket's address. Defaults to wss://my.neuronai.uz/api/v1/realtime, or to where agentId's answer or signedUrl says. */
     serverUrl?: string;
     dynamicVariables?: Record<string, string | number | boolean>;
-    /** Only the overrides the token allows; any other closes the session with 4003. */
-    overrides?: {firstMessage?: string; language?: LanguageCode};
+    /** Only the overrides the agent allows; any other closes the session with 4003. */
+    overrides?: SessionOverrides;
     /** Defaults to true. False makes the session a call: the microphone is asked for first. */
     textOnly?: boolean;
     /** The rate a call's agent audio comes at. Defaults to "pcm_24000"; the client plays whatever the server sends. */
@@ -102,6 +123,8 @@ export interface SessionOptions extends Callbacks {
     userId?: string;
     /** Defaults to globalThis.WebSocket. */
     WebSocket?: WebSocketFactory;
+    /** How agentId asks for a session. Defaults to globalThis.fetch. */
+    fetch?: typeof globalThis.fetch;
     /** Makes each message's client_message_id. Defaults to crypto.randomUUID. */
     idGenerator?: () => string;
     /**

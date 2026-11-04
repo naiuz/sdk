@@ -48,8 +48,22 @@ export type EventId = number;
 export type DateTime = string;
 
 export interface Overrides {
+    /** Added to the agent's prompt for this session. */
+    prompt?: string;
     first_message?: string;
     language?: LanguageCode;
+    /** A voice the organization can use. */
+    voice?: {
+        id: string;
+        speed?: number;
+    };
+    /** A model the organization can choose. A customer's own endpoint can't be named. */
+    model?: {
+        source: "neuronai" | "external";
+        id: string;
+    };
+    /** Decides whether the session is text or a call, over the frame's own text_only. */
+    text_only?: boolean;
 }
 
 export interface Features {
