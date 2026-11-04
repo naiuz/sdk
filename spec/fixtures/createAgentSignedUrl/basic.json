@@ -1,0 +1,46 @@
+{
+  "description": "A link your page opens a conversation with, for a private agent or to bind a conversation to a customer of yours. It must be used within 15 minutes, once. Make it on your server.",
+  "operationId": "createAgentSignedUrl",
+  "call": {
+    "path_params": {
+      "agent": "agent_01JB8Z5R4Q6Y2N7K3M9D0F1H2J"
+    },
+    "params": {
+      "customer_id": "crm-42"
+    }
+  },
+  "request": {
+    "method": "GET",
+    "path": "/agents/agent_01JB8Z5R4Q6Y2N7K3M9D0F1H2J/signed-url",
+    "query": {
+      "customer_id": "crm-42"
+    },
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json",
+      "x-request-id": "00000000-0000-4000-8000-000000000106"
+    },
+    "body": {
+      "json": {
+        "data": {
+          "signed_url": "wss://my.neuronai.uz/agents/realtime?token=abc",
+          "expires_at": "2026-11-04T10:15:00Z"
+        },
+        "request_id": "00000000-0000-4000-8000-000000000106"
+      }
+    }
+  },
+  "result": {
+    "data": {
+      "signed_url": "wss://my.neuronai.uz/agents/realtime?token=abc",
+      "expires_at": "2026-11-04T10:15:00Z"
+    },
+    "request_id": "00000000-0000-4000-8000-000000000106"
+  }
+}

@@ -1,0 +1,107 @@
+{
+  "description": "Adds a file, sent as multipart/form-data.",
+  "operationId": "createFileDocument",
+  "call": {
+    "params": {
+      "name": "Narxlar"
+    },
+    "files": {
+      "file": {
+        "filename": "prices.pdf",
+        "content_type": "application/octet-stream",
+        "base64": "JVBERi0xLjQK"
+      }
+    }
+  },
+  "request": {
+    "method": "POST",
+    "path": "/knowledge-base/file",
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key",
+      "content-type": "multipart/form-data"
+    },
+    "body": {
+      "multipart": {
+        "fields": {
+          "name": "Narxlar"
+        },
+        "files": {
+          "file": {
+            "filename": "prices.pdf",
+            "content_type": "application/octet-stream",
+            "base64": "JVBERi0xLjQK"
+          }
+        }
+      }
+    }
+  },
+  "response": {
+    "status": 201,
+    "headers": {
+      "content-type": "application/json",
+      "x-request-id": "00000000-0000-4000-8000-000000000131"
+    },
+    "body": {
+      "json": {
+        "data": {
+          "id": 31,
+          "name": "Narxlar",
+          "kind": "pdf",
+          "status": "processing",
+          "failure_reason": null,
+          "searchable": false,
+          "source_url": null,
+          "crawl_scope": null,
+          "last_fetched_at": null,
+          "next_refresh_at": null,
+          "bytes": 120,
+          "char_count": 120,
+          "page_count": 0,
+          "row_count": 0,
+          "ocr_pages": 0,
+          "chunk_count": 1,
+          "truncated": false,
+          "pages_done": 0,
+          "pages_total": 0,
+          "refused_char_count": null,
+          "created_at": "2026-11-04T10:00:00Z",
+          "updated_at": "2026-11-04T10:00:00Z",
+          "used_by": [],
+          "text": null,
+          "pairs": null
+        },
+        "request_id": "00000000-0000-4000-8000-000000000131"
+      }
+    }
+  },
+  "result": {
+    "data": {
+      "id": 31,
+      "name": "Narxlar",
+      "kind": "pdf",
+      "status": "processing",
+      "failure_reason": null,
+      "searchable": false,
+      "source_url": null,
+      "crawl_scope": null,
+      "last_fetched_at": null,
+      "next_refresh_at": null,
+      "bytes": 120,
+      "char_count": 120,
+      "page_count": 0,
+      "row_count": 0,
+      "ocr_pages": 0,
+      "chunk_count": 1,
+      "truncated": false,
+      "pages_done": 0,
+      "pages_total": 0,
+      "refused_char_count": null,
+      "created_at": "2026-11-04T10:00:00Z",
+      "updated_at": "2026-11-04T10:00:00Z",
+      "used_by": [],
+      "text": null,
+      "pairs": null
+    },
+    "request_id": "00000000-0000-4000-8000-000000000131"
+  }
+}

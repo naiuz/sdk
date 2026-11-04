@@ -66,7 +66,7 @@ class Voices(APIResource):
         name: str,
         language: SpeechLanguage,
         ref_audio: Uploadable,
-        ref_text: str | NotGiven | None = NOT_GIVEN,
+        ref_text: str,
         category: VoiceCategory | NotGiven = NOT_GIVEN,
         tags: Sequence[str] | NotGiven | None = NOT_GIVEN,
         idempotency_key: str | None = None,
@@ -87,7 +87,7 @@ class Voices(APIResource):
             ref_audio: A 10-15 second reference clip: WAV, MP3, OGG or FLAC, at most 10 MB. A path, a
                 `(filename, content)` or `(filename, content, content_type)` tuple, or a binary file object with a
                 name: the filename's extension names the format.
-            ref_text: What the clip says, up to 1000 characters. None sends nothing, as leaving it out does.
+            ref_text: What the clip says, up to 1000 characters.
             category: What the voice is for.
             tags: Tags, up to 32 characters each, each sent as its own `tags[]` field. Blank tags are dropped.
             idempotency_key: Sent as the Idempotency-Key header, at most 191 characters. None or "" sends a

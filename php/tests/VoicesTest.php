@@ -205,7 +205,7 @@ final class VoicesTest extends TestCase
         self::assertIsResource($stream);
         try {
             // @phpstan-ignore argument.type (an untyped caller's mistake, which the SDK refuses)
-            Clients::on($api)->voices->create(['name' => 'Office voice', 'language' => 'uz', 'ref_audio' => $stream]);
+            Clients::on($api)->voices->create(['name' => 'Office voice', 'language' => 'uz', 'ref_audio' => $stream, 'ref_text' => 'Salom.']);
             self::fail('The stream should have been refused.');
         } catch (NeuronAIException $error) {
             self::assertSame("ref_audio needs a filename: pass ['stream' => \$stream, 'filename' => 'clip.wav'] rather than the stream alone.", $error->getMessage());
@@ -216,7 +216,7 @@ final class VoicesTest extends TestCase
     public function test_create_retries_a_bare_502_and_a_reset_with_the_same_form_and_key(): void
     {
         $api = new MockClient(new Response(502, [], '<html>Bad Gateway</html>'), NetworkError::reset(), Replies::envelope(self::voice('v-new'), status: 201));
-        (new Voices((new TestHttp($api))->http))->create(['name' => 'Office voice', 'language' => 'uz', 'ref_audio' => $this->sample()]);
+        (new Voices((new TestHttp($api))->http))->create(['name' => 'Office voice', 'language' => 'uz', 'ref_audio' => $this->sample(), 'ref_text' => 'Salom.']);
         self::assertCount(3, $api);
         [$first] = $api->requests;
         foreach ($api->requests as $sent) {
@@ -249,7 +249,7 @@ final class VoicesTest extends TestCase
 
     public function test_with_raw_response_gives_a_created_voice_with_its_201(): void
     {
-        $raw = Clients::on(new MockClient(Replies::envelope(self::voice('v-new'), status: 201)))->withRawResponse()->voices->create(['name' => 'Office voice', 'language' => 'uz', 'ref_audio' => $this->sample()]);
+        $raw = Clients::on(new MockClient(Replies::envelope(self::voice('v-new'), status: 201)))->withRawResponse()->voices->create(['name' => 'Office voice', 'language' => 'uz', 'ref_audio' => $this->sample(), 'ref_text' => 'Salom.']);
         self::assertSame(['v-new', 201], [$raw->data->id, $raw->status]);
     }
 

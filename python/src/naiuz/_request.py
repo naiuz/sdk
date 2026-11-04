@@ -52,7 +52,7 @@ class RequestOptions:
 class APIRequest:
     """One API call, as a resource describes it to the HTTP core."""
 
-    method: Literal["GET", "POST", "PATCH", "DELETE"]
+    method: Literal["GET", "POST", "PUT", "PATCH", "DELETE"]
     path: str
     """The path under the base URL, with `{name}` for each path parameter, such as `/tts/voices/{id}`."""
     retry: RetryClass

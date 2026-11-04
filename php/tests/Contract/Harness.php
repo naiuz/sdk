@@ -31,9 +31,9 @@ final class Harness
 
     public const COMPATIBLE_OPERATIONS = ['createChatCompletion', 'listModels', 'createEmbedding', 'rerank'];
 
-    public const PAGE_OPERATIONS = ['listVoices', 'listApiKeys'];
+    public const PAGE_OPERATIONS = ['listVoices', 'listApiKeys', 'listAgents', 'listConversations', 'listConversationMessages', 'listTools', 'listWebhookEndpoints'];
 
-    public const AUDIO_OPERATIONS = ['synthesizeSpeech', 'synthesizeDialogue', 'downloadTtsJobAudio'];
+    public const AUDIO_OPERATIONS = ['synthesizeSpeech', 'synthesizeDialogue', 'downloadTtsJobAudio', 'downloadConversationAudio'];
 
     /**
      * Every fixture file under spec/fixtures, as `<operationId>/<name>.json`, sorted.

@@ -15,6 +15,7 @@ export interface ApiKeyPermissions {
     embeddings: "none" | "write" | (string & {});
     rerank: "none" | "write" | (string & {});
     account: "none" | "read" | (string & {});
+    agents: "none" | "read" | "write" | (string & {});
     api_keys: "none" | "read" | "write" | (string & {});
 }
 

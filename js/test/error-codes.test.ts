@@ -5,9 +5,9 @@ import {readSpec} from "./helpers/spec";
 const document = readSpec("openapi.json") as {components: {schemas: {ErrorCode: {enum: string[]}}}};
 
 describe("ErrorCode", () => {
-    it("holds exactly the API's 38 codes, in the document's order", () => {
+    it("holds exactly the API's 41 codes, in the document's order", () => {
         expect(Object.values(ErrorCode)).toEqual(document.components.schemas.ErrorCode.enum);
-        expect(Object.values(ErrorCode)).toHaveLength(38);
+        expect(Object.values(ErrorCode)).toHaveLength(41);
     });
 
     it("names each member after its code, in PascalCase", () => {

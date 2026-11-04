@@ -1,0 +1,54 @@
+{
+  "description": "Stores what the customer said and answers at once, and the agent's reply reaches you by webhook. After the conversation has ended it goes on in the next one, and `conversation_id` says which.",
+  "operationId": "createConversationMessage",
+  "call": {
+    "path_params": {
+      "conversation": "conv_01JB8Z5R4Q6Y2N7K3M9D0F1H2K"
+    },
+    "params": {
+      "client_message_id": "msg-1",
+      "text": "Yetkazib berish bormi?"
+    }
+  },
+  "request": {
+    "method": "POST",
+    "path": "/conversations/conv_01JB8Z5R4Q6Y2N7K3M9D0F1H2K/messages",
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key",
+      "content-type": "application/json"
+    },
+    "body": {
+      "json": {
+        "client_message_id": "msg-1",
+        "text": "Yetkazib berish bormi?"
+      }
+    }
+  },
+  "response": {
+    "status": 202,
+    "headers": {
+      "content-type": "application/json",
+      "x-request-id": "00000000-0000-4000-8000-000000000111"
+    },
+    "body": {
+      "json": {
+        "data": {
+          "id": "980",
+          "conversation_id": "conv_01JB8Z5R4Q6Y2N7K3M9D0F1H2K",
+          "client_message_id": "msg-1",
+          "occurred_at": "2026-11-04T10:00:00Z"
+        },
+        "request_id": "00000000-0000-4000-8000-000000000111"
+      }
+    }
+  },
+  "result": {
+    "data": {
+      "id": "980",
+      "conversation_id": "conv_01JB8Z5R4Q6Y2N7K3M9D0F1H2K",
+      "client_message_id": "msg-1",
+      "occurred_at": "2026-11-04T10:00:00Z"
+    },
+    "request_id": "00000000-0000-4000-8000-000000000111"
+  }
+}

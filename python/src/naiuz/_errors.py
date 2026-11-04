@@ -18,6 +18,10 @@ class NeuronAIError(Exception):
     """The base of every error this SDK raises."""
 
 
+class WebhookVerificationError(NeuronAIError):
+    """A webhook's signature didn't check out: answer 400 and do nothing with the body."""
+
+
 class APIConnectionError(NeuronAIError):
     """The API couldn't be reached, or the connection failed before a whole answer arrived.
 

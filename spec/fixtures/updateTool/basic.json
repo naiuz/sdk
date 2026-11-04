@@ -1,0 +1,88 @@
+{
+  "description": "Replaces a tool. Agents that use it get the change when it's saved.",
+  "operationId": "updateTool",
+  "call": {
+    "path_params": {
+      "tool": "7"
+    },
+    "params": {
+      "kind": "webhook",
+      "name": "check_order",
+      "description": "Finds an order by its number.",
+      "config": {
+        "method": "GET",
+        "url": "https://api.shop.uz/orders",
+        "timeout_s": 20
+      }
+    }
+  },
+  "request": {
+    "method": "PUT",
+    "path": "/tools/7",
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key",
+      "content-type": "application/json"
+    },
+    "body": {
+      "json": {
+        "kind": "webhook",
+        "name": "check_order",
+        "description": "Finds an order by its number.",
+        "config": {
+          "method": "GET",
+          "url": "https://api.shop.uz/orders",
+          "timeout_s": 20
+        }
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json",
+      "x-request-id": "00000000-0000-4000-8000-000000000124"
+    },
+    "body": {
+      "json": {
+        "data": {
+          "id": 7,
+          "kind": "webhook",
+          "name": "check_order",
+          "description": "Finds an order by its number.",
+          "config": {
+            "method": "GET",
+            "url": "https://api.shop.uz/orders",
+            "timeout_s": 20
+          },
+          "last_test_at": null,
+          "last_test_status": null,
+          "used_by": [],
+          "target": "api.shop.uz",
+          "wait_for_result": null,
+          "timeout_s": null
+        },
+        "request_id": "00000000-0000-4000-8000-000000000124"
+      }
+    }
+  },
+  "result": {
+    "data": {
+      "id": 7,
+      "kind": "webhook",
+      "name": "check_order",
+      "description": "Finds an order by its number.",
+      "config": {
+        "method": "GET",
+        "url": "https://api.shop.uz/orders",
+        "timeout_s": 20
+      },
+      "last_test_at": null,
+      "last_test_status": null,
+      "used_by": [],
+      "target": "api.shop.uz",
+      "wait_for_result": null,
+      "timeout_s": null
+    },
+    "request_id": "00000000-0000-4000-8000-000000000124"
+  }
+}

@@ -23,7 +23,8 @@ final class RawResponseTest extends TestCase
             if (!class_exists($class) || !class_exists($twin)) {
                 self::fail("{$class} has no twin {$twin}");
             }
-            self::assertSame(self::methods($class), self::methods($twin), $twin);
+            // Checking a webhook's signature asks the API nothing, so there's no answer to return raw.
+            self::assertSame(array_diff_key(self::methods($class), ['verify' => true]), self::methods($twin), $twin);
             self::assertSame(self::properties($class), self::properties($twin), $twin);
             foreach ((new \ReflectionClass($twin))->getMethods(\ReflectionMethod::IS_PUBLIC) as $method) {
                 if (!$method->isConstructor()) {

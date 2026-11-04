@@ -38,6 +38,9 @@ enum ErrorCode: string
 
     /** The request's IP address is not on the API key's allowlist. */
     case IpNotAllowed = 'ip_not_allowed';
+    case OriginNotAllowed = 'origin_not_allowed';
+    case PrivateAgent = 'private_agent';
+    case DailyLimitReached = 'daily_limit_reached';
 
     /** The API key belongs to a user without an organization. */
     case NoOrganization = 'no_organization';

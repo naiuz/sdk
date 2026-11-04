@@ -1,0 +1,25 @@
+{
+  "description": "Deletes an endpoint, with its deliveries.",
+  "operationId": "deleteWebhookEndpoint",
+  "call": {
+    "path_params": {
+      "endpoint": "whe_01JB8Z5R4Q6Y2N7K3M9D0F1H2M"
+    }
+  },
+  "request": {
+    "method": "DELETE",
+    "path": "/webhooks/whe_01JB8Z5R4Q6Y2N7K3M9D0F1H2M",
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 204,
+    "headers": {
+      "x-request-id": "00000000-0000-4000-8000-000000000130"
+    },
+    "body": null
+  },
+  "result": null
+}

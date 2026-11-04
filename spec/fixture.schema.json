@@ -28,7 +28,7 @@
       "additionalProperties": false,
       "required": ["method", "path", "headers", "body"],
       "properties": {
-        "method": {"enum": ["GET", "POST", "PATCH", "DELETE"]},
+        "method": {"enum": ["GET", "POST", "PUT", "PATCH", "DELETE"]},
         "path": {"type": "string", "pattern": "^/[^?#]*$"},
         "query": {"type": "object", "additionalProperties": {"type": "string"}},
         "headers": {"$ref": "#/$defs/headers"},

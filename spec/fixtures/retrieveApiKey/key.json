@@ -36,6 +36,7 @@
             "embeddings": "write",
             "rerank": "write",
             "account": "read",
+            "agents": "write",
             "api_keys": "none"
           },
           "expires_at": null,
@@ -66,6 +67,7 @@
         "embeddings": "write",
         "rerank": "write",
         "account": "read",
+        "agents": "write",
         "api_keys": "none"
       },
       "expires_at": null,

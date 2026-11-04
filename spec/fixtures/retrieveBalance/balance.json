@@ -24,7 +24,8 @@
           "currency": "credits",
           "stt_price_per_minute": 500,
           "tts_price_per_char": 2.5,
-          "min_topup": 5000
+          "min_topup": 5000,
+          "stt_price_per_second": 0.5
         },
         "request_id": "00000000-0000-4000-8000-000000000024"
       }
@@ -37,7 +38,8 @@
       "currency": "credits",
       "stt_price_per_minute": 500,
       "tts_price_per_char": 2.5,
-      "min_topup": 5000
+      "min_topup": 5000,
+      "stt_price_per_second": 0.5
     },
     "request_id": "00000000-0000-4000-8000-000000000024"
   }

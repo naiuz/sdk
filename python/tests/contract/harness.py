@@ -26,8 +26,16 @@ Kind = Literal["sync", "async"]
 KINDS: list[Kind] = ["sync", "async"]
 
 COMPATIBLE_OPERATIONS = {"createChatCompletion", "listModels", "createEmbedding", "rerank"}
-PAGE_OPERATIONS = {"listVoices", "listApiKeys"}
-AUDIO_OPERATIONS = {"synthesizeSpeech", "synthesizeDialogue", "downloadTtsJobAudio"}
+PAGE_OPERATIONS = {
+    "listVoices",
+    "listApiKeys",
+    "listAgents",
+    "listConversations",
+    "listConversationMessages",
+    "listTools",
+    "listWebhookEndpoints",
+}
+AUDIO_OPERATIONS = {"synthesizeSpeech", "synthesizeDialogue", "downloadTtsJobAudio", "downloadConversationAudio"}
 
 
 def list_fixtures() -> list[str]:

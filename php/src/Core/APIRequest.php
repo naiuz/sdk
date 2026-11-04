@@ -12,7 +12,7 @@ namespace Naiuz\Core;
 final readonly class APIRequest
 {
     /**
-     * @param 'GET'|'POST'|'PATCH'|'DELETE' $method
+     * @param 'GET'|'POST'|'PUT'|'PATCH'|'DELETE' $method
      * @param string $path The path under the base URL, with `{name}` for each path parameter, such as
      *     `/tts/voices/{id}`.
      * @param RetryClass $retry Which failures are retried, and whether an Idempotency-Key is sent (Idempotent).

@@ -6,14 +6,19 @@ namespace Naiuz;
 
 use Naiuz\Core\HttpClient;
 use Naiuz\Resources\AccountWithRawResponse;
+use Naiuz\Resources\AgentsWithRawResponse;
 use Naiuz\Resources\ApiKeysWithRawResponse;
 use Naiuz\Resources\ChatWithRawResponse;
+use Naiuz\Resources\ConversationsWithRawResponse;
 use Naiuz\Resources\EmbeddingsWithRawResponse;
+use Naiuz\Resources\KnowledgeBaseWithRawResponse;
 use Naiuz\Resources\ModelsWithRawResponse;
 use Naiuz\Resources\RerankWithRawResponse;
 use Naiuz\Resources\SttWithRawResponse;
+use Naiuz\Resources\ToolsWithRawResponse;
 use Naiuz\Resources\TtsWithRawResponse;
 use Naiuz\Resources\VoicesWithRawResponse;
+use Naiuz\Resources\WebhooksWithRawResponse;
 
 /**
  * The client's resources, each method returning a RawResponse: its result with the status and headers of the answer
@@ -36,6 +41,21 @@ final readonly class NeuronAIWithRawResponse
     /** Your organization's API keys. */
     public ApiKeysWithRawResponse $apiKeys;
 
+    /** Your organization's agents. */
+    public AgentsWithRawResponse $agents;
+
+    /** Your organization's conversations, and carrying one on a channel of your own. */
+    public ConversationsWithRawResponse $conversations;
+
+    /** The documents agents answer from. */
+    public KnowledgeBaseWithRawResponse $knowledgeBase;
+
+    /** The tools agents can use. */
+    public ToolsWithRawResponse $tools;
+
+    /** The addresses that hear of what agents and operators say. */
+    public WebhooksWithRawResponse $webhooks;
+
     /** The chat models available to your account. */
     public ModelsWithRawResponse $models;
 
@@ -56,6 +76,11 @@ final readonly class NeuronAIWithRawResponse
         $this->tts = new TtsWithRawResponse($http);
         $this->stt = new SttWithRawResponse($http);
         $this->apiKeys = new ApiKeysWithRawResponse($http);
+        $this->agents = new AgentsWithRawResponse($http);
+        $this->conversations = new ConversationsWithRawResponse($http);
+        $this->knowledgeBase = new KnowledgeBaseWithRawResponse($http);
+        $this->tools = new ToolsWithRawResponse($http);
+        $this->webhooks = new WebhooksWithRawResponse($http);
         $this->models = new ModelsWithRawResponse($http);
         $this->embeddings = new EmbeddingsWithRawResponse($http);
         $this->rerank = new RerankWithRawResponse($http);

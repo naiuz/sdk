@@ -1,0 +1,60 @@
+{
+  "description": "What's been said, oldest first, from wherever you got to. Use it to catch up on anything a webhook missed.",
+  "operationId": "listConversationMessages",
+  "call": {
+    "path_params": {
+      "conversation": "conv_01JB8Z5R4Q6Y2N7K3M9D0F1H2K"
+    },
+    "params": {
+      "after": 980,
+      "limit": 1
+    }
+  },
+  "request": {
+    "method": "GET",
+    "path": "/conversations/conv_01JB8Z5R4Q6Y2N7K3M9D0F1H2K/messages",
+    "query": {
+      "after": "980",
+      "limit": "1"
+    },
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json",
+      "x-request-id": "00000000-0000-4000-8000-000000000112"
+    },
+    "body": {
+      "json": {
+        "data": [
+          {
+            "id": "981",
+            "role": "agent",
+            "text": "Ha, bepul yetkazib beramiz.",
+            "client_message_id": null,
+            "occurred_at": "2026-11-04T10:00:01.250Z"
+          }
+        ],
+        "next_cursor": null,
+        "request_id": "00000000-0000-4000-8000-000000000112"
+      }
+    }
+  },
+  "result": {
+    "data": [
+      {
+        "id": "981",
+        "role": "agent",
+        "text": "Ha, bepul yetkazib beramiz.",
+        "client_message_id": null,
+        "occurred_at": "2026-11-04T10:00:01.250Z"
+      }
+    ],
+    "next_cursor": null,
+    "request_id": "00000000-0000-4000-8000-000000000112"
+  }
+}

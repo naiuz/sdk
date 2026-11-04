@@ -5,7 +5,7 @@ import {basename} from "node:path";
 import {NeuronAI} from "@naiuz/sdk";
 
 const [path, transcript] = process.argv.slice(2);
-if (path === undefined) throw new Error('Pass the recording\'s path, and what it says: node examples/clone-voice.ts sample.wav "Salom!"');
+if (path === undefined || transcript === undefined) throw new Error('Pass the recording\'s path, and what it says: node examples/clone-voice.ts sample.wav "Salom!"');
 
 const client = new NeuronAI();
 
@@ -13,7 +13,7 @@ const voice = await client.voices.create({
     name: "Example voice",
     language: "uz",
     ref_audio: {data: await readFile(path), filename: basename(path)},
-    ref_text: transcript ?? null,
+    ref_text: transcript,
     tags: ["example"],
 });
 console.log(`Created the voice ${voice.id}.`);

@@ -1,0 +1,31 @@
+{
+  "description": "Deletes a tool.",
+  "operationId": "deleteTool",
+  "call": {
+    "path_params": {
+      "tool": "7"
+    },
+    "params": {
+      "detach": true
+    }
+  },
+  "request": {
+    "method": "DELETE",
+    "path": "/tools/7",
+    "query": {
+      "detach": "true"
+    },
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 204,
+    "headers": {
+      "x-request-id": "00000000-0000-4000-8000-000000000125"
+    },
+    "body": null
+  },
+  "result": null
+}

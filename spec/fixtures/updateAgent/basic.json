@@ -1,0 +1,60 @@
+{
+  "description": "Replaces whole sections of the draft. Someone else's change since you read it raises a conflict: read the agent again. Customers see nothing of this until you publish.",
+  "operationId": "updateAgent",
+  "call": {
+    "path_params": {
+      "agent": "agent_01JB8Z5R4Q6Y2N7K3M9D0F1H2J"
+    },
+    "params": {
+      "base_revision": 8,
+      "sections": {
+        "prompt": {
+          "system": "Qisqa javob bering."
+        }
+      }
+    }
+  },
+  "request": {
+    "method": "PATCH",
+    "path": "/agents/agent_01JB8Z5R4Q6Y2N7K3M9D0F1H2J",
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key",
+      "content-type": "application/json"
+    },
+    "body": {
+      "json": {
+        "base_revision": 8,
+        "sections": {
+          "prompt": {
+            "system": "Qisqa javob bering."
+          }
+        }
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json",
+      "x-request-id": "00000000-0000-4000-8000-000000000104"
+    },
+    "body": {
+      "json": {
+        "data": {
+          "revision": 9,
+          "saved_at": "2026-11-04T10:00:00Z",
+          "has_unpublished_changes": true
+        },
+        "request_id": "00000000-0000-4000-8000-000000000104"
+      }
+    }
+  },
+  "result": {
+    "data": {
+      "revision": 9,
+      "saved_at": "2026-11-04T10:00:00Z",
+      "has_unpublished_changes": true
+    },
+    "request_id": "00000000-0000-4000-8000-000000000104"
+  }
+}

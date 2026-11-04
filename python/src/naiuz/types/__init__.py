@@ -2,6 +2,14 @@
 
 from .._uploads import FileContent, Uploadable
 from .account import Balance, Usage, UsageByKey, UsageByService, UsagePeriod, UsageTotal
+from .agents import (
+    Agent,
+    AgentChannel,
+    AgentDraftSaved,
+    AgentSignedUrl,
+    AgentStatus,
+    CreatedAgent,
+)
 from .api_keys import (
     ApiKey,
     ApiKeyAccess,
@@ -23,8 +31,25 @@ from .chat import (
     ChatRole,
     CreateChatCompletionRequest,
 )
+from .conversations import (
+    Conversation,
+    ConversationContact,
+    ConversationContactParam,
+    ConversationMessage,
+    ConversationTranscript,
+    SentConversationMessage,
+    StartedConversation,
+)
 from .embeddings import CreateEmbeddingRequest, Embedding, EmbeddingResponse, EmbeddingUsage
 from .errors import ErrorDetail, ErrorEnvelope, ErrorType
+from .knowledge_base import (
+    DocumentPair,
+    DocumentPairParam,
+    DocumentUser,
+    KnowledgeDocument,
+    KnowledgeDocuments,
+    KnowledgeUsage,
+)
 from .models import Model, ModelList
 from .rerank import (
     RerankBilledUnits,
@@ -37,6 +62,10 @@ from .rerank import (
 )
 from .shared import SpeechLanguage, SpeechQuality
 from .stt import CreateTranscriptionRequest, Transcription, TranscriptionLanguage, TranscriptionSegment
+from .tools import (
+    Tool,
+    ToolUser,
+)
 from .tts import DialogueTurn, SynthesizeDialogueRequest, SynthesizeSpeechRequest, TtsJob, TtsJobError, TtsJobStatus
 from .voices import (
     CreateVoiceRequest,
@@ -46,8 +75,19 @@ from .voices import (
     VoiceCategory,
     VoiceType,
 )
+from .webhooks import (
+    CreatedWebhookEndpoint,
+    WebhookEndpoint,
+    WebhookEvent,
+    WebhookLastDelivery,
+)
 
 __all__ = [
+    "Agent",
+    "AgentChannel",
+    "AgentDraftSaved",
+    "AgentSignedUrl",
+    "AgentStatus",
     "ApiKey",
     "ApiKeyAccess",
     "ApiKeyPermissions",
@@ -62,14 +102,24 @@ __all__ = [
     "ChatCompletionUsage",
     "ChatMessageParam",
     "ChatRole",
+    "Conversation",
+    "ConversationContact",
+    "ConversationContactParam",
+    "ConversationMessage",
+    "ConversationTranscript",
     "CreateApiKeyRequest",
     "CreateChatCompletionRequest",
     "CreateEmbeddingRequest",
     "CreateTranscriptionRequest",
     "CreateVoiceRequest",
+    "CreatedAgent",
+    "CreatedWebhookEndpoint",
     "DialogueAudio",
     "DialogueTurn",
     "DialogueTurnTiming",
+    "DocumentPair",
+    "DocumentPairParam",
+    "DocumentUser",
     "Embedding",
     "EmbeddingResponse",
     "EmbeddingUsage",
@@ -77,6 +127,9 @@ __all__ = [
     "ErrorEnvelope",
     "ErrorType",
     "FileContent",
+    "KnowledgeDocument",
+    "KnowledgeDocuments",
+    "KnowledgeUsage",
     "Model",
     "ModelList",
     "ReplaceVoiceAudioRequest",
@@ -87,11 +140,15 @@ __all__ = [
     "RerankResponse",
     "RerankResult",
     "RerankUsage",
+    "SentConversationMessage",
     "SpeechAudio",
     "SpeechLanguage",
     "SpeechQuality",
+    "StartedConversation",
     "SynthesizeDialogueRequest",
     "SynthesizeSpeechRequest",
+    "Tool",
+    "ToolUser",
     "Transcription",
     "TranscriptionLanguage",
     "TranscriptionSegment",
@@ -109,4 +166,7 @@ __all__ = [
     "Voice",
     "VoiceCategory",
     "VoiceType",
+    "WebhookEndpoint",
+    "WebhookEvent",
+    "WebhookLastDelivery",
 ]

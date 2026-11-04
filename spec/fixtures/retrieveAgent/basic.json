@@ -1,0 +1,88 @@
+{
+  "description": "An agent, with its draft as `config` and the `revision` to change it from.",
+  "operationId": "retrieveAgent",
+  "call": {
+    "path_params": {
+      "agent": "agent_01JB8Z5R4Q6Y2N7K3M9D0F1H2J"
+    }
+  },
+  "request": {
+    "method": "GET",
+    "path": "/agents/agent_01JB8Z5R4Q6Y2N7K3M9D0F1H2J",
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json",
+      "x-request-id": "00000000-0000-4000-8000-000000000102"
+    },
+    "body": {
+      "json": {
+        "data": {
+          "id": "agent_01JB8Z5R4Q6Y2N7K3M9D0F1H2J",
+          "name": "Sotuv",
+          "state": "published",
+          "live_version": 3,
+          "has_unpublished_changes": false,
+          "languages": [
+            "uz",
+            "ru"
+          ],
+          "last_published_at": "2026-11-04T10:00:00Z",
+          "channels": [
+            {
+              "id": 12,
+              "type": "telegram",
+              "name": "Support bot"
+            }
+          ],
+          "revision": 8,
+          "config": {
+            "prompt": {
+              "system": "Siz doʻkon yordamchisisiz."
+            },
+            "languages": {
+              "primary": "uz"
+            }
+          }
+        },
+        "request_id": "00000000-0000-4000-8000-000000000102"
+      }
+    }
+  },
+  "result": {
+    "data": {
+      "id": "agent_01JB8Z5R4Q6Y2N7K3M9D0F1H2J",
+      "name": "Sotuv",
+      "state": "published",
+      "live_version": 3,
+      "has_unpublished_changes": false,
+      "languages": [
+        "uz",
+        "ru"
+      ],
+      "last_published_at": "2026-11-04T10:00:00Z",
+      "channels": [
+        {
+          "id": 12,
+          "type": "telegram",
+          "name": "Support bot"
+        }
+      ],
+      "revision": 8,
+      "config": {
+        "prompt": {
+          "system": "Siz doʻkon yordamchisisiz."
+        },
+        "languages": {
+          "primary": "uz"
+        }
+      }
+    },
+    "request_id": "00000000-0000-4000-8000-000000000102"
+  }
+}

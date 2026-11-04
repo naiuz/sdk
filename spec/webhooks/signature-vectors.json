@@ -1,0 +1,91 @@
+{
+  "secret": "whsec_test_secret",
+  "now": 1793000000,
+  "tolerance_seconds": 300,
+  "cases": [
+    {
+      "name": "a good signature",
+      "body": "{\"id\":\"evt_1\",\"type\":\"conversation.ended\",\"created_at\":\"2026-11-04T10:00:00.000Z\",\"data\":{\"conversation_id\":\"conv_1\",\"agent_id\":\"agent_1\",\"reason\":\"agent\"}}",
+      "header": "t=1793000000,v1=8738bca0951952b81a838954ba247ccf1041a19fd43e9950b3508ba41183e394",
+      "valid": true
+    },
+    {
+      "name": "words outside ASCII",
+      "body": "{\"id\":\"evt_2\",\"type\":\"conversation.message.created\",\"created_at\":\"2026-11-04T10:00:00.000Z\",\"data\":{\"message\":{\"text\":\"Oʻzbekcha gʻoya, русский текст\"}}}",
+      "header": "t=1793000000,v1=6369b08a0c09dbf0ef4e478f8b2b024249b704321119354ef218b5be307f5fb7",
+      "valid": true
+    },
+    {
+      "name": "just inside the tolerance",
+      "body": "{\"id\":\"evt_1\",\"type\":\"conversation.ended\",\"created_at\":\"2026-11-04T10:00:00.000Z\",\"data\":{\"conversation_id\":\"conv_1\",\"agent_id\":\"agent_1\",\"reason\":\"agent\"}}",
+      "header": "t=1792999700,v1=02a691c9574a643f25f298332d702337796877f54c880455c473059d1cc2cff6",
+      "valid": true
+    },
+    {
+      "name": "a second signature, for a secret being replaced",
+      "body": "{\"id\":\"evt_1\",\"type\":\"conversation.ended\",\"created_at\":\"2026-11-04T10:00:00.000Z\",\"data\":{\"conversation_id\":\"conv_1\",\"agent_id\":\"agent_1\",\"reason\":\"agent\"}}",
+      "header": "t=1793000000,v1=0000000000000000000000000000000000000000000000000000000000000000,v1=8738bca0951952b81a838954ba247ccf1041a19fd43e9950b3508ba41183e394",
+      "valid": true
+    },
+    {
+      "name": "too old",
+      "body": "{\"id\":\"evt_1\",\"type\":\"conversation.ended\",\"created_at\":\"2026-11-04T10:00:00.000Z\",\"data\":{\"conversation_id\":\"conv_1\",\"agent_id\":\"agent_1\",\"reason\":\"agent\"}}",
+      "header": "t=1792999699,v1=62b823d8288b1053cea34c57d0891661c5dba85c0a399aec1c5d0e8089a67fcc",
+      "valid": false
+    },
+    {
+      "name": "too far ahead",
+      "body": "{\"id\":\"evt_1\",\"type\":\"conversation.ended\",\"created_at\":\"2026-11-04T10:00:00.000Z\",\"data\":{\"conversation_id\":\"conv_1\",\"agent_id\":\"agent_1\",\"reason\":\"agent\"}}",
+      "header": "t=1793000301,v1=dec74aa8793a92c6c4ca86596fd5ab05541c87d0e919bbfd6e2056d119900787",
+      "valid": false
+    },
+    {
+      "name": "a body someone changed",
+      "body": "{\"id\":\"evt_1\",\"type\":\"conversation.ended\",\"created_at\":\"2026-11-04T10:00:00.000Z\",\"data\":{\"conversation_id\":\"conv_1\",\"agent_id\":\"agent_1\",\"reason\":\"operator\"}}",
+      "header": "t=1793000000,v1=8738bca0951952b81a838954ba247ccf1041a19fd43e9950b3508ba41183e394",
+      "valid": false
+    },
+    {
+      "name": "a timestamp someone changed",
+      "body": "{\"id\":\"evt_1\",\"type\":\"conversation.ended\",\"created_at\":\"2026-11-04T10:00:00.000Z\",\"data\":{\"conversation_id\":\"conv_1\",\"agent_id\":\"agent_1\",\"reason\":\"agent\"}}",
+      "header": "t=1793000001,v1=8738bca0951952b81a838954ba247ccf1041a19fd43e9950b3508ba41183e394",
+      "valid": false
+    },
+    {
+      "name": "another endpoint's secret",
+      "body": "{\"id\":\"evt_1\",\"type\":\"conversation.ended\",\"created_at\":\"2026-11-04T10:00:00.000Z\",\"data\":{\"conversation_id\":\"conv_1\",\"agent_id\":\"agent_1\",\"reason\":\"agent\"}}",
+      "header": "t=1793000000,v1=3ea0b0ea8e4c09337319faefded061c721af08b15297a95e25ab494041ecd353",
+      "valid": false
+    },
+    {
+      "name": "no signature",
+      "body": "{\"id\":\"evt_1\",\"type\":\"conversation.ended\",\"created_at\":\"2026-11-04T10:00:00.000Z\",\"data\":{\"conversation_id\":\"conv_1\",\"agent_id\":\"agent_1\",\"reason\":\"agent\"}}",
+      "header": "t=1793000000",
+      "valid": false
+    },
+    {
+      "name": "no timestamp",
+      "body": "{\"id\":\"evt_1\",\"type\":\"conversation.ended\",\"created_at\":\"2026-11-04T10:00:00.000Z\",\"data\":{\"conversation_id\":\"conv_1\",\"agent_id\":\"agent_1\",\"reason\":\"agent\"}}",
+      "header": "v1=8738bca0951952b81a838954ba247ccf1041a19fd43e9950b3508ba41183e394",
+      "valid": false
+    },
+    {
+      "name": "a timestamp that is not a number",
+      "body": "{\"id\":\"evt_1\",\"type\":\"conversation.ended\",\"created_at\":\"2026-11-04T10:00:00.000Z\",\"data\":{\"conversation_id\":\"conv_1\",\"agent_id\":\"agent_1\",\"reason\":\"agent\"}}",
+      "header": "t=soon,v1=8738bca0951952b81a838954ba247ccf1041a19fd43e9950b3508ba41183e394",
+      "valid": false
+    },
+    {
+      "name": "nothing at all",
+      "body": "{\"id\":\"evt_1\",\"type\":\"conversation.ended\",\"created_at\":\"2026-11-04T10:00:00.000Z\",\"data\":{\"conversation_id\":\"conv_1\",\"agent_id\":\"agent_1\",\"reason\":\"agent\"}}",
+      "header": "",
+      "valid": false
+    },
+    {
+      "name": "nonsense",
+      "body": "{\"id\":\"evt_1\",\"type\":\"conversation.ended\",\"created_at\":\"2026-11-04T10:00:00.000Z\",\"data\":{\"conversation_id\":\"conv_1\",\"agent_id\":\"agent_1\",\"reason\":\"agent\"}}",
+      "header": "nonsense",
+      "valid": false
+    }
+  ]
+}

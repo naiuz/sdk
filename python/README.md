@@ -1,6 +1,6 @@
 # NeuronAI Python SDK
 
-The official Python client for the NeuronAI API: speech synthesis and dialogue, voice cloning, transcription, chat completions, embeddings and rerank. It runs on Python 3.10 to 3.14, with a sync and an async client, and depends only on httpx and pydantic.
+The official Python client for the NeuronAI API: speech synthesis and dialogue, voice cloning, transcription, chat completions, embeddings, rerank and agents. It runs on Python 3.10 to 3.14, with a sync and an async client, and depends only on httpx and pydantic.
 
 ## Install
 
@@ -80,6 +80,12 @@ client = NeuronAI(
 | `client.rerank` | `create` |
 | `client.account` | `balance`, `usage` |
 | `client.api_keys` | `list`, `create`, `retrieve`, `update`, `revoke` |
+| `client.agents` | `list`, `retrieve`, `create`, `update`, `publish`, `signed_url` |
+| `client.conversations` | `list`, `retrieve`, `transcript`, `audio`, `create` |
+| `client.conversations.messages` | `create`, `list` |
+| `client.knowledge_base` | `list`, `retrieve`, `create_text`, `create_qa`, `create_link`, `create_file`, `update`, `refresh`, `delete` |
+| `client.tools` | `list`, `retrieve`, `create`, `update`, `delete` |
+| `client.webhooks` | `list`, `retrieve`, `create`, `update`, `delete`, `verify` |
 
 [api.md](https://github.com/naiuz/sdk/blob/main/python/api.md) lists every method with its parameters and what it returns. Methods are snake_case, and request and response fields keep the API's own names, such as `voice_id` and `next_cursor`. Every parameter is a keyword argument, except a path's `id`.
 
@@ -219,6 +225,28 @@ print(ranked.results[0].index, ranked.results[0].relevance_score)
 ```
 
 Embeddings are float vectors. Rerank's `results` keep the server's order: by `relevance_score`, highest first. Chat completions, models, embeddings and rerank return the API's own bodies, compatible with OpenAI's and Cohere's shapes, with `cost` attached from `X-Cost` when the answer sends it.
+
+## Agents
+
+`client.agents` creates, changes and publishes agents, and `agents.signed_url` makes the link a page opens a conversation with, for a private agent or to bind a conversation to a customer of yours. `client.conversations` reads what was said. `client.knowledge_base` and `client.tools` hold what an agent knows and can do.
+
+For a channel we don't support, start a conversation and send what the customer says. The agent's replies reach your webhook.
+
+```python
+conversation = client.conversations.create(
+    agent_id="agent_01JB8Z5R4Q6Y2N7K3M9D0F1H2J",
+    contact={"external_id": "crm-42"},
+)
+client.conversations.messages.create(conversation.id, client_message_id="msg-1", text="Salom")
+```
+
+Check a webhook against its body exactly as it arrived, before you parse it. A wrong or old signature raises `WebhookVerificationError`, and the signing secret is the one you were shown when you added the endpoint.
+
+```python
+event = client.webhooks.verify(raw_body, headers.get("x-neuronai-signature"), os.environ["NEURONAI_WEBHOOK_SECRET"])
+if event.type == "conversation.message.created":
+    print(event.id, event.data)
+```
 
 ## Lists and pages
 

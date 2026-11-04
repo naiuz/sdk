@@ -31,7 +31,7 @@ export interface IdempotentRequestOptions extends RequestOptions {
 
 /** One API call, as a resource hands it to the HTTP core. */
 export interface APIRequest {
-    method: "GET" | "POST" | "PATCH" | "DELETE";
+    method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
     /** The path under the base URL, with `{name}` for each path parameter, such as `/tts/voices/{id}`. */
     path: string;
     pathParams?: Record<string, string>;

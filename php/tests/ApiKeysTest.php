@@ -20,7 +20,7 @@ final class ApiKeysTest extends TestCase
 {
     private const KEY_ID = '01j9zqa1b2c3d4e5f6g7h8j9k0';
 
-    private const PERMISSIONS = ['tts' => 'write', 'voices' => 'read', 'stt' => 'none', 'llm' => 'none', 'embeddings' => 'none', 'rerank' => 'none', 'account' => 'read', 'api_keys' => 'none'];
+    private const PERMISSIONS = ['tts' => 'write', 'voices' => 'read', 'stt' => 'none', 'llm' => 'none', 'embeddings' => 'none', 'rerank' => 'none', 'account' => 'read', 'agents' => 'none', 'api_keys' => 'none'];
 
     public function test_list_pages_through_the_keys(): void
     {

@@ -59,13 +59,13 @@ class _CreateVoiceFields(TypedDict):
     """The language the voice speaks."""
     ref_audio: Uploadable
     """A 10-15 second reference clip: WAV, MP3, OGG or FLAC, at most 10 MB."""
+    ref_text: str
+    """What the clip says, up to 1000 characters."""
 
 
 class CreateVoiceRequest(_CreateVoiceFields, total=False):
     """A voice clone to create, sent as multipart/form-data: the keyword arguments of `voices.create`."""
 
-    ref_text: str | None
-    """What the clip says, up to 1000 characters."""
     category: VoiceCategory
     """What the voice is for."""
     tags: Sequence[str] | None

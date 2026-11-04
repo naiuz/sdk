@@ -3,6 +3,11 @@ import {globalFetch, isBrowser, readEnv, userAgent} from "./core/runtime";
 import {NeuronAIError} from "./errors";
 import {Account} from "./resources/account";
 import {ApiKeys} from "./resources/api-keys";
+import {Webhooks} from "./resources/webhooks";
+import {Tools} from "./resources/tools";
+import {KnowledgeBase} from "./resources/knowledge-base";
+import {Conversations} from "./resources/conversations";
+import {Agents} from "./resources/agents";
 import {Chat} from "./resources/chat";
 import {Embeddings} from "./resources/embeddings";
 import {Models} from "./resources/models";
@@ -73,6 +78,16 @@ export class NeuronAI {
     readonly stt: Stt;
     /** Your organization's API keys. */
     readonly apiKeys: ApiKeys;
+    /** Your organization's agents. */
+    readonly agents: Agents;
+    /** Your organization's conversations, and carrying one on a channel of your own. */
+    readonly conversations: Conversations;
+    /** The documents agents answer from. */
+    readonly knowledgeBase: KnowledgeBase;
+    /** The tools agents can use. */
+    readonly tools: Tools;
+    /** The addresses that hear of what agents and operators say. */
+    readonly webhooks: Webhooks;
     /** The chat models available to your account. */
     readonly models: Models;
     /** Dense vectors for text. */
@@ -115,6 +130,11 @@ export class NeuronAI {
         this.tts = new Tts(http);
         this.stt = new Stt(http);
         this.apiKeys = new ApiKeys(http);
+        this.agents = new Agents(http);
+        this.conversations = new Conversations(http);
+        this.knowledgeBase = new KnowledgeBase(http);
+        this.tools = new Tools(http);
+        this.webhooks = new Webhooks(http);
         this.models = new Models(http);
         this.embeddings = new Embeddings(http);
         this.rerank = new Rerank(http);

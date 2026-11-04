@@ -55,6 +55,18 @@ final readonly class Fields
         return is_int($value) ? $value : throw self::invalid($name, 'a whole number');
     }
 
+    /** A field the API always sends, which may be null. */
+    public function nullableInt(string $name): ?int
+    {
+        return $this->required($name) === null ? null : $this->int($name);
+    }
+
+    /** A field the API may leave out; null when it does. */
+    public function optionalInt(string $name): ?int
+    {
+        return $this->has($name) ? $this->nullableInt($name) : null;
+    }
+
     public function float(string $name): float
     {
         $value = $this->required($name);
@@ -66,6 +78,38 @@ final readonly class Fields
     public function nullableFloat(string $name): ?float
     {
         return $this->required($name) === null ? null : $this->float($name);
+    }
+
+    /** A field the API may leave out; null when it does. */
+    public function optionalFloat(string $name): ?float
+    {
+        return $this->has($name) ? $this->nullableFloat($name) : null;
+    }
+
+    /** A field the API always sends, which may be null. */
+    public function nullableBool(string $name): ?bool
+    {
+        return $this->required($name) === null ? null : $this->bool($name);
+    }
+
+    /** A field the API may leave out; null when it does. */
+    public function optionalBool(string $name): ?bool
+    {
+        return $this->has($name) ? $this->nullableBool($name) : null;
+    }
+
+    /** A field holding an object whose shape the API doesn't promise. */
+    public function objectField(string $name): \stdClass
+    {
+        $value = $this->required($name);
+
+        return $value instanceof \stdClass ? $value : throw self::invalid($name, 'an object');
+    }
+
+    /** A field the API may leave out, holding an object whose shape it doesn't promise; null when it does. */
+    public function optionalObject(string $name): ?\stdClass
+    {
+        return $this->has($name) && $this->object->{$name} !== null ? $this->objectField($name) : null;
     }
 
     public function bool(string $name): bool
@@ -173,6 +217,20 @@ final readonly class Fields
         }
 
         return $items;
+    }
+
+    /**
+     * A list the API may leave out; null when it does, or when it's null.
+     *
+     * @template T
+     *
+     * @param \Closure(\stdClass): T $make
+     *
+     * @return list<T>|null
+     */
+    public function optionalListOf(string $name, \Closure $make): ?array
+    {
+        return $this->has($name) && $this->object->{$name} !== null ? $this->listOf($name, $make) : null;
     }
 
     /** @return list<mixed> */

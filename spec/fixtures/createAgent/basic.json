@@ -1,0 +1,55 @@
+{
+  "description": "Creates an agent from a template. The model fits its prompt to your answers, and `personalized` says when it couldn't.",
+  "operationId": "createAgent",
+  "call": {
+    "params": {
+      "template": "support",
+      "language": "uz",
+      "name": "Yordam",
+      "answers": {
+        "business": "Bodom Mebel"
+      }
+    }
+  },
+  "request": {
+    "method": "POST",
+    "path": "/agents",
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key",
+      "content-type": "application/json"
+    },
+    "body": {
+      "json": {
+        "template": "support",
+        "language": "uz",
+        "name": "Yordam",
+        "answers": {
+          "business": "Bodom Mebel"
+        }
+      }
+    }
+  },
+  "response": {
+    "status": 201,
+    "headers": {
+      "content-type": "application/json",
+      "x-request-id": "00000000-0000-4000-8000-000000000103"
+    },
+    "body": {
+      "json": {
+        "data": {
+          "id": "agent_01JB8Z5R4Q6Y2N7K3M9D0F1H2J",
+          "personalized": true
+        },
+        "request_id": "00000000-0000-4000-8000-000000000103"
+      }
+    }
+  },
+  "result": {
+    "data": {
+      "id": "agent_01JB8Z5R4Q6Y2N7K3M9D0F1H2J",
+      "personalized": true
+    },
+    "request_id": "00000000-0000-4000-8000-000000000103"
+  }
+}

@@ -58,7 +58,7 @@ final class ScaffoldTest extends TestCase
     {
         $readme = (string) file_get_contents(self::PHP_DIR . '/README.md');
         self::assertStringStartsWith("# NeuronAI PHP SDK\n", $readme);
-        foreach (['tts', 'tts->jobs', 'voices', 'stt', 'chat->completions', 'models', 'embeddings', 'rerank', 'account', 'apiKeys'] as $resource) {
+        foreach (['tts', 'tts->jobs', 'voices', 'stt', 'chat->completions', 'models', 'embeddings', 'rerank', 'account', 'apiKeys', 'agents', 'conversations', 'conversations->messages', 'knowledgeBase', 'tools', 'webhooks'] as $resource) {
             self::assertStringContainsString("| `\$client->{$resource}` |", $readme);
         }
         // Packagist's page shows this README away from the repository, where a relative link leads nowhere.

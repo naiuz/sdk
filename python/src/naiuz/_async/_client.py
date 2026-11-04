@@ -13,14 +13,19 @@ from .._options import DEFAULT_MAX_RETRIES, DEFAULT_TIMEOUT, resolve_api_key, re
 from .._request import check_max_retries, check_timeout
 from ._http import AsyncHttpClient
 from .resources.account import AsyncAccount
+from .resources.agents import AsyncAgents
 from .resources.api_keys import AsyncApiKeys
 from .resources.chat import AsyncChat
+from .resources.conversations import AsyncConversations
 from .resources.embeddings import AsyncEmbeddings
+from .resources.knowledge_base import AsyncKnowledgeBase
 from .resources.models import AsyncModels
 from .resources.rerank import AsyncRerank
 from .resources.stt import AsyncStt
+from .resources.tools import AsyncTools
 from .resources.tts import AsyncTts
 from .resources.voices import AsyncVoices
+from .resources.webhooks import AsyncWebhooks
 
 _Client = TypeVar("_Client", bound="AsyncNeuronAI")
 
@@ -50,6 +55,16 @@ class AsyncNeuronAI:
     """Speech to text."""
     api_keys: AsyncApiKeys
     """Your organization's API keys."""
+    agents: AsyncAgents
+    """Your organization's agents."""
+    conversations: AsyncConversations
+    """Your organization's conversations, and carrying one on a channel of your own."""
+    knowledge_base: AsyncKnowledgeBase
+    """The documents agents answer from."""
+    tools: AsyncTools
+    """The tools agents can use."""
+    webhooks: AsyncWebhooks
+    """The addresses that hear of what agents and operators say."""
     models: AsyncModels
     """The chat models available to your account."""
     embeddings: AsyncEmbeddings
@@ -106,6 +121,11 @@ class AsyncNeuronAI:
         self.tts = AsyncTts(http)
         self.stt = AsyncStt(http)
         self.api_keys = AsyncApiKeys(http)
+        self.agents = AsyncAgents(http)
+        self.conversations = AsyncConversations(http)
+        self.knowledge_base = AsyncKnowledgeBase(http)
+        self.tools = AsyncTools(http)
+        self.webhooks = AsyncWebhooks(http)
         self.models = AsyncModels(http)
         self.embeddings = AsyncEmbeddings(http)
         self.rerank = AsyncRerank(http)

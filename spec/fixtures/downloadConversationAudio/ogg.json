@@ -1,0 +1,38 @@
+{
+  "description": "Downloads a call's recording.",
+  "operationId": "downloadConversationAudio",
+  "call": {
+    "path_params": {
+      "conversation": "conv_01JB8Z5R4Q6Y2N7K3M9D0F1H2K"
+    }
+  },
+  "request": {
+    "method": "GET",
+    "path": "/conversations/conv_01JB8Z5R4Q6Y2N7K3M9D0F1H2K/audio",
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "audio/ogg",
+      "x-request-id": "00000000-0000-4000-8000-000000000132"
+    },
+    "body": {
+      "base64": "T2dnUw=="
+    }
+  },
+  "result": {
+    "audio_base64": "T2dnUw==",
+    "content_type": "audio/ogg",
+    "cost": null,
+    "character_count": null,
+    "balance": null,
+    "voice_custom": false,
+    "latency_ms": null,
+    "replayed": false,
+    "request_id": "00000000-0000-4000-8000-000000000132"
+  }
+}

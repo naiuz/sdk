@@ -19,6 +19,7 @@ final readonly class ApiKeyPermissions extends ApiObject
      * @param string $embeddings Embeddings: `none` or `write`.
      * @param string $rerank Rerank: `none` or `write`.
      * @param string $account Balance and usage: `none` or `read`.
+     * @param string $agents The agent platform: `none`, `read` or `write`.
      * @param string $api_keys API keys: `none`, `read` or `write`.
      */
     private function __construct(
@@ -30,6 +31,7 @@ final readonly class ApiKeyPermissions extends ApiObject
         public string $embeddings,
         public string $rerank,
         public string $account,
+        public string $agents,
         public string $api_keys,
     ) {
         parent::__construct($sent);
@@ -53,6 +55,7 @@ final readonly class ApiKeyPermissions extends ApiObject
             $fields->string('embeddings'),
             $fields->string('rerank'),
             $fields->string('account'),
+            $fields->string('agents'),
             $fields->string('api_keys'),
         );
     }

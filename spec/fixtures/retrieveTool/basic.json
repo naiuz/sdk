@@ -1,0 +1,66 @@
+{
+  "description": "One tool, with its config. Secrets appear by id, never by value.",
+  "operationId": "retrieveTool",
+  "call": {
+    "path_params": {
+      "tool": "7"
+    }
+  },
+  "request": {
+    "method": "GET",
+    "path": "/tools/7",
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json",
+      "x-request-id": "00000000-0000-4000-8000-000000000122"
+    },
+    "body": {
+      "json": {
+        "data": {
+          "id": 7,
+          "kind": "webhook",
+          "name": "check_order",
+          "description": "Finds an order by its number.",
+          "config": {
+            "method": "GET",
+            "url": "https://api.shop.uz/orders",
+            "timeout_s": 20
+          },
+          "last_test_at": null,
+          "last_test_status": null,
+          "used_by": [],
+          "target": "api.shop.uz",
+          "wait_for_result": null,
+          "timeout_s": null
+        },
+        "request_id": "00000000-0000-4000-8000-000000000122"
+      }
+    }
+  },
+  "result": {
+    "data": {
+      "id": 7,
+      "kind": "webhook",
+      "name": "check_order",
+      "description": "Finds an order by its number.",
+      "config": {
+        "method": "GET",
+        "url": "https://api.shop.uz/orders",
+        "timeout_s": 20
+      },
+      "last_test_at": null,
+      "last_test_status": null,
+      "used_by": [],
+      "target": "api.shop.uz",
+      "wait_for_result": null,
+      "timeout_s": null
+    },
+    "request_id": "00000000-0000-4000-8000-000000000122"
+  }
+}

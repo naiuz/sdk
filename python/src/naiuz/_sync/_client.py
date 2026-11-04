@@ -14,14 +14,19 @@ from .._options import DEFAULT_MAX_RETRIES, DEFAULT_TIMEOUT, resolve_api_key, re
 from .._request import check_max_retries, check_timeout
 from ._http import HttpClient
 from .resources.account import Account
+from .resources.agents import Agents
 from .resources.api_keys import ApiKeys
 from .resources.chat import Chat
+from .resources.conversations import Conversations
 from .resources.embeddings import Embeddings
+from .resources.knowledge_base import KnowledgeBase
 from .resources.models import Models
 from .resources.rerank import Rerank
 from .resources.stt import Stt
+from .resources.tools import Tools
 from .resources.tts import Tts
 from .resources.voices import Voices
+from .resources.webhooks import Webhooks
 
 _Client = TypeVar("_Client", bound="NeuronAI")
 
@@ -51,6 +56,16 @@ class NeuronAI:
     """Speech to text."""
     api_keys: ApiKeys
     """Your organization's API keys."""
+    agents: Agents
+    """Your organization's agents."""
+    conversations: Conversations
+    """Your organization's conversations, and carrying one on a channel of your own."""
+    knowledge_base: KnowledgeBase
+    """The documents agents answer from."""
+    tools: Tools
+    """The tools agents can use."""
+    webhooks: Webhooks
+    """The addresses that hear of what agents and operators say."""
     models: Models
     """The chat models available to your account."""
     embeddings: Embeddings
@@ -107,6 +122,11 @@ class NeuronAI:
         self.tts = Tts(http)
         self.stt = Stt(http)
         self.api_keys = ApiKeys(http)
+        self.agents = Agents(http)
+        self.conversations = Conversations(http)
+        self.knowledge_base = KnowledgeBase(http)
+        self.tools = Tools(http)
+        self.webhooks = Webhooks(http)
         self.models = Models(http)
         self.embeddings = Embeddings(http)
         self.rerank = Rerank(http)

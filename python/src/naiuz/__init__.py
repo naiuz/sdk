@@ -23,6 +23,7 @@ from ._errors import (
     UnprocessableEntityError,
     UnsupportedMediaTypeError,
     WaitTimeoutError,
+    WebhookVerificationError,
 )
 from ._models import BaseModel
 from ._options import DEFAULT_BASE_URL, DEFAULT_MAX_RETRIES, DEFAULT_TIMEOUT
@@ -66,5 +67,6 @@ __all__ = [
     "UnprocessableEntityError",
     "UnsupportedMediaTypeError",
     "WaitTimeoutError",
+    "WebhookVerificationError",
     "__version__",
 ]

@@ -8,10 +8,10 @@ from pathlib import Path
 
 from naiuz import NeuronAI
 
-if len(sys.argv) < 2:
+if len(sys.argv) < 3:
     raise SystemExit('Pass the recording\'s path, and what it says: python examples/clone_voice.py sample.wav "Salom!"')
 recording = Path(sys.argv[1])
-transcript = sys.argv[2] if len(sys.argv) > 2 else None
+transcript = sys.argv[2]
 
 client = NeuronAI()
 

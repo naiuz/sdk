@@ -1,0 +1,25 @@
+{
+  "description": "Reads a link document again now.",
+  "operationId": "refreshDocument",
+  "call": {
+    "path_params": {
+      "document": "31"
+    }
+  },
+  "request": {
+    "method": "POST",
+    "path": "/knowledge-base/31/refresh",
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 202,
+    "headers": {
+      "x-request-id": "00000000-0000-4000-8000-000000000119"
+    },
+    "body": null
+  },
+  "result": null
+}

@@ -17,7 +17,7 @@ use Naiuz\Types\ApiKeyAccess;
 /**
  * Your organization's API keys.
  *
- * @phpstan-type ApiKeyPermissionsParam array{tts?: 'none'|'read'|'write', voices?: 'none'|'read'|'write', stt?: 'none'|'write', llm?: 'none'|'read'|'write', embeddings?: 'none'|'write', rerank?: 'none'|'write', account?: 'none'|'read', api_keys?: 'none'|'read'|'write'}
+ * @phpstan-type ApiKeyPermissionsParam array{tts?: 'none'|'read'|'write', voices?: 'none'|'read'|'write', stt?: 'none'|'write', llm?: 'none'|'read'|'write', embeddings?: 'none'|'write', rerank?: 'none'|'write', account?: 'none'|'read', agents?: 'none'|'read'|'write', api_keys?: 'none'|'read'|'write'}
  * @phpstan-type ListApiKeysParams array{limit?: int|null, cursor?: string|null}
  * @phpstan-type CreateApiKeyRequest array{name: string, access: ApiKeyAccess|value-of<ApiKeyAccess>, description?: string|null, permissions?: ApiKeyPermissionsParam, expires_at?: string|null, monthly_spend_limit?: float|int|null, allowed_ips?: list<string>|null}
  * @phpstan-type UpdateApiKeyRequest array{name?: string, description?: string|null, access?: ApiKeyAccess|value-of<ApiKeyAccess>, permissions?: ApiKeyPermissionsParam, expires_at?: string|null, monthly_spend_limit?: float|int|null, enabled?: bool, allowed_ips?: list<string>|null}

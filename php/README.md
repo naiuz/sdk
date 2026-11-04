@@ -1,6 +1,6 @@
 # NeuronAI PHP SDK
 
-The official PHP client for the NeuronAI API: speech synthesis and dialogue, voice cloning, transcription, chat completions, embeddings and rerank. It runs on PHP 8.2 to 8.5, sends its calls through any PSR-18 HTTP client, such as Guzzle or Symfony HttpClient, and depends only on the PSR interfaces and php-http/discovery.
+The official PHP client for the NeuronAI API: speech synthesis and dialogue, voice cloning, transcription, chat completions, embeddings, rerank and agents. It runs on PHP 8.2 to 8.5, sends its calls through any PSR-18 HTTP client, such as Guzzle or Symfony HttpClient, and depends only on the PSR interfaces and php-http/discovery.
 
 ## Install
 
@@ -63,6 +63,12 @@ $client = new NeuronAI([
 | `$client->rerank` | `create` |
 | `$client->account` | `balance`, `usage` |
 | `$client->apiKeys` | `list`, `create`, `retrieve`, `update`, `revoke` |
+| `$client->agents` | `list`, `retrieve`, `create`, `update`, `publish`, `signedUrl` |
+| `$client->conversations` | `list`, `retrieve`, `transcript`, `audio`, `create` |
+| `$client->conversations->messages` | `create`, `list` |
+| `$client->knowledgeBase` | `list`, `retrieve`, `createText`, `createQa`, `createLink`, `createFile`, `update`, `refresh`, `delete` |
+| `$client->tools` | `list`, `retrieve`, `create`, `update`, `delete` |
+| `$client->webhooks` | `list`, `retrieve`, `create`, `update`, `delete`, `verify` |
 
 [api.md](https://github.com/naiuz/sdk/blob/main/php/api.md) lists every method with its parameters and what it returns. Methods are camelCase. Request fields are array keys, and result fields are properties, under the API's own names, such as `voice_id` and `next_cursor`.
 
@@ -206,6 +212,29 @@ echo "{$ranked->results[0]->index} {$ranked->results[0]->relevance_score}\n";
 ```
 
 Embeddings are float vectors. Rerank's `results` keep the server's order: by `relevance_score`, highest first. Chat completions, models, embeddings and rerank return the API's own bodies, compatible with OpenAI's and Cohere's shapes, with `cost` attached from `X-Cost` when the answer sends it.
+
+## Agents
+
+`$client->agents` creates, changes and publishes agents, and `agents->signedUrl` makes the link a page opens a conversation with, for a private agent or to bind a conversation to a customer of yours. `$client->conversations` reads what was said. `$client->knowledgeBase` and `$client->tools` hold what an agent knows and can do.
+
+For a channel we don't support, start a conversation and send what the customer says. The agent's replies reach your webhook.
+
+```php
+$conversation = $client->conversations->create([
+    'agent_id' => 'agent_01JB8Z5R4Q6Y2N7K3M9D0F1H2J',
+    'contact' => ['external_id' => 'crm-42'],
+]);
+$client->conversations->messages->create($conversation->id, ['client_message_id' => 'msg-1', 'text' => 'Salom']);
+```
+
+Check a webhook against its body exactly as it arrived, before you parse it. A wrong or old signature throws `WebhookVerificationException`, and the signing secret is the one you were shown when you added the endpoint.
+
+```php
+$event = $client->webhooks->verify(file_get_contents('php://input'), $_SERVER['HTTP_X_NEURONAI_SIGNATURE'] ?? null, getenv('NEURONAI_WEBHOOK_SECRET'));
+if ($event->type === 'conversation.message.created') {
+    echo $event->id;
+}
+```
 
 ## Lists and pages
 

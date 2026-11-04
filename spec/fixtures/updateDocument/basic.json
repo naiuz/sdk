@@ -1,0 +1,106 @@
+{
+  "description": "Changes the name, or what each kind holds. What changes the content is read again.",
+  "operationId": "updateDocument",
+  "call": {
+    "path_params": {
+      "document": "31"
+    },
+    "params": {
+      "name": "Yangi nom"
+    }
+  },
+  "request": {
+    "method": "PUT",
+    "path": "/knowledge-base/31",
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key",
+      "content-type": "application/json"
+    },
+    "body": {
+      "json": {
+        "name": "Yangi nom"
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json",
+      "x-request-id": "00000000-0000-4000-8000-000000000118"
+    },
+    "body": {
+      "json": {
+        "data": {
+          "id": 31,
+          "name": "Yangi nom",
+          "kind": "text",
+          "status": "ready",
+          "failure_reason": null,
+          "searchable": true,
+          "source_url": null,
+          "crawl_scope": null,
+          "last_fetched_at": null,
+          "next_refresh_at": null,
+          "bytes": 120,
+          "char_count": 120,
+          "page_count": 0,
+          "row_count": 0,
+          "ocr_pages": 0,
+          "chunk_count": 1,
+          "truncated": false,
+          "pages_done": 0,
+          "pages_total": 0,
+          "refused_char_count": null,
+          "created_at": "2026-11-04T10:00:00Z",
+          "updated_at": "2026-11-04T10:00:00Z",
+          "used_by": [
+            {
+              "id": "agent_01JB8Z5R4Q6Y2N7K3M9D0F1H2J",
+              "name": "Sotuv",
+              "published": true
+            }
+          ],
+          "text": null,
+          "pairs": null
+        },
+        "request_id": "00000000-0000-4000-8000-000000000118"
+      }
+    }
+  },
+  "result": {
+    "data": {
+      "id": 31,
+      "name": "Yangi nom",
+      "kind": "text",
+      "status": "ready",
+      "failure_reason": null,
+      "searchable": true,
+      "source_url": null,
+      "crawl_scope": null,
+      "last_fetched_at": null,
+      "next_refresh_at": null,
+      "bytes": 120,
+      "char_count": 120,
+      "page_count": 0,
+      "row_count": 0,
+      "ocr_pages": 0,
+      "chunk_count": 1,
+      "truncated": false,
+      "pages_done": 0,
+      "pages_total": 0,
+      "refused_char_count": null,
+      "created_at": "2026-11-04T10:00:00Z",
+      "updated_at": "2026-11-04T10:00:00Z",
+      "used_by": [
+        {
+          "id": "agent_01JB8Z5R4Q6Y2N7K3M9D0F1H2J",
+          "name": "Sotuv",
+          "published": true
+        }
+      ],
+      "text": null,
+      "pairs": null
+    },
+    "request_id": "00000000-0000-4000-8000-000000000118"
+  }
+}

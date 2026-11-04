@@ -71,7 +71,7 @@ export interface CreateVoiceRequest {
     /** A 10–15 second reference clip: WAV, MP3, OGG or FLAC, at most 10 MB. */
     ref_audio: Uploadable;
     /** What the clip says, up to 1000 characters. */
-    ref_text?: string | null;
+    ref_text: string;
     /** What the voice is for. */
     category?: VoiceCategory;
     /** Tags, up to 32 characters each, each sent as its own `tags[]` field. Blank tags are dropped. */

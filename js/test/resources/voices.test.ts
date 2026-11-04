@@ -81,14 +81,14 @@ describe("voices", () => {
 
     it("create() resolves to the voice for a 200 replay of its key, as for a 201", async () => {
         const {fetch} = mockFetch(envelope(voice("v1"), "req-replay", 200));
-        const {data, status} = await testClient(fetch).voices.create({name: "Office voice", language: "uz", ref_audio: new File([CLIP], "sample.wav")}, {idempotencyKey: "clone-1"}).withResponse();
+        const {data, status} = await testClient(fetch).voices.create({name: "Office voice", language: "uz", ref_audio: new File([CLIP], "sample.wav"), ref_text: "Salom"}, {idempotencyKey: "clone-1"}).withResponse();
         expect(data.id).toBe("v1");
         expect(status).toBe(200);
     });
 
     it("create() refuses a path in place of the clip, sending nothing", async () => {
         const {fetch, requests} = mockFetch();
-        const call = testClient(fetch).voices.create({name: "Office voice", language: "uz", ref_audio: "sample.wav" as never});
+        const call = testClient(fetch).voices.create({name: "Office voice", language: "uz", ref_audio: "sample.wav" as never, ref_text: "Salom"});
         await expect(call).rejects.toThrow("ref_audio must be a File, or {data, filename} with the bytes as a Uint8Array or a Blob.");
         expect(requests).toHaveLength(0);
     });
@@ -128,7 +128,7 @@ describe("voices", () => {
         const client = testClient(mockFetch(page([], null), envelope(voice("v1")), envelope(voice("v1")), envelope(voice("v1")), envelope(voice("v1")), new Response(null, {status: 204})).fetch);
         await client.voices.list();
         await client.voices.retrieve("v1");
-        await client.voices.create({name: "V", language: "uz", ref_audio: new File([CLIP], "a.wav")});
+        await client.voices.create({name: "V", language: "uz", ref_audio: new File([CLIP], "a.wav"), ref_text: "Salom"});
         await client.voices.update("v1", {name: "x"});
         await client.voices.replaceAudio("v1", {ref_audio: new File([CLIP], "a.wav")});
         await client.voices.delete("v1");

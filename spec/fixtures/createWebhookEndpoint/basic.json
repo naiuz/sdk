@@ -1,0 +1,73 @@
+{
+  "description": "Adds an address to send events to, and returns its signing `secret`: the only time it's shown, so store it now. For owners and admins.",
+  "operationId": "createWebhookEndpoint",
+  "call": {
+    "params": {
+      "url": "https://shop.uz/hooks/neuronai",
+      "events": [
+        "conversation.ended"
+      ]
+    }
+  },
+  "request": {
+    "method": "POST",
+    "path": "/webhooks",
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key",
+      "content-type": "application/json"
+    },
+    "body": {
+      "json": {
+        "url": "https://shop.uz/hooks/neuronai",
+        "events": [
+          "conversation.ended"
+        ]
+      }
+    }
+  },
+  "response": {
+    "status": 201,
+    "headers": {
+      "content-type": "application/json",
+      "x-request-id": "00000000-0000-4000-8000-000000000128"
+    },
+    "body": {
+      "json": {
+        "data": {
+          "endpoint": {
+            "id": "whe_01JB8Z5R4Q6Y2N7K3M9D0F1H2M",
+            "url": "https://shop.uz/hooks/neuronai",
+            "host": "shop.uz",
+            "events": [
+              "conversation.ended"
+            ],
+            "status": "active",
+            "failing_because": null,
+            "last_delivery": null,
+            "created_at": "2026-11-04T10:00:00Z"
+          },
+          "secret": "whsec_test_secret_in_a_fixture"
+        },
+        "request_id": "00000000-0000-4000-8000-000000000128"
+      }
+    }
+  },
+  "result": {
+    "data": {
+      "endpoint": {
+        "id": "whe_01JB8Z5R4Q6Y2N7K3M9D0F1H2M",
+        "url": "https://shop.uz/hooks/neuronai",
+        "host": "shop.uz",
+        "events": [
+          "conversation.ended"
+        ],
+        "status": "active",
+        "failing_because": null,
+        "last_delivery": null,
+        "created_at": "2026-11-04T10:00:00Z"
+      },
+      "secret": "whsec_test_secret_in_a_fixture"
+    },
+    "request_id": "00000000-0000-4000-8000-000000000128"
+  }
+}

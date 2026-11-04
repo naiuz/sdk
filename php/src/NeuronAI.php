@@ -11,14 +11,19 @@ use Naiuz\Core\Params;
 use Naiuz\Core\Transport\Transports;
 use Naiuz\Exceptions\NeuronAIException;
 use Naiuz\Resources\Account;
+use Naiuz\Resources\Agents;
 use Naiuz\Resources\ApiKeys;
 use Naiuz\Resources\Chat;
+use Naiuz\Resources\Conversations;
 use Naiuz\Resources\Embeddings;
+use Naiuz\Resources\KnowledgeBase;
 use Naiuz\Resources\Models;
 use Naiuz\Resources\Rerank;
 use Naiuz\Resources\Stt;
+use Naiuz\Resources\Tools;
 use Naiuz\Resources\Tts;
 use Naiuz\Resources\Voices;
+use Naiuz\Resources\Webhooks;
 use Psr\Http\Client\ClientInterface;
 
 /**
@@ -68,6 +73,21 @@ final readonly class NeuronAI
 
     /** Your organization's API keys. */
     public ApiKeys $apiKeys;
+
+    /** Your organization's agents. */
+    public Agents $agents;
+
+    /** Your organization's conversations, and carrying one on a channel of your own. */
+    public Conversations $conversations;
+
+    /** The documents agents answer from. */
+    public KnowledgeBase $knowledgeBase;
+
+    /** The tools agents can use. */
+    public Tools $tools;
+
+    /** The addresses that hear of what agents and operators say. */
+    public Webhooks $webhooks;
 
     /** The chat models available to your account. */
     public Models $models;
@@ -124,6 +144,11 @@ final readonly class NeuronAI
         $this->tts = new Tts($this->http);
         $this->stt = new Stt($this->http);
         $this->apiKeys = new ApiKeys($this->http);
+        $this->agents = new Agents($this->http);
+        $this->conversations = new Conversations($this->http);
+        $this->knowledgeBase = new KnowledgeBase($this->http);
+        $this->tools = new Tools($this->http);
+        $this->webhooks = new Webhooks($this->http);
         $this->models = new Models($this->http);
         $this->embeddings = new Embeddings($this->http);
         $this->rerank = new Rerank($this->http);

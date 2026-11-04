@@ -16,6 +16,7 @@ PERMISSIONS = {
     "embeddings": "none",
     "rerank": "none",
     "account": "read",
+    "agents": "none",
     "api_keys": "none",
 }
 

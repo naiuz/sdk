@@ -168,10 +168,10 @@ async def test_create_takes_a_create_voice_request_with_a_path_as_keyword_argume
     path = tmp_path / "sample.flac"
     path.write_bytes(CLIP)
     api = MockAPI(envelope(voice("v-new"), status=201))
-    request: CreateVoiceRequest = {"name": "V", "language": "uz", "ref_audio": path, "ref_text": None, "tags": []}
+    request: CreateVoiceRequest = {"name": "V", "language": "uz", "ref_audio": path, "ref_text": "Salom", "tags": []}
     await client_for(api).voices.create(**request)
     assert form_of(api.requests[0]) == {
-        "fields": {"name": "V", "language": "uz"},
+        "fields": {"name": "V", "language": "uz", "ref_text": "Salom"},
         "files": {"ref_audio": clip("sample.flac", "audio/flac")},
     }
     assert UUID_V4.fullmatch(api.requests[0].headers["idempotency-key"])
@@ -180,7 +180,7 @@ async def test_create_takes_a_create_voice_request_with_a_path_as_keyword_argume
 async def test_create_returns_the_voice_for_a_200_replay_of_its_key_as_for_a_201() -> None:
     replay = json_response(200, {"data": voice("v-new"), "request_id": "r"}, {"idempotency-replayed": "1"})
     raw = await client_for(MockAPI(replay)).voices.with_raw_response.create(
-        name="Office voice", language="uz", ref_audio=("sample.wav", CLIP), idempotency_key="clone-1"
+        name="Office voice", language="uz", ref_audio=("sample.wav", CLIP), ref_text="Salom", idempotency_key="clone-1"
     )
     assert (raw.data.id, raw.status, raw.headers["idempotency-replayed"]) == ("v-new", 200, "1")
 
@@ -192,6 +192,7 @@ async def test_create_refuses_bytes_without_a_filename_sending_nothing() -> None
             name="V",
             language="uz",
             ref_audio=CLIP,  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
+            ref_text="Salom",
         )
     assert api.requests == []
 
@@ -213,6 +214,6 @@ async def test_replace_audio_sends_the_new_clip_and_its_transcript_as_multipart_
 async def test_create_is_an_idempotent_call_and_replace_audio_a_re_create(monkeypatch: pytest.MonkeyPatch) -> None:
     seen = retry_classes(monkeypatch)
     client = client_for(MockAPI(envelope(voice("v1"), status=201), envelope(voice("v1"))))
-    await client.voices.create(name="V", language="uz", ref_audio=("a.wav", CLIP))
+    await client.voices.create(name="V", language="uz", ref_audio=("a.wav", CLIP), ref_text="Salom")
     await client.voices.replace_audio("v1", ref_audio=("a.wav", CLIP))
     assert seen == ["idempotent", "recreate"]

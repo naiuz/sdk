@@ -13,7 +13,8 @@ use Naiuz\NeuronAI;
 require __DIR__ . '/../vendor/autoload.php';
 
 $recording = $argv[1] ?? null;
-if ($recording === null) {
+$transcript = $argv[2] ?? null;
+if ($recording === null || $transcript === null) {
     exit("Pass the recording's path, and what it says: php examples/clone-voice.php sample.wav \"Salom!\"\n");
 }
 
@@ -23,7 +24,7 @@ $voice = $client->voices->create([
     'name' => 'Example voice',
     'language' => 'uz',
     'ref_audio' => $recording,
-    'ref_text' => $argv[2] ?? null,
+    'ref_text' => $transcript,
     'tags' => ['example'],
 ]);
 echo "Created the voice {$voice->id}.\n";

@@ -1,0 +1,75 @@
+{
+  "description": "A conversation on a channel of your own. Nothing is sent until the customer says something, and then the agent's first message and its answer reach you by webhook.",
+  "operationId": "createConversation",
+  "call": {
+    "params": {
+      "agent_id": "agent_01JB8Z5R4Q6Y2N7K3M9D0F1H2J",
+      "contact": {
+        "external_id": "crm-42",
+        "name": "Dilnoza",
+        "phone": "+998901234567"
+      },
+      "variables": {
+        "plan": "gold"
+      }
+    }
+  },
+  "request": {
+    "method": "POST",
+    "path": "/conversations",
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key",
+      "content-type": "application/json"
+    },
+    "body": {
+      "json": {
+        "agent_id": "agent_01JB8Z5R4Q6Y2N7K3M9D0F1H2J",
+        "contact": {
+          "external_id": "crm-42",
+          "name": "Dilnoza",
+          "phone": "+998901234567"
+        },
+        "variables": {
+          "plan": "gold"
+        }
+      }
+    }
+  },
+  "response": {
+    "status": 201,
+    "headers": {
+      "content-type": "application/json",
+      "x-request-id": "00000000-0000-4000-8000-000000000110"
+    },
+    "body": {
+      "json": {
+        "data": {
+          "id": "conv_01JB8Z5R4Q6Y2N7K3M9D0F1H2K",
+          "agent_id": "agent_01JB8Z5R4Q6Y2N7K3M9D0F1H2J",
+          "status": "ai_handling",
+          "contact": {
+            "external_id": "crm-42",
+            "name": "Dilnoza",
+            "phone": "+998901234567"
+          },
+          "created_at": "2026-11-04T10:00:00Z"
+        },
+        "request_id": "00000000-0000-4000-8000-000000000110"
+      }
+    }
+  },
+  "result": {
+    "data": {
+      "id": "conv_01JB8Z5R4Q6Y2N7K3M9D0F1H2K",
+      "agent_id": "agent_01JB8Z5R4Q6Y2N7K3M9D0F1H2J",
+      "status": "ai_handling",
+      "contact": {
+        "external_id": "crm-42",
+        "name": "Dilnoza",
+        "phone": "+998901234567"
+      },
+      "created_at": "2026-11-04T10:00:00Z"
+    },
+    "request_id": "00000000-0000-4000-8000-000000000110"
+  }
+}

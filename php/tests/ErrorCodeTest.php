@@ -10,10 +10,10 @@ use Naiuz\Tests\Support\Spec;
 
 final class ErrorCodeTest extends TestCase
 {
-    public function test_it_holds_exactly_the_api_s_38_codes_in_the_document_s_order(): void
+    public function test_it_holds_exactly_the_api_s_41_codes_in_the_document_s_order(): void
     {
         $documented = Spec::strings(Spec::at(Spec::read('openapi.json'), 'components', 'schemas', 'ErrorCode', 'enum'));
-        self::assertCount(38, $documented);
+        self::assertCount(41, $documented);
         self::assertSame($documented, array_map(static fn(ErrorCode $case): string => $case->value, ErrorCode::cases()));
     }
 

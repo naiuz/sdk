@@ -7,9 +7,9 @@ from tests.spec import read_spec
 DOCUMENTED: list[str] = read_spec("openapi.json")["components"]["schemas"]["ErrorCode"]["enum"]
 
 
-def test_it_holds_exactly_the_api_s_38_codes_in_the_document_s_order() -> None:
+def test_it_holds_exactly_the_api_s_41_codes_in_the_document_s_order() -> None:
     assert [member.value for member in ErrorCode] == DOCUMENTED
-    assert len(ErrorCode) == 38
+    assert len(ErrorCode) == 41
 
 
 def test_each_member_is_named_after_its_code_in_upper_case() -> None:

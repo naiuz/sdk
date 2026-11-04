@@ -62,8 +62,8 @@ const DOCUMENT = readSpec("openapi.json") as {paths: Record<string, Record<strin
 export const FIXTURE_KEY = "nai_test_fixture_key";
 
 const COMPATIBLE_OPERATIONS = new Set(["createChatCompletion", "listModels", "createEmbedding", "rerank"]);
-const PAGE_OPERATIONS = new Set(["listVoices", "listApiKeys"]);
-const AUDIO_OPERATIONS = new Set(["synthesizeSpeech", "synthesizeDialogue", "downloadTtsJobAudio"]);
+const PAGE_OPERATIONS = new Set(["listVoices", "listApiKeys", "listAgents", "listConversations", "listConversationMessages", "listTools", "listWebhookEndpoints"]);
+const AUDIO_OPERATIONS = new Set(["synthesizeSpeech", "synthesizeDialogue", "downloadTtsJobAudio", "downloadConversationAudio"]);
 
 /** Every fixture file under spec/fixtures, as `<operationId>/<name>.json`, sorted. */
 export function listFixtures(): string[] {

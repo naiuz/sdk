@@ -1,0 +1,77 @@
+{
+  "description": "Your organization's conversations from every channel, newest first. Loop over the result for every one, each page fetched when the loop reaches it.",
+  "operationId": "listConversations",
+  "call": {
+    "params": {
+      "agent_id": "agent_01JB8Z5R4Q6Y2N7K3M9D0F1H2J",
+      "limit": 1
+    }
+  },
+  "request": {
+    "method": "GET",
+    "path": "/conversations",
+    "query": {
+      "agent_id": "agent_01JB8Z5R4Q6Y2N7K3M9D0F1H2J",
+      "limit": "1"
+    },
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json",
+      "x-request-id": "00000000-0000-4000-8000-000000000107"
+    },
+    "body": {
+      "json": {
+        "data": [
+          {
+            "id": "conv_01JB8Z5R4Q6Y2N7K3M9D0F1H2K",
+            "agent_id": "agent_01JB8Z5R4Q6Y2N7K3M9D0F1H2J",
+            "source": "api",
+            "mode": "text",
+            "status": "ai_handling",
+            "language": "uz",
+            "contact": {
+              "external_id": "crm-42",
+              "name": "Dilnoza",
+              "phone": "+998901234567"
+            },
+            "started_at": "2026-11-04T10:00:00Z",
+            "last_message_at": "2026-11-04T10:00:00Z",
+            "ended_at": null,
+            "end_reason": null
+          }
+        ],
+        "next_cursor": "41",
+        "request_id": "00000000-0000-4000-8000-000000000107"
+      }
+    }
+  },
+  "result": {
+    "data": [
+      {
+        "id": "conv_01JB8Z5R4Q6Y2N7K3M9D0F1H2K",
+        "agent_id": "agent_01JB8Z5R4Q6Y2N7K3M9D0F1H2J",
+        "source": "api",
+        "mode": "text",
+        "status": "ai_handling",
+        "language": "uz",
+        "contact": {
+          "external_id": "crm-42",
+          "name": "Dilnoza",
+          "phone": "+998901234567"
+        },
+        "started_at": "2026-11-04T10:00:00Z",
+        "last_message_at": "2026-11-04T10:00:00Z",
+        "ended_at": null,
+        "end_reason": null
+      }
+    ],
+    "next_cursor": "41",
+    "request_id": "00000000-0000-4000-8000-000000000107"
+  }
+}

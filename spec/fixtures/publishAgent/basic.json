@@ -1,0 +1,54 @@
+{
+  "description": "Makes the draft live as a new version. What stands in the way is an error with `fields`, naming each part of the config.",
+  "operationId": "publishAgent",
+  "call": {
+    "path_params": {
+      "agent": "agent_01JB8Z5R4Q6Y2N7K3M9D0F1H2J"
+    },
+    "params": {
+      "base_revision": 9,
+      "note": "Shorter answers"
+    }
+  },
+  "request": {
+    "method": "POST",
+    "path": "/agents/agent_01JB8Z5R4Q6Y2N7K3M9D0F1H2J/publish",
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key",
+      "content-type": "application/json"
+    },
+    "body": {
+      "json": {
+        "base_revision": 9,
+        "note": "Shorter answers"
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json",
+      "x-request-id": "00000000-0000-4000-8000-000000000105"
+    },
+    "body": {
+      "json": {
+        "data": {
+          "state": "published",
+          "live_version": 4,
+          "revision": 9,
+          "has_unpublished_changes": false
+        },
+        "request_id": "00000000-0000-4000-8000-000000000105"
+      }
+    }
+  },
+  "result": {
+    "data": {
+      "state": "published",
+      "live_version": 4,
+      "revision": 9,
+      "has_unpublished_changes": false
+    },
+    "request_id": "00000000-0000-4000-8000-000000000105"
+  }
+}

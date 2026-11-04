@@ -102,7 +102,7 @@ Creates a job, polls it until it has `succeeded` or `failed`, and returns it. Th
 | `name` | `string` | Required. Up to 120 characters. |
 | `language` | `SpeechLanguage` | Required. The language the voice speaks. |
 | `ref_audio` | `Uploadable` | Required. A 10–15 second clip: WAV, MP3, OGG or FLAC, at most 10 MB. |
-| `ref_text` | `string\|null` | What the clip says, up to 1000 characters. |
+| `ref_text` | `string` | Required. What the clip says, up to 1000 characters. |
 | `category` | `VoiceCategory\|string` | What the voice is for. |
 | `tags` | `list<string>\|null` | Up to 32 characters each, sent as repeated `tags[]` fields. |
 
@@ -223,6 +223,279 @@ Creates a job, polls it until it has `succeeded` or `failed`, and returns it. Th
 ### `apiKeys->revoke(string $id, array $options = []): void`
 
 `POST /api-keys/{id}/revoke`. Revokes a key for good.
+
+## `$client->agents`
+
+Your organization's agents.
+
+### `agents->list(array $query = [], array $options = []): Page<Agent>`
+
+`GET /agents`. Your organization's agents, the ones changed last first. Loop over the result for every agent, each page fetched when the loop reaches it.
+
+| Key | Type | |
+|---|---|---|
+| `search` | `string\|null` | Part of the agent's name. |
+| `status` | `string\|null` | `draft`, `published` or `paused`. |
+| `limit` | `int\|null` | How many, from 1 to 100 (50 when left out). |
+| `cursor` | `string\|null` | A page's `next_cursor`, to start from the page after it. |
+
+### `agents->retrieve(string $agent, array $options = []): Agent`
+
+`GET /agents/{agent}`. An agent, with its draft as `config` and the `revision` to change it from.
+
+### `agents->create(array $params, array $options = []): CreatedAgent`
+
+`POST /agents`. Creates an agent from a template. The model fits its prompt to your answers, and `personalized` says when it couldn't.
+
+| Key | Type | |
+|---|---|---|
+| `template` | `string` | Required. The template: `support` or `sales`. |
+| `language` | `string` | Required. The agent's main language: `uz`, `ru` or `en`. |
+| `name` | `string\|null` | The agent's name. The template's when left out. |
+| `answers` | `array<string, mixed>` | The answers to the template's questions, by question. |
+
+### `agents->update(string $agent, array $params, array $options = []): AgentDraftSaved`
+
+`PATCH /agents/{agent}`. Replaces whole sections of the draft. Someone else's change since you read it raises a conflict: read the agent again. Customers see nothing of this until you publish.
+
+| Key | Type | |
+|---|---|---|
+| `base_revision` | `int` | Required. The `revision` you read. |
+| `sections` | `array<string, mixed>` | Required. The top-level sections of the config to replace, such as `prompt`. |
+
+### `agents->publish(string $agent, array $params, array $options = []): AgentStatus`
+
+`POST /agents/{agent}/publish`. Makes the draft live as a new version. What stands in the way is an error with `fields`, naming each part of the config.
+
+| Key | Type | |
+|---|---|---|
+| `base_revision` | `int` | Required. The `revision` you read. |
+| `note` | `string\|null` | What changed, for the version history. Up to 140 characters. |
+
+### `agents->signedUrl(string $agent, array $query = [], array $options = []): AgentSignedUrl`
+
+`GET /agents/{agent}/signed-url`. A link your page opens a conversation with, for a private agent or to bind a conversation to a customer of yours. It must be used within 15 minutes, once. Make it on your server.
+
+| Key | Type | |
+|---|---|---|
+| `vars` | `array<string, string\|int\|float\|bool>` | Values for the agent's `{{variables}}` that the page can't change. They travel in the link, so they're not secret. |
+| `customer_id` | `string\|null` | Your own id for this customer. Their conversations then share one contact. |
+
+## `$client->conversations`
+
+Your organization's conversations, and carrying one on a channel of your own.
+
+### `conversations->list(array $query = [], array $options = []): Page<Conversation>`
+
+`GET /conversations`. Your organization's conversations from every channel, newest first. Loop over the result for every one, each page fetched when the loop reaches it.
+
+| Key | Type | |
+|---|---|---|
+| `agent_id` | `string\|null` | Only this agent's. |
+| `status` | `string\|null` | Only those in this status, such as `resolved`. |
+| `limit` | `int\|null` | How many, from 1 to 100 (50 when left out). |
+| `cursor` | `string\|null` | A page's `next_cursor`, to start from the page after it. |
+
+### `conversations->retrieve(string $conversation, array $options = []): Conversation`
+
+`GET /conversations/{conversation}`. One conversation, with its variables, summary and cost, and whether it has audio.
+
+### `conversations->transcript(string $conversation, array $options = []): ConversationTranscript`
+
+`GET /conversations/{conversation}/transcript`. What the customer, the agent and operators said, all in one answer.
+
+### `conversations->audio(string $conversation, array $options = []): SpeechAudio`
+
+`GET /conversations/{conversation}/audio`. The recording of a call, as Ogg Opus. No recording, or one past its time, raises NotFound.
+
+### `conversations->create(array $params, array $options = []): StartedConversation`
+
+`POST /conversations`. A conversation on a channel of your own. Nothing is sent until the customer says something, and then the agent's first message and its answer reach you by webhook.
+
+| Key | Type | |
+|---|---|---|
+| `agent_id` | `string` | Required. The agent that answers. |
+| `contact` | `array` | Who it's with. |
+| `variables` | `array<string, string\|int\|float\|bool>` | Values for the agent's `{{variables}}`. |
+
+## `$client->conversations->messages`
+
+What's said in a conversation.
+
+### `conversations->messages->create(string $conversation, array $params, array $options = []): SentConversationMessage`
+
+`POST /conversations/{conversation}/messages`. Stores what the customer said and answers at once, and the agent's reply reaches you by webhook. After the conversation has ended it goes on in the next one, and `conversation_id` says which.
+
+| Key | Type | |
+|---|---|---|
+| `client_message_id` | `string` | Required. Your own id for this message: letters, digits, `_` and `-`, up to 64. Sending it again stores it once. |
+| `text` | `string` | Required. What the customer said, up to 10,000 characters. |
+
+### `conversations->messages->list(string $conversation, array $query = [], array $options = []): Page<ConversationMessage>`
+
+`GET /conversations/{conversation}/messages`. What's been said, oldest first, from wherever you got to. Use it to catch up on anything a webhook missed.
+
+| Key | Type | |
+|---|---|---|
+| `after` | `string \| int\|null` | The message to read on from. |
+| `limit` | `int\|null` | How many, from 1 to 100 (50 when left out). |
+| `cursor` | `string\|null` | A page's `next_cursor`, to start from the page after it. |
+
+## `$client->knowledgeBase`
+
+The documents agents answer from.
+
+### `knowledgeBase->list(array $options = []): KnowledgeDocuments`
+
+`GET /knowledge-base`. Your organization's documents, and how much of its room they use.
+
+### `knowledgeBase->retrieve(int|string $document, array $options = []): KnowledgeDocument`
+
+`GET /knowledge-base/{document}`. One document, and how far reading it has got.
+
+### `knowledgeBase->createText(array $params, array $options = []): KnowledgeDocument`
+
+`POST /knowledge-base/text`. Adds text you type in. It's read in the background, and `status` says how far that's got.
+
+| Key | Type | |
+|---|---|---|
+| `name` | `string` | Required. The document's name. |
+| `text` | `string` | Required. Its text. |
+
+### `knowledgeBase->createQa(array $params, array $options = []): KnowledgeDocument`
+
+`POST /knowledge-base/qa`. Adds pairs of a question and its answer, each found on its own.
+
+| Key | Type | |
+|---|---|---|
+| `name` | `string` | Required. The document's name. |
+| `pairs` | `list<array>` | Required. Up to 2,000 pairs of `question` and `answer`. |
+
+### `knowledgeBase->createLink(array $params, array $options = []): KnowledgeDocument`
+
+`POST /knowledge-base/link`. Adds a website or a Google file by its address, which is read again every week.
+
+| Key | Type | |
+|---|---|---|
+| `url` | `string` | Required. An https address. |
+| `crawl_scope` | `string\|null` | How far to read a website: `page`, `section` or `site`. |
+| `name` | `string\|null` | The document's name. The page's title when left out. |
+
+### `knowledgeBase->createFile(array $params, array $options = []): KnowledgeDocument`
+
+`POST /knowledge-base/file`. Adds a file, sent as multipart/form-data.
+
+| Key | Type | |
+|---|---|---|
+| `file` | `Upload\|string` | Required. A PDF, a Word document, a spreadsheet or a text file. |
+| `name` | `string\|null` | The document's name. The file's when left out. |
+
+### `knowledgeBase->update(int|string $document, array $params = [], array $options = []): KnowledgeDocument`
+
+`PUT /knowledge-base/{document}`. Changes the name, or what each kind holds. What changes the content is read again.
+
+| Key | Type | |
+|---|---|---|
+| `name` | `string` | The document's name. |
+| `text` | `string` | A text document's text. |
+| `pairs` | `list<array>` | A questions document's pairs. |
+| `crawl_scope` | `string` | How far to read a website. |
+
+### `knowledgeBase->refresh(int|string $document, array $options = []): void`
+
+`POST /knowledge-base/{document}/refresh`. Reads a link document again now.
+
+### `knowledgeBase->delete(int|string $document, array $query = [], array $options = []): void`
+
+`DELETE /knowledge-base/{document}`. Deletes a document.
+
+| Key | Type | |
+|---|---|---|
+| `detach` | `bool\|null` | Take it off the agents that use it. Without this, one in use raises a conflict naming them. |
+
+## `$client->tools`
+
+The tools agents can use.
+
+### `tools->list(array $options = []): Page<Tool>`
+
+`GET /tools`. Your organization's tools.
+
+### `tools->retrieve(int|string $tool, array $options = []): Tool`
+
+`GET /tools/{tool}`. One tool, with its config. Secrets appear by id, never by value.
+
+### `tools->create(array $params, array $options = []): Tool`
+
+`POST /tools`. Creates a webhook tool, which calls your systems, or a client tool, which runs in your page.
+
+| Key | Type | |
+|---|---|---|
+| `kind` | `string` | Required. `webhook` or `client`. |
+| `name` | `string` | Required. Its name: small letters, digits and `_`. |
+| `description` | `string` | Required. What it does and when to use it, for the model to read. |
+| `config` | `array<string, mixed>` | Required. What it calls, with its parameters. |
+| `last_test_status` | `string\|null` | The result of a test this config passed. |
+
+### `tools->update(int|string $tool, array $params, array $options = []): Tool`
+
+`PUT /tools/{tool}`. Replaces a tool. Agents that use it get the change when it's saved.
+
+| Key | Type | |
+|---|---|---|
+| `kind` | `string` | Required. `webhook` or `client`. |
+| `name` | `string` | Required. Its name. |
+| `description` | `string` | Required. What it does and when to use it. |
+| `config` | `array<string, mixed>` | Required. What it calls, with its parameters. |
+| `last_test_status` | `string\|null` | The result of a test this config passed. |
+
+### `tools->delete(int|string $tool, array $query = [], array $options = []): void`
+
+`DELETE /tools/{tool}`. Deletes a tool.
+
+| Key | Type | |
+|---|---|---|
+| `detach` | `bool\|null` | Take it off the agents that use it. Without this, one in use raises a conflict naming them. |
+
+## `$client->webhooks`
+
+The addresses that hear of what agents and operators say.
+
+### `webhooks->list(array $options = []): Page<WebhookEndpoint>`
+
+`GET /webhooks`. Your organization's endpoints. A signing secret never appears here.
+
+### `webhooks->retrieve(string $endpoint, array $options = []): WebhookEndpoint`
+
+`GET /webhooks/{endpoint}`. One endpoint, and how its last delivery went.
+
+### `webhooks->create(array $params, array $options = []): CreatedWebhookEndpoint`
+
+`POST /webhooks`. Adds an address to send events to, and returns its signing `secret`: the only time it's shown, so store it now. For owners and admins.
+
+| Key | Type | |
+|---|---|---|
+| `url` | `string` | Required. A public https address. |
+| `events` | `list<string>` | Required. `conversation.message.created` and `conversation.ended`. |
+
+### `webhooks->update(string $endpoint, array $params = [], array $options = []): WebhookEndpoint`
+
+`PATCH /webhooks/{endpoint}`. Changes the address or the events, or turns it off and on. Only what you pass is sent.
+
+| Key | Type | |
+|---|---|---|
+| `url` | `string` | A public https address. |
+| `events` | `list<string>` | What it hears of. |
+| `enabled` | `bool` | On or off. Turning it on sends what was waiting. |
+
+### `webhooks->delete(string $endpoint, array $options = []): void`
+
+`DELETE /webhooks/{endpoint}`. Deletes an endpoint, with its deliveries.
+
+### `webhooks->verify(string $body, ?string $signature, string $secret, int $toleranceSeconds = 300, ?int $now = null): WebhookEvent`
+
+Checks a webhook's `X-NeuronAI-Signature` header against the body exactly as it arrived, and returns the event. Anything wrong throws `WebhookVerificationException`. A signature older than `$toleranceSeconds` is refused.
+
 
 ## Results and helpers
 

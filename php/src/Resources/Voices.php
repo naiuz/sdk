@@ -20,7 +20,7 @@ use Naiuz\Types\VoiceCategory;
  * Stock voices and your organization's voice clones.
  *
  * @phpstan-type ListVoicesParams array{type?: 'stock'|'custom'|null, language?: string|null, limit?: int|null, cursor?: string|null}
- * @phpstan-type CreateVoiceRequest array{name: string, language: SpeechLanguage, ref_audio: Uploadable, ref_text?: string|null, category?: VoiceCategory|value-of<VoiceCategory>, tags?: list<string>|null}
+ * @phpstan-type CreateVoiceRequest array{name: string, language: SpeechLanguage, ref_audio: Uploadable, ref_text: string, category?: VoiceCategory|value-of<VoiceCategory>, tags?: list<string>|null}
  * @phpstan-type UpdateVoiceRequest array{name?: string, category?: VoiceCategory|value-of<VoiceCategory>, language?: SpeechLanguage, ref_text?: string|null, tags?: list<string>|null}
  * @phpstan-type ReplaceVoiceAudioRequest array{ref_audio: Uploadable, ref_text?: string|null}
  * @phpstan-import-type SpeechLanguage from TtsJobs
@@ -90,7 +90,7 @@ readonly class Voices
      *     - ref_audio: a 10–15 second reference clip, WAV, MP3, OGG or FLAC, at most 10 MB: a path, or
      *       ['stream' => $stream, 'filename' => 'sample.wav'], and optionally 'content_type'. The filename's extension
      *       names the format.
-     *     - ref_text: what the clip says, up to 1000 characters. Null sends nothing, as leaving it out does.
+     *     - ref_text: what the clip says, up to 1000 characters.
      *     - category: what the voice is for.
      *     - tags: tags, up to 32 characters each, each sent as its own `tags[]` field. Blank tags are dropped.
      * @param IdempotentCallOptions $options idempotency_key: sent as the Idempotency-Key header, at most 191

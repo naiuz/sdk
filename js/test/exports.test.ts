@@ -1,5 +1,5 @@
 import {describe, expect, it} from "vitest";
-import type {Account, ApiKeys, Chat, Completions, Embeddings, Models, Rerank, Stt, Tts, TtsJobs, Voices} from "../src/index";
+import type {Account, Agents, ApiKeys, ConversationMessages, Conversations, KnowledgeBase, Tools, Webhooks, Chat, Completions, Embeddings, Models, Rerank, Stt, Tts, TtsJobs, Voices} from "../src/index";
 import {testClient} from "./helpers/client";
 import {mockFetch} from "./helpers/mock-fetch";
 
@@ -12,12 +12,24 @@ describe("the package's exports", () => {
         const ttsJobs: TtsJobs = client.tts.jobs;
         const stt: Stt = client.stt;
         const apiKeys: ApiKeys = client.apiKeys;
+        const agents: Agents = client.agents;
+        const conversations: Conversations = client.conversations;
+        const messages: ConversationMessages = client.conversations.messages;
+        const knowledgeBase: KnowledgeBase = client.knowledgeBase;
+        const tools: Tools = client.tools;
+        const webhooks: Webhooks = client.webhooks;
         const models: Models = client.models;
         const embeddings: Embeddings = client.embeddings;
         const rerank: Rerank = client.rerank;
         const chat: Chat = client.chat;
         const completions: Completions = client.chat.completions;
         expect(account).toBe(client.account);
+        expect(agents).toBe(client.agents);
+        expect(conversations).toBe(client.conversations);
+        expect(messages).toBe(client.conversations.messages);
+        expect(knowledgeBase).toBe(client.knowledgeBase);
+        expect(tools).toBe(client.tools);
+        expect(webhooks).toBe(client.webhooks);
         expect(voices).toBe(client.voices);
         expect(tts).toBe(client.tts);
         expect(ttsJobs).toBe(client.tts.jobs);

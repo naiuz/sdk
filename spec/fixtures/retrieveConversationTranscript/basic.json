@@ -1,0 +1,72 @@
+{
+  "description": "What the customer, the agent and operators said, all in one answer.",
+  "operationId": "retrieveConversationTranscript",
+  "call": {
+    "path_params": {
+      "conversation": "conv_01JB8Z5R4Q6Y2N7K3M9D0F1H2K"
+    }
+  },
+  "request": {
+    "method": "GET",
+    "path": "/conversations/conv_01JB8Z5R4Q6Y2N7K3M9D0F1H2K/transcript",
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json",
+      "x-request-id": "00000000-0000-4000-8000-000000000109"
+    },
+    "body": {
+      "json": {
+        "data": {
+          "conversation_id": "conv_01JB8Z5R4Q6Y2N7K3M9D0F1H2K",
+          "messages": [
+            {
+              "id": "980",
+              "role": "customer",
+              "text": "Yetkazib berish bormi?",
+              "client_message_id": "msg-1",
+              "occurred_at": "2026-11-04T10:00:01.250Z"
+            },
+            {
+              "id": "981",
+              "role": "agent",
+              "text": "Ha, bepul yetkazib beramiz.",
+              "client_message_id": null,
+              "occurred_at": "2026-11-04T10:00:01.250Z"
+            }
+          ],
+          "truncated": false
+        },
+        "request_id": "00000000-0000-4000-8000-000000000109"
+      }
+    }
+  },
+  "result": {
+    "data": {
+      "conversation_id": "conv_01JB8Z5R4Q6Y2N7K3M9D0F1H2K",
+      "messages": [
+        {
+          "id": "980",
+          "role": "customer",
+          "text": "Yetkazib berish bormi?",
+          "client_message_id": "msg-1",
+          "occurred_at": "2026-11-04T10:00:01.250Z"
+        },
+        {
+          "id": "981",
+          "role": "agent",
+          "text": "Ha, bepul yetkazib beramiz.",
+          "client_message_id": null,
+          "occurred_at": "2026-11-04T10:00:01.250Z"
+        }
+      ],
+      "truncated": false
+    },
+    "request_id": "00000000-0000-4000-8000-000000000109"
+  }
+}

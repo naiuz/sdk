@@ -1,0 +1,58 @@
+{
+  "description": "Your organization's tools.",
+  "operationId": "listTools",
+  "call": {},
+  "request": {
+    "method": "GET",
+    "path": "/tools",
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json",
+      "x-request-id": "00000000-0000-4000-8000-000000000121"
+    },
+    "body": {
+      "json": {
+        "data": [
+          {
+            "id": 7,
+            "kind": "webhook",
+            "name": "check_order",
+            "description": "Finds an order by its number.",
+            "target": "api.shop.uz",
+            "last_test_at": null,
+            "last_test_status": null,
+            "used_by": [],
+            "wait_for_result": null,
+            "timeout_s": null
+          }
+        ],
+        "next_cursor": null,
+        "request_id": "00000000-0000-4000-8000-000000000121"
+      }
+    }
+  },
+  "result": {
+    "data": [
+      {
+        "id": 7,
+        "kind": "webhook",
+        "name": "check_order",
+        "description": "Finds an order by its number.",
+        "target": "api.shop.uz",
+        "last_test_at": null,
+        "last_test_status": null,
+        "used_by": [],
+        "wait_for_result": null,
+        "timeout_s": null
+      }
+    ],
+    "next_cursor": null,
+    "request_id": "00000000-0000-4000-8000-000000000121"
+  }
+}

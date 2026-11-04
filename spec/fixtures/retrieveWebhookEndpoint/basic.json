@@ -1,0 +1,66 @@
+{
+  "description": "One endpoint, and how its last delivery went.",
+  "operationId": "retrieveWebhookEndpoint",
+  "call": {
+    "path_params": {
+      "endpoint": "whe_01JB8Z5R4Q6Y2N7K3M9D0F1H2M"
+    }
+  },
+  "request": {
+    "method": "GET",
+    "path": "/webhooks/whe_01JB8Z5R4Q6Y2N7K3M9D0F1H2M",
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json",
+      "x-request-id": "00000000-0000-4000-8000-000000000127"
+    },
+    "body": {
+      "json": {
+        "data": {
+          "id": "whe_01JB8Z5R4Q6Y2N7K3M9D0F1H2M",
+          "url": "https://shop.uz/hooks/neuronai",
+          "host": "shop.uz",
+          "events": [
+            "conversation.message.created",
+            "conversation.ended"
+          ],
+          "status": "active",
+          "failing_because": null,
+          "last_delivery": {
+            "status": "delivered",
+            "status_code": 200,
+            "at": "2026-11-04T10:00:00Z"
+          },
+          "created_at": "2026-11-04T10:00:00Z"
+        },
+        "request_id": "00000000-0000-4000-8000-000000000127"
+      }
+    }
+  },
+  "result": {
+    "data": {
+      "id": "whe_01JB8Z5R4Q6Y2N7K3M9D0F1H2M",
+      "url": "https://shop.uz/hooks/neuronai",
+      "host": "shop.uz",
+      "events": [
+        "conversation.message.created",
+        "conversation.ended"
+      ],
+      "status": "active",
+      "failing_because": null,
+      "last_delivery": {
+        "status": "delivered",
+        "status_code": 200,
+        "at": "2026-11-04T10:00:00Z"
+      },
+      "created_at": "2026-11-04T10:00:00Z"
+    },
+    "request_id": "00000000-0000-4000-8000-000000000127"
+  }
+}

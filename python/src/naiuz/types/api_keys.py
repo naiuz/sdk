@@ -25,6 +25,7 @@ class ApiKeyPermissions(BaseModel):
     embeddings: Literal["none", "write"] | str
     rerank: Literal["none", "write"] | str
     account: Literal["none", "read"] | str
+    agents: Literal["none", "read", "write"] | str
     api_keys: Literal["none", "read", "write"] | str
 
 
@@ -42,6 +43,7 @@ class ApiKeyPermissionsParam(TypedDict, total=False):
     embeddings: Literal["none", "write"]
     rerank: Literal["none", "write"]
     account: Literal["none", "read"]
+    agents: Literal["none", "read", "write"]
     api_keys: Literal["none", "read", "write"]
 
 

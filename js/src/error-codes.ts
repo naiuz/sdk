@@ -23,6 +23,12 @@ export enum ErrorCode {
     InsufficientPermissions = "insufficient_permissions",
     /** The request's IP address is not on the API key's allowlist. */
     IpNotAllowed = "ip_not_allowed",
+    /** This website is not on the agent's list of allowed websites. */
+    OriginNotAllowed = "origin_not_allowed",
+    /** This agent only works through a signed link your server creates. */
+    PrivateAgent = "private_agent",
+    /** This agent has reached its limit of conversations for today. */
+    DailyLimitReached = "daily_limit_reached",
     /** The API key belongs to a user without an organization. */
     NoOrganization = "no_organization",
     /** The voice_id is not usable by this account. */

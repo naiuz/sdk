@@ -1,0 +1,93 @@
+{
+  "description": "Adds a website or a Google file by its address, which is read again every week.",
+  "operationId": "createLinkDocument",
+  "call": {
+    "params": {
+      "url": "https://shop.uz/delivery",
+      "crawl_scope": "page"
+    }
+  },
+  "request": {
+    "method": "POST",
+    "path": "/knowledge-base/link",
+    "headers": {
+      "authorization": "Bearer nai_test_fixture_key",
+      "content-type": "application/json"
+    },
+    "body": {
+      "json": {
+        "url": "https://shop.uz/delivery",
+        "crawl_scope": "page"
+      }
+    }
+  },
+  "response": {
+    "status": 201,
+    "headers": {
+      "content-type": "application/json",
+      "x-request-id": "00000000-0000-4000-8000-000000000117"
+    },
+    "body": {
+      "json": {
+        "data": {
+          "id": 31,
+          "name": "shop.uz",
+          "kind": "url",
+          "status": "processing",
+          "failure_reason": null,
+          "searchable": false,
+          "source_url": "https://shop.uz/delivery",
+          "crawl_scope": "page",
+          "last_fetched_at": null,
+          "next_refresh_at": null,
+          "bytes": 120,
+          "char_count": 120,
+          "page_count": 0,
+          "row_count": 0,
+          "ocr_pages": 0,
+          "chunk_count": 1,
+          "truncated": false,
+          "pages_done": 0,
+          "pages_total": 0,
+          "refused_char_count": null,
+          "created_at": "2026-11-04T10:00:00Z",
+          "updated_at": "2026-11-04T10:00:00Z",
+          "used_by": [],
+          "text": null,
+          "pairs": null
+        },
+        "request_id": "00000000-0000-4000-8000-000000000117"
+      }
+    }
+  },
+  "result": {
+    "data": {
+      "id": 31,
+      "name": "shop.uz",
+      "kind": "url",
+      "status": "processing",
+      "failure_reason": null,
+      "searchable": false,
+      "source_url": "https://shop.uz/delivery",
+      "crawl_scope": "page",
+      "last_fetched_at": null,
+      "next_refresh_at": null,
+      "bytes": 120,
+      "char_count": 120,
+      "page_count": 0,
+      "row_count": 0,
+      "ocr_pages": 0,
+      "chunk_count": 1,
+      "truncated": false,
+      "pages_done": 0,
+      "pages_total": 0,
+      "refused_char_count": null,
+      "created_at": "2026-11-04T10:00:00Z",
+      "updated_at": "2026-11-04T10:00:00Z",
+      "used_by": [],
+      "text": null,
+      "pairs": null
+    },
+    "request_id": "00000000-0000-4000-8000-000000000117"
+  }
+}
