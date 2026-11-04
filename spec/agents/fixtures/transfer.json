@@ -1,0 +1,153 @@
+{
+  "description": "An agent hands over: its line, the move, and the new agent's reply to what the customer asked, in the same conversation.",
+  "token": "session",
+  "frames": [
+    {
+      "from": "client",
+      "frame": {
+        "type": "conversation_initiation_client_data",
+        "text_only": true
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "conversation_initiation_metadata",
+        "conversation_id": "conv_01JB8Z5R4Q6Y2N7K3M9D0F1H3K",
+        "resume_token": "eyJhbGciOiJFZERTQSIsImtpZCI6ImUxIiwidHlwIjoiSldUIn0.eyJjb252IjoiY29udl8wMUpCOFo1UjRRNlkyTjdLM005RDBGMUgzSyIsImp0aSI6Imp0aS0xIn0.c2lnbmF0dXJlLTE",
+        "status": "ai_handling",
+        "languages": [
+          "uz",
+          "ru",
+          "en"
+        ],
+        "language": "uz",
+        "features": {
+          "text": true,
+          "voice": false,
+          "debug": false
+        },
+        "audio": null
+      }
+    },
+    {
+      "from": "client",
+      "frame": {
+        "type": "user_message",
+        "client_message_id": "c-1",
+        "text": "Доставка сколько стоит?"
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "message_ack",
+        "client_message_id": "c-1",
+        "message_id": 101,
+        "occurred_at": "2026-11-04T10:00:00.000Z"
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_typing"
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_chat_response_part",
+        "event_id": 2,
+        "text_response_part": {
+          "type": "start",
+          "text": ""
+        }
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_chat_response_part",
+        "event_id": 2,
+        "text_response_part": {
+          "type": "delta",
+          "text": "Sizni yordam boʻlimiga ulayman."
+        }
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_chat_response_part",
+        "event_id": 2,
+        "text_response_part": {
+          "type": "stop",
+          "text": ""
+        }
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_response",
+        "event_id": 2,
+        "text": "Sizni yordam boʻlimiga ulayman."
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_transferred",
+        "agent_id": "agent_01JB8Z5R4Q6Y2N7K3M9D0F1H2J",
+        "agent_name": "Yordam"
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_typing"
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_chat_response_part",
+        "event_id": 3,
+        "text_response_part": {
+          "type": "start",
+          "text": ""
+        }
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_chat_response_part",
+        "event_id": 3,
+        "text_response_part": {
+          "type": "delta",
+          "text": "Yetkazib berish ertaga boʻladi."
+        }
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_chat_response_part",
+        "event_id": 3,
+        "text_response_part": {
+          "type": "stop",
+          "text": ""
+        }
+      }
+    },
+    {
+      "from": "server",
+      "frame": {
+        "type": "agent_response",
+        "event_id": 3,
+        "text": "Yetkazib berish ertaga boʻladi."
+      }
+    }
+  ]
+}

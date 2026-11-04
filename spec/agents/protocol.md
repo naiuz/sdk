@@ -1,4 +1,4 @@
-# The agents protocol, version 0.4
+# The agents protocol, version 0.5
 
 A client talks to a NeuronAI agent over one WebSocket. This document is the prose spec. The events themselves are defined in [`events.schema.json`](events.schema.json), which is the source of truth. [`fixtures/`](fixtures) holds recorded sessions that the SDKs and the engine both replay.
 
@@ -46,6 +46,7 @@ The server accepts every connection and then closes it with a [close code](#clos
 | `agent_response` | `event_id`, `text`: the final text of a reply |
 | `agent_response_correction` | `event_id`, `text`: replaces what you have of that reply. An empty text withdraws it. After an `interruption` it is the reply's final text: nothing more comes for that `event_id` |
 | `guardrail_triggered` | `name`, `action` (`end`, `retry` or `transfer`): a check on the agent's reply or on the customer's message stopped a reply. It tells you the check's name and what happens next. On `retry` a new reply follows, on `transfer` a `handoff` does, and on `end` a `conversation_ended` does. A reply that had started is withdrawn with an `agent_response_correction` first |
+| `agent_transferred` | `agent_id`, `agent_name`: another agent has the conversation now. Its reply follows, and the conversation stays the same one. |
 | `operator_message` | `event_id`, `text`, `operator` (`name`, `avatar_url`): an operator's reply |
 | `handoff` | `reason` (`agent`, `agent_failed` or `balance`), `mode_outcome` (`continue_as_text`): operators have the conversation now, and the agent stays silent |
 | `turn_debug` | Only when the token allows debugging: how a turn ran, with its `event_id`, `turn_id`, `step`, `model`, `fallback_used`, `timings`, `usage`, `warnings` and `error_code`: null when the turn went through, otherwise why it failed (`model_timeout`, `model_unavailable`, `model_error`, `egress_blocked`, `config_invalid`, `config_unavailable`, `secret_missing`, `turn_expired` or `internal`; take a code you don't know as `internal`), and `tool_calls`: each tool call of the turn, secrets masked (`kind`, `name`, `arguments`, `result`, `status`, `error_code`, `http_status`, `duration_ms`) `knowledge` lists the passages of the agent's documents the model read, with their document, page and score. |

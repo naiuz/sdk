@@ -67,6 +67,9 @@
           "$ref": "#/$defs/GuardrailTriggered"
         },
         {
+          "$ref": "#/$defs/AgentTransferred"
+        },
+        {
           "$ref": "#/$defs/OperatorMessage"
         },
         {
@@ -1441,6 +1444,27 @@
         "type",
         "name",
         "action"
+      ],
+      "additionalProperties": false
+    },
+    "AgentTransferred": {
+      "description": "Another agent has the conversation now, and its reply follows.",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "agent_transferred"
+        },
+        "agent_id": {
+          "type": "string"
+        },
+        "agent_name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "agent_id",
+        "agent_name"
       ],
       "additionalProperties": false
     }

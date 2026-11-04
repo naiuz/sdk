@@ -90,6 +90,8 @@ export interface Callbacks {
     onLanguageChange?: (change: {language: LanguageCode}) => void;
     /** A check stopped a reply. `retry` means a new reply is coming; `end` and `transfer` say what happens instead. */
     onGuardrailTriggered?: (trigger: {name: string; action: "end" | "retry" | "transfer"}) => void;
+    /** Another agent has the conversation now, and its reply follows. */
+    onAgentTransferred?: (agent: {agentId: string; agentName: string}) => void;
     onError?: (message: string, context: {code: string}) => void;
 }
 

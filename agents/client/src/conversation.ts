@@ -417,6 +417,9 @@ export class Conversation {
             case "guardrail_triggered":
                 this.emit("onGuardrailTriggered", {name: event.name, action: event.action});
                 break;
+            case "agent_transferred":
+                this.emit("onAgentTransferred", {agentId: event.agent_id, agentName: event.agent_name});
+                break;
             case "ping":
                 this.send({type: "pong", event_id: event.event_id});
                 break;

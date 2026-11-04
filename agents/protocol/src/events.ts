@@ -23,6 +23,7 @@ export type ServerEvent =
     | AgentResponse
     | AgentResponseCorrection
     | GuardrailTriggered
+    | AgentTransferred
     | OperatorMessage
     | Handoff
     | TurnDebug
@@ -424,8 +425,15 @@ export interface GuardrailTriggered {
     action: "end" | "retry" | "transfer";
 }
 
+/** Another agent has the conversation now, and its reply follows. */
+export interface AgentTransferred {
+    type: "agent_transferred";
+    agent_id: string;
+    agent_name: string;
+}
+
 /** Every event type a client sends. */
 export const CLIENT_EVENT_TYPES = ["conversation_initiation_client_data", "user_message", "pong", "playback", "client_tool_result", "contextual_update", "user_activity", "feedback"] as const;
 
 /** Every event type the server sends. */
-export const SERVER_EVENT_TYPES = ["conversation_initiation_metadata", "conversation_history", "message_ack", "message_error", "user_message", "agent_typing", "agent_chat_response_part", "agent_response", "agent_response_correction", "guardrail_triggered", "operator_message", "handoff", "turn_debug", "ping", "conversation_ended", "error", "agent_state", "user_transcript", "audio_pause", "audio_resume", "interruption", "client_tool_call", "agent_tool_response", "language_changed"] as const;
+export const SERVER_EVENT_TYPES = ["conversation_initiation_metadata", "conversation_history", "message_ack", "message_error", "user_message", "agent_typing", "agent_chat_response_part", "agent_response", "agent_response_correction", "guardrail_triggered", "agent_transferred", "operator_message", "handoff", "turn_debug", "ping", "conversation_ended", "error", "agent_state", "user_transcript", "audio_pause", "audio_resume", "interruption", "client_tool_call", "agent_tool_response", "language_changed"] as const;

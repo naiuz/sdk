@@ -137,6 +137,12 @@ describe("what the agent tells the page", () => {
         expect(calls.onLanguageChange).toEqual([[{language: "ru"}]]);
     });
 
+    test("that another agent has the conversation, by id and name", async () => {
+        const {socket, calls} = await connected();
+        socket.serverSends({type: "agent_transferred", agent_id: "agent_01JB8Z5R4Q6Y2N7K3M9D0F1H2J", agent_name: "Support"});
+        expect(calls.onAgentTransferred).toEqual([[{agentId: "agent_01JB8Z5R4Q6Y2N7K3M9D0F1H2J", agentName: "Support"}]]);
+    });
+
     test("that a check stopped a reply, by its name and what happens next", async () => {
         const {socket, calls} = await connected();
         socket.serverSends({type: "guardrail_triggered", name: "Chegirmalar", action: "retry"});
@@ -165,6 +171,14 @@ test("a recorded session with all of it replays", async () => {
     expect(sent).toEqual(clientFrames(recorded));
     expect(calls.onAgentToolResponse.map(([tool]) => tool.status)).toEqual(["running", "done"]);
     expect(calls.onLanguageChange).toEqual([[{language: "ru"}]]);
+});
+
+test("a transfer replays, with the new agent's reply after the move", async () => {
+    const recorded = loadFixture("transfer");
+    const {sent, calls} = await replay(recorded, {idGenerator: () => "c-1"});
+    expect(sent).toEqual(clientFrames(recorded));
+    expect(calls.onAgentTransferred).toEqual([[{agentId: "agent_01JB8Z5R4Q6Y2N7K3M9D0F1H2J", agentName: "Yordam"}]]);
+    expect(calls.onMessage?.at(-1)?.[0]).toMatchObject({source: "ai", message: "Yetkazib berish ertaga boʻladi."});
 });
 
 test("a reply a check stopped replays, withdrawn before the one that follows it", async () => {
