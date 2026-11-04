@@ -37,6 +37,28 @@ class FakeGain extends FakeNode {
     readonly gain = {value: 1};
 }
 
+class FakeBiquad extends FakeNode {
+    type = "";
+    readonly frequency = {value: 0};
+}
+
+class FakeBufferSource extends FakeNode {
+    buffer: unknown = null;
+    loop = false;
+    loopStart = 0;
+    loopEnd = 0;
+    started: [number, number] | null = null;
+    stopped = false;
+
+    start(when: number, offset: number): void {
+        this.started = [when, offset];
+    }
+
+    stop(): void {
+        this.stopped = true;
+    }
+}
+
 class FakeStreamDestination extends FakeNode {
     readonly stream = new FakeStream();
 }
@@ -97,6 +119,16 @@ class FakeContext {
     createMediaStreamSource(stream: unknown): FakeSource {
         return this.keep(new FakeSource(stream));
     }
+
+    createBiquadFilter(): FakeBiquad {
+        return this.keep(new FakeBiquad());
+    }
+
+    createBufferSource(): FakeBufferSource {
+        return this.keep(new FakeBufferSource());
+    }
+
+    readonly decodeAudioData = vi.fn(() => Promise.resolve({duration: 30}));
 
     private keep<T extends FakeNode>(node: T): T {
         this.made.push(node);
@@ -298,3 +330,184 @@ test("a call without the audio option asks for the microphone at once, through B
     await conversation.endSession();
     expect(context().close).toHaveBeenCalled();
 });
+
+describe("what plays under the agent", () => {
+    function sound(): void {
+        vi.stubGlobal("fetch", vi.fn(() => Promise.resolve({ok: true, arrayBuffer: () => Promise.resolve(new ArrayBuffer(8))})));
+    }
+
+    async function loaded(): Promise<void> {
+        for (let i = 0; i < 10; i++) await Promise.resolve();
+    }
+
+    async function started(): Promise<{audio: BrowserAudio; context: FakeContext}> {
+        const audio = new BrowserAudio();
+        await audio.startCapture();
+        audio.startPlayback(24_000);
+        return {audio, context: contexts.at(-1) as FakeContext};
+    }
+
+    const CAFE = {ambienceUrl: "https://my.neuronai.uz/api/v1/realtime/ambience/cafe.mp3", volume: 0.4, phoneFilter: false};
+
+    function sources(context: FakeContext): FakeBufferSource[] {
+        return context.made.filter((node): node is FakeBufferSource => node instanceof FakeBufferSource);
+    }
+
+    test("a background loops, past the MP3's padding, at its volume, into the agent's output", async () => {
+        sound();
+        const {audio, context} = await started();
+
+        audio.setEnvironment(CAFE);
+        await loaded();
+
+        const [source] = sources(context);
+        expect(fetch).toHaveBeenCalledWith(CAFE.ambienceUrl);
+        expect(source?.loop).toBe(true);
+        expect(source?.loopStart).toBeCloseTo(0.06);
+        expect(source?.loopEnd).toBeCloseTo(29.94);
+        expect(source?.started).toEqual([0, 0.06]);
+        const gain = source?.connections[0] as FakeGain;
+        expect(gain.gain.value).toBe(0.4);
+    });
+
+    test("the same background on a reconnect isn't started twice", async () => {
+        sound();
+        const {audio, context} = await started();
+
+        audio.setEnvironment(CAFE);
+        await loaded();
+        audio.setEnvironment(CAFE);
+        await loaded();
+
+        expect(sources(context)).toHaveLength(1);
+    });
+
+    test.each([
+        ["the network", () => Promise.reject(new TypeError("Failed to fetch"))],
+        ["a refusal", () => Promise.resolve({ok: false})],
+    ])("a background that won't load, through %s, is no background", async (_how, answer) => {
+        vi.stubGlobal("fetch", vi.fn(answer));
+        const {audio, context} = await started();
+
+        audio.setEnvironment(CAFE);
+        await loaded();
+
+        expect(sources(context)).toHaveLength(0);
+    });
+
+    test("a background that can't be decoded is no background", async () => {
+        sound();
+        const {audio, context} = await started();
+        context.decodeAudioData.mockRejectedValueOnce(new Error("bad audio"));
+
+        audio.setEnvironment(CAFE);
+        await loaded();
+
+        expect(sources(context)).toHaveLength(0);
+    });
+
+    test("one that arrives after the call ended isn't started", async () => {
+        sound();
+        const {audio, context} = await started();
+
+        audio.setEnvironment(CAFE);
+        await audio.close();
+        await loaded();
+
+        expect(sources(context)).toHaveLength(0);
+    });
+
+    test("closing the call stops it", async () => {
+        sound();
+        const {audio, context} = await started();
+        audio.setEnvironment(CAFE);
+        await loaded();
+
+        await audio.close();
+
+        expect(sources(context)[0]?.stopped).toBe(true);
+    });
+
+    test("no background asked for fetches nothing", async () => {
+        sound();
+        const {audio} = await started();
+
+        audio.setEnvironment({...CAFE, ambienceUrl: null});
+        await loaded();
+
+        expect(fetch).not.toHaveBeenCalled();
+    });
+
+    test("the phone filter puts a telephone's band between the agent and its output", async () => {
+        const {audio, context} = await started();
+        const playback = workletNodes.find((node) => node.name === "naiuz-playback") as FakeWorkletNode;
+
+        audio.setEnvironment({...CAFE, ambienceUrl: null, phoneFilter: true});
+
+        const [low, high] = context.made.filter((node): node is FakeBiquad => node instanceof FakeBiquad);
+        expect([low?.type, low?.frequency.value]).toEqual(["highpass", 300]);
+        expect([high?.type, high?.frequency.value]).toEqual(["lowpass", 3_400]);
+        expect(playback.connections.at(-1)).toBe(low);
+        expect(low?.connections[0]).toBe(high);
+    });
+
+    test("off, the agent goes straight to its output", async () => {
+        const {audio, context} = await started();
+        const playback = workletNodes.find((node) => node.name === "naiuz-playback") as FakeWorkletNode;
+        const direct = playback.connections.at(-1);
+
+        audio.setEnvironment({...CAFE, ambienceUrl: null, phoneFilter: false});
+
+        expect(context.made.filter((node) => node instanceof FakeBiquad)).toHaveLength(0);
+        expect(playback.connections.at(-1)).toBe(direct);
+    });
+});
+
+describe("a goodbye", () => {
+    async function playing(): Promise<{audio: BrowserAudio; playback: FakeWorkletNode}> {
+        const audio = new BrowserAudio();
+        await audio.startCapture();
+        audio.startPlayback(24_000);
+        const playback = workletNodes.find((node) => node.name === "naiuz-playback") as FakeWorkletNode;
+        playback.port.onmessage?.({data: {playing: 7, played: {7: 100}, ended: [], level: 0.5}});
+        return {audio, playback};
+    }
+
+    test("draining waits for what's playing to finish", async () => {
+        const {audio, playback} = await playing();
+        let done = false;
+
+        void audio.drain(2_000).then(() => {
+            done = true;
+        });
+        await Promise.resolve();
+        expect(done).toBe(false);
+
+        playback.port.onmessage?.({data: {playing: null, played: {7: 400}, ended: [7], level: 0}});
+        await Promise.resolve();
+        await Promise.resolve();
+        expect(done).toBe(true);
+    });
+
+    test("it can't hold the speaker past its limit", async () => {
+        vi.useFakeTimers();
+        const {audio} = await playing();
+        let done = false;
+
+        void audio.drain(2_000).then(() => {
+            done = true;
+        });
+        await vi.advanceTimersByTimeAsync(2_000);
+
+        expect(done).toBe(true);
+        vi.useRealTimers();
+    });
+
+    test("with nothing playing there's nothing to wait for", async () => {
+        const audio = new BrowserAudio();
+        await audio.startCapture();
+
+        await expect(audio.drain(2_000)).resolves.toBeUndefined();
+    });
+});
+

@@ -1,3 +1,13 @@
+/** What plays under the agent, as the builder set it. The agent never hears it. */
+export interface AudioEnvironment {
+    /** The sound's whole address, or null for none. */
+    ambienceUrl: string | null;
+    /** 0 to 1. */
+    volume: number;
+    /** The agent's voice as on a phone line. */
+    phoneFilter: boolean;
+}
+
 /**
  * A call's audio: the microphone in, the agent's voice out. BrowserAudio is the browser's; a test, or another
  * runtime, can bring its own.
@@ -15,6 +25,10 @@ export interface AudioIO {
     pause(): void;
     resume(): void;
     drop(): void;
+    /** Plays what the call's metadata says goes under the agent. An AudioIO without it plays the agent alone. */
+    setEnvironment?(environment: AudioEnvironment): void;
+    /** Resolves once what's queued has played, or at the limit, for a goodbye to finish. */
+    drain?(limitMs: number): Promise<void>;
     /** The reply being heard, or null. */
     readonly playing: number | null;
     /** Milliseconds of that reply's audio played since its first frame, pauses excluded. */

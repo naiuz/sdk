@@ -255,10 +255,22 @@ export interface ErrorEvent {
 /** PCM16 little-endian mono at the named sample rate. */
 export type AudioFormat = "pcm_16000" | "pcm_24000";
 
+/** What the client mixes into a call: a background, and the agent's voice as on a phone line. */
+export interface AudioEnvironment {
+    /** Where the sound is, relative to the socket's address; null for none. A sound that won't load is no sound. */
+    ambience_url: string | null;
+    /** 0 to 1. */
+    volume: number;
+    /** The agent's voice between 300 and 3,400 Hz. */
+    phone_filter: boolean;
+}
+
 /** A call's audio: the client sends 16 kHz, and gets the output rate it asked for. */
 export interface AudioFormats {
     input: "pcm_16000";
     output: AudioFormat;
+    /** What the client plays under the agent. On the server's side only; the agent never hears it. */
+    environment?: AudioEnvironment;
 }
 
 /** How much of a reply's audio has played: every 250 ms while it plays, once when it pauses, and once when its audio ends. */

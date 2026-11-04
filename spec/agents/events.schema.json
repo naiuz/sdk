@@ -890,6 +890,33 @@
         "pcm_24000"
       ]
     },
+    "AudioEnvironment": {
+      "description": "What the client mixes into a call: a background, and the agent's voice as on a phone line.",
+      "type": "object",
+      "properties": {
+        "ambience_url": {
+          "description": "Where the sound is, relative to the socket's address; null for none. A sound that won't load is no sound.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "volume": {
+          "description": "0 to 1.",
+          "type": "number"
+        },
+        "phone_filter": {
+          "description": "The agent's voice between 300 and 3,400 Hz.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "ambience_url",
+        "volume",
+        "phone_filter"
+      ],
+      "additionalProperties": false
+    },
     "AudioFormats": {
       "description": "A call's audio: the client sends 16 kHz, and gets the output rate it asked for.",
       "type": "object",
@@ -901,6 +928,10 @@
         },
         "output": {
           "$ref": "#/$defs/AudioFormat"
+        },
+        "environment": {
+          "description": "What the client plays under the agent. On the server's side only; the agent never hears it.",
+          "$ref": "#/$defs/AudioEnvironment"
         }
       },
       "required": [

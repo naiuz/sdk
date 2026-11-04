@@ -8,6 +8,8 @@ export type AudioCall =
     | {call: "pause"}
     | {call: "resume"}
     | {call: "drop"}
+    | {call: "setEnvironment"; ambienceUrl: string | null; volume: number; phoneFilter: boolean}
+    | {call: "drain"; limitMs: number}
     | {call: "setMuted"; muted: boolean}
     | {call: "setVolume"; volume: number}
     | {call: "close"};
@@ -84,6 +86,20 @@ export class FakeAudio implements AudioIO {
         this.calls.push({call: "resume"});
         this.paused = false;
         this.schedule();
+    }
+
+    setEnvironment(environment: {ambienceUrl: string | null; volume: number; phoneFilter: boolean}): void {
+        this.calls.push({call: "setEnvironment", ...environment});
+    }
+
+    /** Set by a test to hold a goodbye open. */
+    finishDraining: (() => void) | null = null;
+
+    drain(limitMs: number): Promise<void> {
+        this.calls.push({call: "drain", limitMs});
+        return new Promise((resolve) => {
+            this.finishDraining = resolve;
+        });
     }
 
     drop(): void {

@@ -1,5 +1,5 @@
 import {MicrophoneError} from "../errors";
-import type {AudioIO} from "./io";
+import type {AudioEnvironment, AudioIO} from "./io";
 import {workletSource} from "./worklets";
 
 /** The microphone as the agent should hear it: the browser's echo cancelling, noise suppression and gain control, in mono. */
@@ -13,6 +13,12 @@ export interface BrowserAudioOptions {
     /** The element the agent plays through. The default is a new <audio>. */
     element?: HTMLAudioElement;
 }
+
+/** A telephone's band, for an agent that should sound like it's on one. */
+const PHONE_LOW_HZ = 300;
+const PHONE_HIGH_HZ = 3_400;
+/** What an MP3's encoder pads each end with, which would dip at every repeat. */
+const LOOP_TRIM_S = 0.06;
 
 interface CaptureMessage {
     frame: Int16Array;
@@ -53,6 +59,13 @@ export class BrowserAudio implements AudioIO {
     private loudness = 0;
     private current: number | null = null;
     private readonly played = new Map<number, number>();
+    private readonly ambienceGain: GainNode;
+    /** The sound asked for, so a reconnect's metadata doesn't start it twice. */
+    private ambienceUrl: string | null = null;
+    private ambience: AudioBufferSourceNode | null = null;
+    private phoneBand: [BiquadFilterNode, BiquadFilterNode] | null = null;
+    private drained: (() => void) | null = null;
+    private closed = false;
 
     constructor(options: BrowserAudioOptions = {}) {
         if (options.context === undefined && typeof AudioContext === "undefined") {
@@ -64,6 +77,8 @@ export class BrowserAudio implements AudioIO {
         this.inputStream = options.inputStream ?? null;
         this.gain = this.context.createGain();
         this.output = this.context.createMediaStreamDestination();
+        this.ambienceGain = this.context.createGain();
+        this.ambienceGain.connect(this.gain);
     }
 
     async startCapture(): Promise<void> {
@@ -96,7 +111,7 @@ export class BrowserAudio implements AudioIO {
         playback.port.postMessage({rate});
         if (!this.connected) {
             this.connected = true;
-            playback.connect(this.gain);
+            this.routeVoice();
             this.gain.connect(this.output);
         }
         if (this.element.paused) this.element.play().catch(() => undefined);
@@ -118,6 +133,32 @@ export class BrowserAudio implements AudioIO {
         this.playback?.port.postMessage({drop: true});
         this.current = null;
         this.loudness = 0;
+    }
+
+    setEnvironment(environment: AudioEnvironment): void {
+        this.ambienceGain.gain.value = environment.volume;
+        const band = environment.phoneFilter;
+        if (band !== (this.phoneBand !== null)) {
+            this.phoneBand = band ? [this.bandEdge("highpass", PHONE_LOW_HZ), this.bandEdge("lowpass", PHONE_HIGH_HZ)] : null;
+            this.routeVoice();
+        }
+        if (environment.ambienceUrl !== null && environment.ambienceUrl !== this.ambienceUrl) {
+            this.ambienceUrl = environment.ambienceUrl;
+            void this.playAmbience(environment.ambienceUrl);
+        }
+    }
+
+    drain(limitMs: number): Promise<void> {
+        if (this.current === null) return Promise.resolve();
+        return new Promise((resolve) => {
+            const done = () => {
+                clearTimeout(limit);
+                this.drained = null;
+                resolve();
+            };
+            const limit = setTimeout(done, limitMs);
+            this.drained = done;
+        });
     }
 
     get playing(): number | null {
@@ -147,6 +188,11 @@ export class BrowserAudio implements AudioIO {
     }
 
     close(): Promise<void> {
+        this.closed = true;
+        this.drained?.();
+        this.ambience?.stop();
+        this.ambience?.disconnect();
+        this.ambienceGain.disconnect();
         for (const node of [this.capture, this.playback]) {
             if (node === null) continue;
             node.port.onmessage = null;
@@ -160,6 +206,48 @@ export class BrowserAudio implements AudioIO {
         if (this.moduleUrl !== null) URL.revokeObjectURL(this.moduleUrl);
         this.moduleUrl = null;
         return this.ownsContext && this.context.state !== "closed" ? this.context.close() : Promise.resolve();
+    }
+
+    /** The agent's voice to the output, through a telephone's band when it's asked for. */
+    private routeVoice(): void {
+        const playback = this.playback;
+        if (playback === null || !this.connected) return;
+        playback.disconnect();
+        if (this.phoneBand === null) {
+            playback.connect(this.gain);
+            return;
+        }
+        const [low, high] = this.phoneBand;
+        playback.connect(low);
+        low.connect(high);
+        high.connect(this.gain);
+    }
+
+    private bandEdge(type: BiquadFilterType, frequency: number): BiquadFilterNode {
+        const edge = this.context.createBiquadFilter();
+        edge.type = type;
+        edge.frequency.value = frequency;
+        return edge;
+    }
+
+    /** A sound that won't load is no sound: it's never a reason for a call to fail. */
+    private async playAmbience(url: string): Promise<void> {
+        try {
+            const answer = await fetch(url);
+            if (!answer.ok) return;
+            const sound = await this.context.decodeAudioData(await answer.arrayBuffer());
+            if (this.closed) return;
+            const source = this.context.createBufferSource();
+            source.buffer = sound;
+            source.loop = true;
+            source.loopStart = LOOP_TRIM_S;
+            source.loopEnd = sound.duration - LOOP_TRIM_S;
+            source.connect(this.ambienceGain);
+            source.start(0, LOOP_TRIM_S);
+            this.ambience = source;
+        } catch {
+            this.ambienceUrl = null;
+        }
     }
 
     private async openMicrophone(): Promise<MediaStream> {
@@ -186,5 +274,6 @@ export class BrowserAudio implements AudioIO {
         this.current = playing;
         this.loudness = level;
         for (const eventId of ended) this.onPlaybackEnd?.(eventId);
+        if (playing === null) this.drained?.();
     }
 }

@@ -113,6 +113,7 @@ The server accepts every connection and then closes it with a [close code](#clos
   - The token must allow voice, or the server closes with 4003 `not_allowed`.
   - The server takes a voice line first (4009 `voice_limit` when none is free), then checks the balance (4010 `balance` when it can't cover one minute).
   - Each refusal comes before the metadata. The metadata then carries `features.voice: true` and the `audio` formats.
+  - `audio.environment` says what to play under the agent, as the builder set it: `ambience_url`, relative to the socket's address, with its `volume`, and `phone_filter`, the agent's voice between 300 and 3,400 Hz. Mix them on your side, so the microphone's echo cancelling keeps them from the agent. A sound that won't load is no sound.
   - Send audio only once the metadata has arrived.
 - **Audio frames** are binary:
 
@@ -132,6 +133,7 @@ The server accepts every connection and then closes it with a [close code](#clos
   - On a new conversation, the agent speaks its first message first: its `agent_response`, and `agent_state` `speaking` with its audio, in either order. Play the audio as it comes, whether or not the text has arrived.
   - The customer's turn ends after a pause in their speech, 700 ms unless the agent is set to answer sooner or later. The server sends `user_transcript`, then `agent_typing`, and the reply streams as text (`agent_chat_response_part`, `agent_response`) beside its audio.
   - `agent_state` goes back to `listening` once the reply has played.
+  - **Fillers:** when a reply is slow, a short line may play first, as audio under an `event_id` of its own. It has no `agent_response`, nobody's transcript holds it, and no `agent_response_correction` comes for it. The reply follows under its own `event_id`.
 - **Interruptions:**
   1. When the customer has spoken over a reply for 250 ms, `audio_pause` arrives: pause playback and keep the buffer.
   2. Then either `audio_resume` (nothing to answer was said, such as a cough: carry on where you paused), or `interruption` (1.5 s of speech, or a transcript with words: drop the reply's audio).
@@ -145,6 +147,8 @@ The server accepts every connection and then closes it with a [close code](#clos
 - **The call's lifecycle:**
   - **Hanging up** is closing the socket. The conversation goes on as chat.
   - **Max duration:** a call that reaches the agent's max duration is closed with 1000 `max_duration`, without `conversation_ended`. The conversation goes on as chat.
+  - **Silence:** a call left silent for as long as the agent allows is closed with 1000 `silence`, without `conversation_ended`. The conversation goes on as chat.
+  - **A goodbye:** the server closes when it reckons the last frame has played, and the network and your buffer are behind that. After a close from the server with 1000, let what you hold play out.
   - **One call per conversation:** a second connection that asks for a call takes it over, and the first is closed with 4008 `taken_over`. Text viewers are never replaced.
   - **Reconnecting:** after 4012, 1001 or 1011, or a dropped network, resume with `text_only: false` to go on with the call. Drop the reply that was playing, and number the microphone from 0 again.
 - **Typing during a call:** a `user_message` from any viewer goes into the call, and the agent answers it by voice.

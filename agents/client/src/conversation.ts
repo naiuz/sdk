@@ -1,4 +1,4 @@
-import type {AudioFormat, ClientToolCall, ConversationInitiationClientData, HistoryMessage, ServerEvent} from "@naiuz/agents-protocol";
+import type {AudioFormat, AudioFormats, ClientToolCall, ConversationInitiationClientData, HistoryMessage, ServerEvent} from "@naiuz/agents-protocol";
 import {BrowserAudio} from "./audio/browser";
 import type {AudioIO} from "./audio/io";
 import {Call} from "./call";
@@ -6,6 +6,8 @@ import {MessageError, MicrophoneError, SessionError} from "./errors";
 import type {Callbacks, ConversationStatus, DisconnectDetails, MessageAck, Mode, SendOptions, SessionOptions, Status, WebSocketFactory, WebSocketLike} from "./types";
 
 const DEFAULT_URL = "wss://my.neuronai.uz/api/v1/realtime";
+/** How long the last of a call's audio can keep the speaker, about what the server sends ahead and more. */
+const GOODBYE_LIMIT_MS = 2_000;
 const OPEN = 1;
 const CLOSED = 3;
 /** Closes after which the client resumes with its resume token: a lost client, a drain, a lost network, a server error or restart. */
@@ -67,6 +69,8 @@ export class Conversation {
     /** A call's microphone and speaker, kept across reconnects; null for a text session. */
     private readonly audio: AudioIO | null;
     private audioClosed = false;
+    /** The server closed normally, so the last of a call's audio plays before it's released. */
+    private goodbye = false;
     /** This connection's side of the call, from its metadata to its close. */
     private call: Call | null = null;
     private mode: Mode | null = null;
@@ -228,7 +232,7 @@ export class Conversation {
                 this.conversationId = event.conversation_id;
                 this.resumeToken = event.resume_token;
                 this.reconnects = 0;
-                this.startCall(event.audio?.output ?? null);
+                this.startCall(event.audio ?? null);
                 this.setStatus("connected");
                 if (this.connectedOnce) {
                     this.resendOnHistory = true;
@@ -358,7 +362,10 @@ export class Conversation {
     private closed(socket: WebSocketLike, code: number, reason: string): void {
         if (socket !== this.socket) return;
         this.stopWatchingSilence();
-        this.call?.stop();
+        // The server closes when it reckons a goodbye has played, and this end is behind that.
+        const letItFinish = code === 1000 && !this.endedByUser && this.opening === null;
+        this.goodbye = letItFinish;
+        this.call?.stop(letItFinish);
         this.call = null;
         this.resendOnHistory = false;
         if (this.opening !== null) {
@@ -422,7 +429,7 @@ export class Conversation {
         for (const timer of this.timers) clearTimeout(timer);
         this.timers.clear();
         this.silence = null;
-        this.closeAudio();
+        this.closeAudio(this.goodbye);
         this.setStatus("disconnected");
         for (const [clientMessageId, pending] of this.pending) pending.reject(new MessageError(clientMessageId, resumable, "unavailable"));
         this.pending.clear();
@@ -437,16 +444,25 @@ export class Conversation {
     }
 
     /** This connection's side of the call, once the server has taken it: the metadata names its output. */
-    private startCall(output: AudioFormat | null): void {
+    private startCall(formats: AudioFormats | null): void {
         const {audio, socket} = this;
-        if (audio === null || socket === null || output === null) return;
+        if (audio === null || socket === null || formats === null) return;
         const channel = {
             send: (data: string | Uint8Array) => {
                 if (socket.readyState === OPEN) socket.send(data);
             },
             buffered: () => socket.bufferedAmount ?? 0,
         };
-        this.call = new Call(channel, audio, OUTPUT_RATES[output]);
+        this.call = new Call(channel, audio, OUTPUT_RATES[formats.output]);
+        if (formats.environment !== undefined) {
+            const {ambience_url: ambience, volume, phone_filter: phoneFilter} = formats.environment;
+            audio.setEnvironment?.({ambienceUrl: ambience === null ? null : this.fromServer(ambience), volume, phoneFilter});
+        }
+    }
+
+    /** An address the server gave, relative to its socket's. */
+    private fromServer(path: string): string {
+        return new URL(path, (this.options.serverUrl ?? DEFAULT_URL).replace(/^ws/, "http")).href;
     }
 
     /** The call's audio, until the session is over. */
@@ -454,11 +470,15 @@ export class Conversation {
         return this.audioClosed ? null : this.audio;
     }
 
-    /** Releases the microphone and the speaker, once, when the session is over. */
-    private closeAudio(): void {
-        if (this.audio === null || this.audioClosed) return;
+    /** Releases the microphone and the speaker, once, when the session is over, after a goodbye has played. */
+    private closeAudio(letItFinish = false): void {
+        const audio = this.audio;
+        if (audio === null || this.audioClosed) return;
         this.audioClosed = true;
-        this.audio.close().catch(() => undefined);
+        const drained = letItFinish ? audio.drain?.(GOODBYE_LIMIT_MS) : undefined;
+        const release = () => audio.close().catch(() => undefined);
+        if (drained === undefined) void release();
+        else void drained.then(release, release);
     }
 
     private changeMode(mode: Mode): void {

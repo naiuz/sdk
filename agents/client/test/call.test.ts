@@ -316,7 +316,95 @@ describe("the call's events", () => {
 
         const timedOut = await call();
         timedOut.socket.serverCloses(1000, "max_duration");
+        timedOut.audio.finishDraining?.();
+        await settle();
         expect(timedOut.audio.calls.at(-1)).toEqual({call: "close"});
         expect(timedOut.calls.onDisconnect).toEqual([[{reason: "server", code: 1000, message: "max_duration"}]]);
     });
 });
+
+describe("what the metadata says goes under the agent", () => {
+    const ENVIRONMENT = {ambience_url: "/api/v1/realtime/ambience/cafe.mp3", volume: 0.4, phone_filter: true};
+
+    async function callWith(serverUrl: string | undefined): Promise<FakeAudio> {
+        const sockets = fakeSockets();
+        const audio = new FakeAudio();
+        const started = Conversation.startSession({token: "tok", WebSocket: sockets.factory, textOnly: false, output: "pcm_24000", audio, serverUrl});
+        await settle();
+        sockets.socket.open();
+        sockets.socket.serverSends({...callMetadata("pcm_24000"), audio: {input: "pcm_16000", output: "pcm_24000", environment: ENVIRONMENT}});
+        await started;
+        return audio;
+    }
+
+    test("it's played from the socket's own server", async () => {
+        const audio = await callWith("wss://calls.example/api/v1/realtime");
+
+        expect(audio.calls).toContainEqual({
+            call: "setEnvironment",
+            ambienceUrl: "https://calls.example/api/v1/realtime/ambience/cafe.mp3",
+            volume: 0.4,
+            phoneFilter: true,
+        });
+    });
+
+    test("over plain http for a plain socket", async () => {
+        const audio = await callWith("ws://localhost:8090/api/v1/realtime");
+
+        expect(audio.calls).toContainEqual(expect.objectContaining({ambienceUrl: "http://localhost:8090/api/v1/realtime/ambience/cafe.mp3"}));
+    });
+
+    test("from NeuronAI when the page names no server", async () => {
+        const audio = await callWith(undefined);
+
+        expect(audio.calls).toContainEqual(expect.objectContaining({ambienceUrl: "https://my.neuronai.uz/api/v1/realtime/ambience/cafe.mp3"}));
+    });
+
+    test("a server that says nothing about it plays the agent alone", async () => {
+        const {audio} = await call();
+
+        expect(audio.calls.some((made) => made.call === "setEnvironment")).toBe(false);
+    });
+});
+
+describe("how a call ends", () => {
+    test("a close from the server lets the goodbye play out, then releases the audio", async () => {
+        const {audio, socket} = await call();
+        speak(socket, 7, 200);
+
+        socket.serverCloses(1000, "ended");
+        await settle();
+
+        expect(audio.calls.some((made) => made.call === "drop")).toBe(false);
+        expect(audio.calls).toContainEqual({call: "drain", limitMs: 2_000});
+        expect(audio.calls.some((made) => made.call === "close")).toBe(false);
+
+        audio.finishDraining?.();
+        await settle();
+        expect(audio.calls.at(-1)).toEqual({call: "close"});
+    });
+
+    test("an app that ends the call has silence at once", async () => {
+        const {audio, conversation, socket} = await call();
+        speak(socket, 7, 200);
+
+        await conversation.endSession();
+        await settle();
+
+        expect(audio.calls.some((made) => made.call === "drop")).toBe(true);
+        expect(audio.calls.some((made) => made.call === "drain")).toBe(false);
+        expect(audio.calls.at(-1)).toEqual({call: "close"});
+    });
+
+    test("an error drops what was playing and doesn't wait", async () => {
+        const {audio, socket} = await call();
+        speak(socket, 7, 200);
+
+        socket.serverCloses(4003, "not_allowed");
+        await settle();
+
+        expect(audio.calls.some((made) => made.call === "drop")).toBe(true);
+        expect(audio.calls.some((made) => made.call === "drain")).toBe(false);
+    });
+});
+

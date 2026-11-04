@@ -71,14 +71,14 @@ export class Call {
         this.audio.drop();
     }
 
-    /** The socket closed: what was playing is dropped, and nothing more is sent. */
-    stop(): void {
+    /** The socket closed: nothing more is sent, and what was playing is dropped unless it's a goodbye to finish. */
+    stop(letItFinish = false): void {
         if (this.stopped) return;
         this.stopped = true;
         clearInterval(this.clock);
         this.audio.onFrame = null;
         this.audio.onPlaybackEnd = null;
-        this.audio.drop();
+        if (!letItFinish) this.audio.drop();
     }
 
     /** Reports the reply's position: on the clock and at its end only when it moved, at a pause or interruption always. */
