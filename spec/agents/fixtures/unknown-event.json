@@ -33,7 +33,7 @@
     {
       "from": "client",
       "frame": {
-        "type": "user_activity"
+        "type": "future_event"
       },
       "invalid": true
     },
@@ -42,7 +42,7 @@
       "frame": {
         "type": "error",
         "code": "unknown_event",
-        "message": "user_activity isn't an event of this protocol version."
+        "message": "future_event isn't an event of this protocol version."
       }
     }
   ]

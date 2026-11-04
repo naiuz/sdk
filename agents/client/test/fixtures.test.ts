@@ -35,5 +35,5 @@ test("a tester's turn_debug reaches onDebug, and an error event onError", async 
     const debug = await replay(loadFixture("debug"), {idGenerator: ids("c-1")});
     expect(debug.calls.onDebug[0]?.[0]).toMatchObject({type: "turn_debug", model: "gemma-4-26b-a4b"});
     const unknown = await replay(loadFixture("unknown-event"));
-    expect(unknown.calls.onError).toEqual([["user_activity isn't an event of this protocol version.", {code: "unknown_event"}]]);
+    expect(unknown.calls.onError).toEqual([["future_event isn't an event of this protocol version.", {code: "unknown_event"}]]);
 });
