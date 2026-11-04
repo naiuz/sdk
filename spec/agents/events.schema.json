@@ -879,6 +879,13 @@
           "items": {
             "$ref": "#/$defs/TurnPassage"
           }
+        },
+        "guardrails": {
+          "description": "The checks that triggered on the turn.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TurnGuardrail"
+          }
         }
       },
       "required": [
@@ -1465,6 +1472,49 @@
         "type",
         "agent_id",
         "agent_name"
+      ],
+      "additionalProperties": false
+    },
+    "TurnGuardrail": {
+      "description": "A check that triggered on a turn, for testers: what it found stays out of what customers see.",
+      "type": "object",
+      "properties": {
+        "check": {
+          "description": "`manipulation`, `content:<category>` or `custom:<rule id>`.",
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "action": {
+          "enum": [
+            "end",
+            "retry",
+            "transfer"
+          ]
+        },
+        "reason": {
+          "type": "string"
+        },
+        "score": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "mode": {
+          "enum": [
+            "streaming",
+            "blocking"
+          ]
+        }
+      },
+      "required": [
+        "check",
+        "name",
+        "action",
+        "reason",
+        "mode"
       ],
       "additionalProperties": false
     }

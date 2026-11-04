@@ -252,6 +252,8 @@ export interface TurnDebug {
     tool_calls?: TurnToolCall[];
     /** The passages of the agent's documents the model read, best first. */
     knowledge?: TurnPassage[];
+    /** The checks that triggered on the turn. */
+    guardrails?: TurnGuardrail[];
 }
 
 /** Answer with a pong carrying the same event id. */
@@ -430,6 +432,17 @@ export interface AgentTransferred {
     type: "agent_transferred";
     agent_id: string;
     agent_name: string;
+}
+
+/** A check that triggered on a turn, for testers: what it found stays out of what customers see. */
+export interface TurnGuardrail {
+    /** `manipulation`, `content:<category>` or `custom:<rule id>`. */
+    check: string;
+    name: string;
+    action: "end" | "retry" | "transfer";
+    reason: string;
+    score?: number | null;
+    mode: "streaming" | "blocking";
 }
 
 /** Every event type a client sends. */
