@@ -28,12 +28,14 @@ await conversation.endSession();
 A session starts from exactly one of these:
 
 - **`agentId`,** for a public agent, on a page of one of its allowed websites. The client asks for the session itself, and a call asks after the microphone. A refusal rejects with a `SessionRefusedError`, whose `code` says why: `origin_not_allowed`, `private_agent`, `daily_limit_reached`, `insufficient_balance` or `not_found`, or `unavailable` when the server couldn't answer.
-- **`signedUrl`,** a link your server makes with an API key, for any of your agents. It opens one connection, within 15 minutes. A second use rejects with a `SessionError`, 4003 `link_used`.
+- **`signedUrl`,** a link your server makes with an API key, for any of your agents. It opens one conversation, within 15 minutes. A second use rejects with a `SessionError`, 4003 `link_used`. `customer_id` in the query is your own id for this customer, and their conversations share one contact.
 - **`token`,** a session token from your backend or the dashboard, or a resume token.
 
 `apiUrl` is where `agentId` asks, and defaults to `https://my.neuronai.uz`.
 
-`overrides` changes `prompt`, `firstMessage`, `language`, `voice`, `model` or `textOnly` for this session. The agent's Security tab allows each one, all are off by default, and one it doesn't allow closes the session with 4003.
+`overrides` changes `prompt`, `firstMessage`, `language`, `voice`, `model` or `textOnly` for this session. The agent's Security tab allows each one, all are off by default, and one it doesn't allow closes the session with 4003. The browser holds the session, so anyone who can start one can set what's allowed. To change something for one customer from your server, use `vars` in a signed link.
+
+`userId` is what your page calls this customer, kept as a label. Anyone can send anything here, so it identifies nobody.
 
 ## Voice calls
 

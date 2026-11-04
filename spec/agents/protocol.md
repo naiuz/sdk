@@ -8,8 +8,8 @@ Version 0.1 covers text conversations and basic voice calls (see [Voice](#voice)
 
 - **The URL:** `wss://my.neuronai.uz/api/v1/realtime?token=…`.
 - **The token** is either:
-  - a session token: a short-lived JWS. A page on one of a public agent's allowed websites asks for one with the agent's id: `POST https://my.neuronai.uz/api/agents/v1/sessions` with `agent_id` and `mode` (`text` or `voice`) answers `data.token`, lasting 60 seconds, and `data.url`, the address to connect to. A refusal answers `error.code`: `origin_not_allowed`, `private_agent`, `daily_limit_reached` or `insufficient_balance`;
-  - a signed link's token: `GET /api/v1/agents/{id}/signed-url` with an API key answers `data.signed_url`, the whole address to connect to, for any agent of the key's organization. It opens one connection, within 15 minutes;
+  - a session token: a short-lived JWS. A page on one of a public agent's allowed websites asks for one with the agent's id: `POST https://my.neuronai.uz/api/agents/v1/sessions` with `agent_id` and `mode` (`text` or `voice`) answers `data.token`, which opens one conversation within 60 seconds from that website, and `data.url`, the address to connect to. A refusal answers `error.code`: `origin_not_allowed`, `private_agent`, `daily_limit_reached` or `insufficient_balance`;
+  - a signed link's token: `GET /api/v1/agents/{id}/signed-url` with an API key answers `data.signed_url`, the whole address to connect to, for any agent of the key's organization. It opens one conversation, within 15 minutes. `customer_id` in the query is your own id for this customer, and their conversations share one contact. `vars` are values the page can't change, though it can read them: they travel in the link;
   - a resume token: one the server gave this conversation earlier (see [Resuming](#resuming)).
 - **Frames:** every event is a JSON text frame with a `type` field. A call's audio travels in binary frames (see [Voice](#voice)).
 - **The handshake:**
@@ -23,7 +23,7 @@ The server accepts every connection and then closes it with a [close code](#clos
 
 | Event | Fields |
 |---|---|
-| `conversation_initiation_client_data` | All optional: `dynamic_variables` (values for the agent's variables; signed values in the token win), `overrides` (`prompt`, `first_message`, `language`, `voice`, `model`, `text_only`; only those the token allows. `text_only` here decides the session's mode, over the frame's own), `text_only` (`false` asks for a call; left out, the session is text), `audio` (a call's formats: `input` `pcm_16000`, `output` `pcm_16000` or `pcm_24000`), `user_id`, `client_tools` (the names of the client tools this page runs, at most 32) |
+| `conversation_initiation_client_data` | All optional: `dynamic_variables` (values for the agent's variables; signed values in the token win), `overrides` (`prompt`, `first_message`, `language`, `voice`, `model`, `text_only`; only those the token allows. `text_only` here decides the session's mode, over the frame's own), `text_only` (`false` asks for a call; left out, the session is text), `audio` (a call's formats: `input` `pcm_16000`, `output` `pcm_16000` or `pcm_24000`), `user_id` (what your page calls this customer, kept as a label. Anyone can send anything here, so it identifies nobody: a signed link's `customer_id` does), `client_tools` (the names of the client tools this page runs, at most 32) |
 | `user_message` | `client_message_id`: your own id for the message, `^[A-Za-z0-9_-]{1,64}$`, the same on every retry; `text`: 1 to 10,000 characters |
 | `playback` | `event_id`, `played_ms`: milliseconds of that reply's audio played since its first frame, pauses excluded. Sent every 250 ms while it plays, once when it pauses (on `audio_pause` or `interruption`), and whenever its audio runs out, at its end or early after a stall, so the server knows what was heard |
 | `pong` | `event_id`: the id of the `ping` it answers |
@@ -68,7 +68,7 @@ The server accepts every connection and then closes it with a [close code](#clos
 | 1011 | An internal error | Reconnect with the resume token, after a pause |
 | 1012, 1013 | The web server restarted, or is overloaded. The gateway itself doesn't send these | Reconnect with the resume token, after a pause |
 | 4001 | The token is invalid or expired | Stop. A session token must be fetched again; an expired resume token ends the conversation on this client |
-| 4003 | Not allowed: the agent is paused or gone, an override the token doesn't allow, a call the token doesn't allow, or a signed link already used (reason `link_used`) | Stop |
+| 4003 | Not allowed: the agent is paused or gone, an override the token doesn't allow, a call the token doesn't allow, a one-time token already used (reason `link_used`), a token given to another website (reason `origin_not_allowed`), or the agent's daily limit (reason `daily_limit`) | Stop |
 | 4008 | Another connection took this conversation's call (reason `taken_over`) | Stop the call. The conversation goes on, in the other connection |
 | 4009 | All voice lines are busy: the organization's or the platform's limit (reason `voice_limit`) | Stop the call, and offer text: "All lines are busy. Send a message instead." |
 | 4010 | The balance can't cover one minute of voice (reason `balance`) | Stop the call, and show the reason |

@@ -129,7 +129,7 @@
           "description": "The agent's prompt for this session, in place of its own.",
           "type": "string",
           "minLength": 1,
-          "maxLength": 100000
+          "maxLength": 30000
         },
         "first_message": {
           "type": "string",

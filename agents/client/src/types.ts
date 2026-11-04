@@ -120,6 +120,7 @@ export interface SessionOptions extends Callbacks {
     output?: AudioFormat;
     /** A call's microphone and speaker. Defaults to a new BrowserAudio; outside a browser, bring an AudioIO of your own. */
     audio?: AudioIO;
+    /** What your page calls this customer, kept as a label. It identifies nobody: a signed link's customer_id does. */
     userId?: string;
     /** Defaults to globalThis.WebSocket. */
     WebSocket?: WebSocketFactory;

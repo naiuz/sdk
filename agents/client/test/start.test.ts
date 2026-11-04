@@ -180,6 +180,19 @@ describe("starting from a signed link", () => {
     });
 });
 
+describe("a socket that never opens", () => {
+    test("gives up, rather than leaving the start waiting for good", async () => {
+        vi.useFakeTimers();
+        const sockets = fakeSockets();
+        const started = Conversation.startSession({signedUrl: LINK, WebSocket: sockets.factory});
+        const refused = started.catch((error: unknown) => error);
+        await vi.advanceTimersByTimeAsync(0);
+        expect(sockets.opened).toBe(1);
+        await vi.advanceTimersByTimeAsync(40_000);
+        await expect(refused).resolves.toMatchObject({name: "SessionError", code: 1006});
+    });
+});
+
 describe("how a session starts", () => {
     test.each([
         ["nothing", {}],

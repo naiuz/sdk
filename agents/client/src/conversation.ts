@@ -212,6 +212,8 @@ export class Conversation {
         const socket = new this.WebSocketClass(`${this.serverUrl}?token=${encodeURIComponent(token)}`);
         socket.binaryType = "arraybuffer";
         this.socket = socket;
+        // From here, so a socket that never opens gives up too.
+        this.watchSilence(socket);
         socket.onopen = () => {
             this.watchSilence(socket);
             this.send(this.initiation());
