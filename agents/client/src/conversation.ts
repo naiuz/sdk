@@ -405,6 +405,9 @@ export class Conversation {
             case "language_changed":
                 this.emit("onLanguageChange", {language: event.language});
                 break;
+            case "guardrail_triggered":
+                this.emit("onGuardrailTriggered", {name: event.name, action: event.action});
+                break;
             case "ping":
                 this.send({type: "pong", event_id: event.event_id});
                 break;

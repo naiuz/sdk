@@ -29,6 +29,7 @@ const CALLBACKS: readonly (keyof Callbacks)[] = [
     "onInterruption",
     "onAgentToolResponse",
     "onLanguageChange",
+    "onGuardrailTriggered",
     "onError",
 ];
 

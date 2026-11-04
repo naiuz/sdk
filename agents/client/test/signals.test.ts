@@ -137,6 +137,12 @@ describe("what the agent tells the page", () => {
         expect(calls.onLanguageChange).toEqual([[{language: "ru"}]]);
     });
 
+    test("that a check stopped a reply, by its name and what happens next", async () => {
+        const {socket, calls} = await connected();
+        socket.serverSends({type: "guardrail_triggered", name: "Chegirmalar", action: "retry"});
+        expect(calls.onGuardrailTriggered).toEqual([[{name: "Chegirmalar", action: "retry"}]]);
+    });
+
     test("that the customer spoke over a reply", async () => {
         const audio = new FakeAudio();
         const sockets = fakeSockets();
@@ -159,6 +165,14 @@ test("a recorded session with all of it replays", async () => {
     expect(sent).toEqual(clientFrames(recorded));
     expect(calls.onAgentToolResponse.map(([tool]) => tool.status)).toEqual(["running", "done"]);
     expect(calls.onLanguageChange).toEqual([[{language: "ru"}]]);
+});
+
+test("a reply a check stopped replays, withdrawn before the one that follows it", async () => {
+    const recorded = loadFixture("guardrail");
+    const {sent, calls} = await replay(recorded, {idGenerator: () => "c-1"});
+    expect(sent).toEqual(clientFrames(recorded));
+    expect(calls.onAgentResponseCorrection).toHaveLength(1);
+    expect(calls.onGuardrailTriggered).toEqual([[{name: "Chegirmalar", action: "retry"}]]);
 });
 
 describe("changing devices in a call", () => {

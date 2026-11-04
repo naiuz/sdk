@@ -64,6 +64,9 @@
           "$ref": "#/$defs/AgentResponseCorrection"
         },
         {
+          "$ref": "#/$defs/GuardrailTriggered"
+        },
+        {
           "$ref": "#/$defs/OperatorMessage"
         },
         {
@@ -1413,6 +1416,31 @@
       "required": [
         "type",
         "language"
+      ],
+      "additionalProperties": false
+    },
+    "GuardrailTriggered": {
+      "description": "A check stopped a reply. Its name is the agent's, and what it found stays on the turn's record.",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "guardrail_triggered"
+        },
+        "name": {
+          "type": "string"
+        },
+        "action": {
+          "enum": [
+            "end",
+            "retry",
+            "transfer"
+          ]
+        }
+      },
+      "required": [
+        "type",
+        "name",
+        "action"
       ],
       "additionalProperties": false
     }

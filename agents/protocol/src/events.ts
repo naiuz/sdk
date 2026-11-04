@@ -22,6 +22,7 @@ export type ServerEvent =
     | AgentChatResponsePart
     | AgentResponse
     | AgentResponseCorrection
+    | GuardrailTriggered
     | OperatorMessage
     | Handoff
     | TurnDebug
@@ -416,8 +417,15 @@ export interface LanguageChanged {
     language: LanguageCode;
 }
 
+/** A check stopped a reply. Its name is the agent's, and what it found stays on the turn's record. */
+export interface GuardrailTriggered {
+    type: "guardrail_triggered";
+    name: string;
+    action: "end" | "retry" | "transfer";
+}
+
 /** Every event type a client sends. */
 export const CLIENT_EVENT_TYPES = ["conversation_initiation_client_data", "user_message", "pong", "playback", "client_tool_result", "contextual_update", "user_activity", "feedback"] as const;
 
 /** Every event type the server sends. */
-export const SERVER_EVENT_TYPES = ["conversation_initiation_metadata", "conversation_history", "message_ack", "message_error", "user_message", "agent_typing", "agent_chat_response_part", "agent_response", "agent_response_correction", "operator_message", "handoff", "turn_debug", "ping", "conversation_ended", "error", "agent_state", "user_transcript", "audio_pause", "audio_resume", "interruption", "client_tool_call", "agent_tool_response", "language_changed"] as const;
+export const SERVER_EVENT_TYPES = ["conversation_initiation_metadata", "conversation_history", "message_ack", "message_error", "user_message", "agent_typing", "agent_chat_response_part", "agent_response", "agent_response_correction", "guardrail_triggered", "operator_message", "handoff", "turn_debug", "ping", "conversation_ended", "error", "agent_state", "user_transcript", "audio_pause", "audio_resume", "interruption", "client_tool_call", "agent_tool_response", "language_changed"] as const;

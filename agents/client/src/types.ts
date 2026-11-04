@@ -88,6 +88,8 @@ export interface Callbacks {
     onAgentToolResponse?: (tool: {toolName: string; toolType: AgentToolResponse["tool_type"]; status: AgentToolResponse["status"]}) => void;
     /** The agent moved to this language, and what it says from here on is in it. */
     onLanguageChange?: (change: {language: LanguageCode}) => void;
+    /** A check stopped a reply. `retry` means a new reply is coming; `end` and `transfer` say what happens instead. */
+    onGuardrailTriggered?: (trigger: {name: string; action: "end" | "retry" | "transfer"}) => void;
     onError?: (message: string, context: {code: string}) => void;
 }
 
