@@ -17,6 +17,33 @@ function userMessages(sent: unknown[]): string[] {
 }
 
 describe("closes that resume", () => {
+    test("a reconnect leaves the language where the conversation has moved it", async () => {
+        const {sockets} = await connected({overrides: {language: "uz", prompt: "Be brief."}});
+        expect(sockets.socket.sentJson()[0]).toMatchObject({overrides: {language: "uz", prompt: "Be brief."}});
+        sockets.socket.serverCloses(1012, "x");
+        await vi.advanceTimersByTimeAsync(250);
+        sockets.socket.open();
+        expect((sockets.socket.sentJson()[0] as {overrides: object}).overrides).toEqual({prompt: "Be brief."});
+    });
+
+    test("a page that only set the language sends no overrides on a reconnect", async () => {
+        const {sockets} = await connected({overrides: {language: "uz"}});
+        sockets.socket.serverCloses(1012, "x");
+        await vi.advanceTimersByTimeAsync(250);
+        sockets.socket.open();
+        expect(sockets.socket.sentJson()[0]).not.toHaveProperty("overrides");
+    });
+
+    test("a socket that never got its metadata still asks for the language", async () => {
+        const sockets = fakeSockets();
+        void Conversation.startSession({token: "t", WebSocket: sockets.factory, overrides: {language: "uz"}});
+        sockets.socket.open();
+        sockets.socket.serverCloses(4012, "draining");
+        await vi.advanceTimersByTimeAsync(250);
+        sockets.socket.open();
+        expect(sockets.socket.sentJson()[0]).toMatchObject({overrides: {language: "uz"}});
+    });
+
     test.each([1001, 1012, 1013])("close %i reconnects with the resume token", async (code) => {
         const {sockets, conversation} = await connected();
         sockets.socket.serverCloses(code, "x");

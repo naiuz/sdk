@@ -288,11 +288,19 @@ export class Conversation {
         socket.onerror = () => undefined;
     }
 
+    /** Whether this session has been opened on the server, so its reconnects only go on with it. */
+    private heardMetadata = false;
+
     private initiation(): ConversationInitiationClientData {
         const {dynamicVariables, overrides, userId} = this.options;
         const frame: ConversationInitiationClientData = {type: "conversation_initiation_client_data"};
         if (dynamicVariables !== undefined) frame.dynamic_variables = dynamicVariables;
-        if (overrides !== undefined) frame.overrides = protocolOverrides(overrides);
+        if (overrides !== undefined) {
+            // The language opens a conversation. Asking again on a reconnect would undo a move since.
+            const {language, ...rest} = protocolOverrides(overrides);
+            const after = this.heardMetadata ? rest : {language, ...rest};
+            if (Object.values(after).some((value) => value !== undefined)) frame.overrides = after;
+        }
         frame.text_only = this.audio === null;
         if (this.audio !== null) frame.audio = {input: "pcm_16000", output: this.options.output ?? "pcm_24000"};
         if (userId !== undefined) frame.user_id = userId;
@@ -315,6 +323,7 @@ export class Conversation {
         }
         switch (event.type) {
             case "conversation_initiation_metadata":
+                this.heardMetadata = true;
                 this.conversationId = event.conversation_id;
                 this.resumeToken = event.resume_token;
                 this.reconnects = 0;
