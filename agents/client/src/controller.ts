@@ -1,4 +1,4 @@
-import {Conversation} from "./conversation";
+import {checkContextualUpdate, checkFeedback, Conversation} from "./conversation";
 import type {Callbacks, ConversationStatus, MessageAck, Mode, SendOptions, SessionOptions, Status} from "./types";
 
 /** What a page shows of its session. A change is a new object, so a framework can compare. */
@@ -46,6 +46,8 @@ export class ConversationController {
     private starts = 0;
     /** The start still waiting for its session, which endSession() can stop. */
     private pending: number | null = null;
+    /** What the page said while a start was on its way, for the session it brings. */
+    private readonly early: ((conversation: Conversation) => boolean)[] = [];
 
     constructor(callbacks: Callbacks | (() => Callbacks) = {}) {
         this.callbacks = typeof callbacks === "function" ? callbacks : () => callbacks;
@@ -64,6 +66,7 @@ export class ConversationController {
     readonly startSession = async (options: Omit<SessionOptions, keyof Callbacks>): Promise<string> => {
         const start = ++this.starts;
         this.pending = start;
+        this.early.length = 0;
         // The session being replaced no longer reports its mode or status, so none shows until the new one has its own.
         this.change({mode: null, conversationStatus: null});
         const replaced = this.conversation;
@@ -74,6 +77,9 @@ export class ConversationController {
         let started: Conversation;
         try {
             started = await starting;
+        } catch (error) {
+            if (start === this.starts) this.early.length = 0;
+            throw error;
         } finally {
             if (this.pending === start) this.pending = null;
         }
@@ -84,6 +90,7 @@ export class ConversationController {
         }
         this.conversation = started;
         if (this.state.micMuted) started.setMicMuted(true);
+        for (const say of this.early.splice(0)) say(started);
         return started.getId();
     };
 
@@ -94,6 +101,7 @@ export class ConversationController {
             // no longer the app's.
             this.pending = null;
             this.starts++;
+            this.early.length = 0;
             this.change({status: "disconnected", mode: null, conversationStatus: null});
             this.callbacks().onStatusChange?.({status: "disconnected"});
             this.callbacks().onDisconnect?.({reason: "user"});
@@ -109,22 +117,28 @@ export class ConversationController {
     readonly dispose = (): void => {
         this.starts++;
         this.pending = null;
+        this.early.length = 0;
         void this.endSession();
+        // Nothing reports any more, so nothing else would say it's over.
+        this.change({status: "disconnected", mode: null, conversationStatus: null});
     };
 
     readonly sendUserMessage = (text: string, options?: SendOptions): Promise<MessageAck> =>
         this.conversation?.sendUserMessage(text, options) ?? Promise.reject(new Error("Start a session before sending a message."));
 
-    readonly sendContextualUpdate = (text: string, options?: {contextId?: string}): void => {
-        this.conversation?.sendContextualUpdate(text, options);
+    /** Said while a session starts, it goes out once it has: onConnect is when a page tells it where the customer is. */
+    readonly sendContextualUpdate = (text: string, options?: {contextId?: string}): boolean => {
+        checkContextualUpdate(text, options);
+        return this.whenStarted((conversation) => conversation.sendContextualUpdate(text, options));
     };
 
     readonly sendUserActivity = (): void => {
         this.conversation?.sendUserActivity();
     };
 
-    readonly sendFeedback = (eventId: number, score: "like" | "dislike" | null): void => {
-        this.conversation?.sendFeedback(eventId, score);
+    readonly sendFeedback = (eventId: number, score: "like" | "dislike" | null): boolean => {
+        checkFeedback(eventId);
+        return this.whenStarted((conversation) => conversation.sendFeedback(eventId, score));
     };
 
     readonly setMicMuted = (muted: boolean): void => {
@@ -150,6 +164,13 @@ export class ConversationController {
     readonly getId = (): string => this.conversation?.getId() ?? "";
 
     readonly getResumeToken = (): string | null => this.conversation?.getResumeToken() ?? null;
+
+    private whenStarted(say: (conversation: Conversation) => boolean): boolean {
+        if (this.conversation !== null) return say(this.conversation);
+        if (this.pending === null) return false;
+        this.early.push(say);
+        return true;
+    }
 
     private change(next: Partial<ConversationState>): void {
         this.state = {...this.state, ...next};

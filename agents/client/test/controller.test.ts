@@ -137,6 +137,49 @@ describe("starting and ending", () => {
         await starting;
         controller.dispose();
         expect(sockets.socket.readyState).toBe(3);
+        expect(controller.getSnapshot()).toMatchObject({status: "disconnected", mode: null, conversationStatus: null});
+    });
+});
+
+describe("what's said while a session starts", () => {
+    test("goes out once it has: onConnect is the moment a page tells it where the customer is", async () => {
+        const sockets = fakeSockets();
+        const controller: ConversationController = new ConversationController({
+            onConnect: () => {
+                controller.sendContextualUpdate("On checkout.", {contextId: "page"});
+            },
+        });
+        const starting = controller.startSession({token: "tok", WebSocket: sockets.factory});
+        controller.sendContextualUpdate("Logged in.", {contextId: "login"});
+        expect(controller.sendFeedback(2, "like")).toBe(true);
+        await opened(sockets, 1);
+        answer(sockets);
+        await starting;
+        expect(sockets.socket.sentJson().slice(1)).toEqual([
+            {type: "contextual_update", text: "Logged in.", context_id: "login"},
+            {type: "feedback", event_id: 2, score: "like"},
+            {type: "contextual_update", text: "On checkout.", context_id: "page"},
+        ]);
+    });
+
+    test("goes nowhere when the start fails, or to the next session", async () => {
+        const sockets = fakeSockets();
+        const controller = new ConversationController();
+        const starting = controller.startSession({token: "tok", WebSocket: sockets.factory});
+        controller.sendContextualUpdate("Logged in.");
+        await opened(sockets, 1);
+        sockets.socket.open();
+        sockets.socket.serverCloses(4001, "invalid_token");
+        await expect(starting).rejects.toThrow();
+        const again = controller.startSession({token: "tok", WebSocket: sockets.factory});
+        await opened(sockets, 2);
+        answer(sockets);
+        await again;
+        expect(sockets.socket.sentJson()).toHaveLength(1);
+    });
+
+    test("with nothing starting, says it went nowhere", () => {
+        expect(new ConversationController().sendFeedback(2, "like")).toBe(false);
     });
 });
 

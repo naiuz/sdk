@@ -33,8 +33,8 @@ conversation.sendFeedback(eventId, "like");
 ```
 
 - **`sendContextualUpdate`** interrupts nothing. The agent reads it at its next turn, as information and never as instructions. A newer update with the same `contextId` replaces the older one, and the agent keeps the last 20. Said while the connection is down, it goes out when it's back.
-- **`sendUserActivity`** says the customer is typing: a reply that hasn't started holds off for about 2 seconds, and 8 at most. In a call it puts off the silence check-in. Send it every second or so while they type.
-- **`sendFeedback`** rates a reply by the `eventId` its `onMessage` gave, with `"like"`, `"dislike"`, or `null` to take it back.
+- **`sendUserActivity`** says the customer is typing: a reply that hasn't started holds off for about 2 seconds, and 8 at most. In a call it puts off the silence check-in. Call it on every key: it goes out at most once a second.
+- **`sendFeedback`** rates a reply by the `eventId` its `onMessage` gave, with `"like"`, `"dislike"`, or `null` to take it back. It returns false once the session is over, when it can't go anywhere, so hide the thumbs then.
 - **`onAgentToolResponse`** says which tool the agent is using and how it's going, never its values or its result. **`onLanguageChange`** says it moved to another language. **`onInterruption`** says the customer spoke over a reply in a call.
 
 ## Starting a session

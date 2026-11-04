@@ -28,8 +28,8 @@ The server accepts every connection and then closes it with a [close code](#clos
 | `playback` | `event_id`, `played_ms`: milliseconds of that reply's audio played since its first frame, pauses excluded. Sent every 250 ms while it plays, once when it pauses (on `audio_pause` or `interruption`), and whenever its audio runs out, at its end or early after a stall, so the server knows what was heard |
 | `pong` | `event_id`: the id of the `ping` it answers |
 | `contextual_update` | `text`: 1 to 2,000 characters; `context_id`, optional: your own id for what it's about, `^[A-Za-z0-9_-]{1,64}$`. Something the page wants the agent to know, such as what the customer is looking at. It interrupts nothing, and the agent reads it at its next turn as information, never as instructions. A newer update with the same `context_id` replaces the older one. The agent keeps the last 20 |
-| `user_activity` | The customer is typing: a reply that hasn't started holds off for about 2 seconds, and 8 at most. In a call it puts off the silence check-in, and interrupts nothing. Send it every second or so while they type |
-| `feedback` | `event_id`: the reply's; `score`: `like`, `dislike`, or null to take it back. An `event_id` that isn't one of this conversation's replies is ignored |
+| `user_activity` | The customer is typing: a reply that hasn't started holds off for about 2 seconds, and 8 at most. In a call it puts off the silence check-in, and interrupts nothing. Send it about once a second while they type. Past a limit the rest are dropped, and a flood of them closes with 4029 |
+| `feedback` | `event_id`: the reply's; `score`: `like`, `dislike`, or null to take it back. An `event_id` that isn't one of this conversation's replies is ignored, and past a limit the rest are dropped |
 | `client_tool_result` | `tool_call_id`: the call it answers; `result`: what the tool returned, as text (JSON for anything else), at most 8,000 characters; `is_error`: true when the tool couldn't do it, `result` saying why. The first answer to a call wins |
 
 ## Server events

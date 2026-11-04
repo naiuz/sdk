@@ -69,11 +69,48 @@ describe("telling the agent something", () => {
         ]);
     });
 
-    test("feedback with no such event can't be sent", async () => {
+    test.each([0, -1, 1.5, 2 ** 53, 2 ** 63])("feedback on event %d can't be sent", async (eventId) => {
         const {conversation} = await connected();
         expect(() => {
-            conversation.sendFeedback(0, "like");
+            conversation.sendFeedback(eventId, "like");
         }).toThrow(TypeError);
+    });
+
+    test("feedback says whether it went, and after the end it can't", async () => {
+        vi.useFakeTimers();
+        const {conversation, sockets} = await connected();
+        expect(conversation.sendFeedback(2, "like")).toBe(true);
+        sockets.socket.serverCloses(1006, "");
+        expect(conversation.sendFeedback(3, "like")).toBe(true);
+        await conversation.endSession();
+        expect(conversation.sendFeedback(4, "like")).toBe(false);
+    });
+
+    test("typing is said once a second, however often the page says it", async () => {
+        vi.useFakeTimers();
+        const {conversation, socket} = await connected();
+        const typing = () => socket.sentJson().filter((frame) => (frame as {type: string}).type === "user_activity");
+        for (let key = 0; key < 60; key++) conversation.sendUserActivity();
+        expect(typing()).toHaveLength(1);
+        await vi.advanceTimersByTimeAsync(999);
+        conversation.sendUserActivity();
+        expect(typing()).toHaveLength(1);
+        await vi.advanceTimersByTimeAsync(1);
+        conversation.sendUserActivity();
+        expect(typing()).toHaveLength(2);
+    });
+
+    test("what's held for the connection's return keeps the newest", async () => {
+        vi.useFakeTimers();
+        const {conversation, sockets} = await connected();
+        sockets.socket.serverCloses(1006, "");
+        for (let page = 1; page <= 40; page++) conversation.sendContextualUpdate(`On page ${String(page)}.`);
+        await vi.advanceTimersByTimeAsync(250);
+        sockets.socket.open();
+        sockets.socket.serverSends(metadata());
+        const sent = sockets.socket.sentJson().slice(1) as {text: string}[];
+        expect(sent).toHaveLength(32);
+        expect(sent.at(-1)?.text).toBe("On page 40.");
     });
 
     test("nothing goes out once the session is over", async () => {

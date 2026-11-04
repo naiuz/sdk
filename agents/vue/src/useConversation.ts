@@ -18,11 +18,11 @@ export interface UseConversation {
     endSession(): Promise<void>;
     sendUserMessage(text: string, options?: SendOptions): Promise<MessageAck>;
     /** Tells the agent something without interrupting it, as information and never as instructions. */
-    sendContextualUpdate(text: string, options?: {contextId?: string}): void;
+    sendContextualUpdate(text: string, options?: {contextId?: string}): boolean;
     /** The customer is typing: a reply that hasn't started holds off for about 2 seconds. */
     sendUserActivity(): void;
     /** The customer's view of a reply, by its eventId. Null takes it back. */
-    sendFeedback(eventId: number, score: "like" | "dislike" | null): void;
+    sendFeedback(eventId: number, score: "like" | "dislike" | null): boolean;
     setMicMuted(muted: boolean): void;
     setVolume(options: {volume: number}): void;
     getInputVolume(): number;

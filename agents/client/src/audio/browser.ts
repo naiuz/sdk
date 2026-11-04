@@ -54,6 +54,8 @@ export class BrowserAudio implements AudioIO {
     /** The microphone stream this opened, and so must stop. */
     private opened: MediaStream | null = null;
     onInputLost: (() => void) | null = null;
+    /** Which change of microphone is the newest. */
+    private inputChanges = 0;
     private moduleUrl: string | null = null;
     private source: MediaStreamAudioSourceNode | null = null;
     private capture: AudioWorkletNode | null = null;
@@ -177,17 +179,19 @@ export class BrowserAudio implements AudioIO {
     }
 
     async changeInputDevice(deviceId: string): Promise<void> {
-        const before = this.opened;
-        const stream = await this.openMicrophone(deviceId);
-        if (this.closed) {
+        const change = ++this.inputChanges;
+        const stream = await this.askForMicrophone(deviceId);
+        // The call ended while the browser answered, or a newer pick came: only the newest stays open.
+        if (this.closed || change !== this.inputChanges) {
             for (const track of stream.getTracks()) track.stop();
             return;
         }
         this.source?.disconnect();
-        for (const track of before?.getTracks() ?? []) {
+        for (const track of this.opened?.getTracks() ?? []) {
             track.onended = null;
             track.stop();
         }
+        this.opened = stream;
         this.source = this.context.createMediaStreamSource(stream);
         if (this.capture !== null) this.source.connect(this.capture);
     }
@@ -308,7 +312,12 @@ export class BrowserAudio implements AudioIO {
         return Date.now() - this.handedOverAt < REPORT_GAP_MS;
     }
 
-    private async openMicrophone(deviceId?: string): Promise<MediaStream> {
+    private async openMicrophone(): Promise<MediaStream> {
+        this.opened = await this.askForMicrophone();
+        return this.opened;
+    }
+
+    private async askForMicrophone(deviceId?: string): Promise<MediaStream> {
         const devices = (globalThis.navigator as Navigator | undefined)?.mediaDevices;
         if (devices === undefined) throw new MicrophoneError(new TypeError("The microphone needs a secure page: https, or localhost."));
         let stream: MediaStream;
@@ -324,7 +333,6 @@ export class BrowserAudio implements AudioIO {
                 this.onInputLost?.();
             };
         }
-        this.opened = stream;
         return stream;
     }
 

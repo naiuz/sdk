@@ -25,6 +25,8 @@ const SILENCE_MS = 40_000;
 const CLIENT_MESSAGE_ID = /^[A-Za-z0-9_-]{1,64}$/;
 const MAX_TEXT_LENGTH = 10_000;
 const MAX_UPDATE_LENGTH = 2000;
+/** How often it's worth saying the customer is typing: the server's limit allows about twice this. */
+const ACTIVITY_EVERY_MS = 1000;
 /** What a session holds to say when its connection is back. */
 const MAX_HELD_FRAMES = 32;
 /** The longest client tool result the protocol takes, in characters. */
@@ -80,6 +82,7 @@ export class Conversation {
     /** This connection's side of the call, from its metadata to its close. */
     private call: Call | null = null;
     private mode: Mode | null = null;
+    private lastActivity = Number.NEGATIVE_INFINITY;
     /** Updates and feedback the page gave while the connection was down. */
     private readonly held: object[] = [];
     /** The status the last metadata gave, so a reconnect reports only a change. */
@@ -155,24 +158,32 @@ export class Conversation {
     /**
      * Tells the agent something without interrupting it, such as what the customer is looking at. It reads this at its
      * next turn, as information and never as instructions. A newer update with the same contextId replaces the older
-     * one. Said while the connection is down, it goes out when it's back.
+     * one. Said while the connection is down, it goes out when it's back. Says whether it went or will.
      */
-    sendContextualUpdate(text: string, options: {contextId?: string} = {}): void {
+    sendContextualUpdate(text: string, options: {contextId?: string} = {}): boolean {
+        checkContextualUpdate(text, options);
         const {contextId} = options;
-        if (text.length === 0 || text.length > MAX_UPDATE_LENGTH) throw new TypeError(`A contextual update takes 1 to ${String(MAX_UPDATE_LENGTH)} characters.`);
-        if (contextId !== undefined && !CLIENT_MESSAGE_ID.test(contextId)) throw new TypeError(`A contextId must match ${String(CLIENT_MESSAGE_ID)}.`);
-        this.sendWhenConnected({type: "contextual_update", text, ...(contextId === undefined ? {} : {context_id: contextId})});
+        return this.sendWhenConnected({type: "contextual_update", text, ...(contextId === undefined ? {} : {context_id: contextId})});
     }
 
-    /** The customer is typing: a reply that hasn't started holds off for about 2 seconds. Send it every second or so while they type. */
+    /**
+     * The customer is typing: a reply that hasn't started holds off for about 2 seconds. Call it on every key: it goes
+     * out at most once a second, and only while connected.
+     */
     sendUserActivity(): void {
-        if (this.currentStatus === "connected") this.send({type: "user_activity"});
+        const now = Date.now();
+        if (this.currentStatus !== "connected" || now - this.lastActivity < ACTIVITY_EVERY_MS) return;
+        this.lastActivity = now;
+        this.send({type: "user_activity"});
     }
 
-    /** The customer's view of a reply, by its eventId. Null takes it back. Said while the connection is down, it goes out when it's back. */
-    sendFeedback(eventId: number, score: "like" | "dislike" | null): void {
-        if (!Number.isInteger(eventId) || eventId < 1) throw new TypeError("Feedback rates a reply by its eventId.");
-        this.sendWhenConnected({type: "feedback", event_id: eventId, score});
+    /**
+     * The customer's view of a reply, by its eventId. Null takes it back. Said while the connection is down, it goes out
+     * when it's back. Says whether it went or will: once the session is over it can't, so hide the thumbs then.
+     */
+    sendFeedback(eventId: number, score: "like" | "dislike" | null): boolean {
+        checkFeedback(eventId);
+        return this.sendWhenConnected({type: "feedback", event_id: eventId, score});
     }
 
     /** Moves a call to this microphone without dropping it. When it can't, the call stays on the one it has. Outside a call it does nothing. */
@@ -624,13 +635,16 @@ export class Conversation {
         if (this.socket?.readyState === OPEN) this.socket.send(JSON.stringify(frame));
     }
 
-    private sendWhenConnected(frame: object): void {
-        if (this.finished || this.endedByUser) return;
+    private sendWhenConnected(frame: object): boolean {
+        if (this.finished || this.endedByUser) return false;
         if (this.currentStatus === "connected") {
             this.send(frame);
-        } else if (this.held.length < MAX_HELD_FRAMES) {
-            this.held.push(frame);
+            return true;
         }
+        // The newest matter most: they say where the customer is now.
+        if (this.held.length >= MAX_HELD_FRAMES) this.held.shift();
+        this.held.push(frame);
+        return true;
     }
 
     private later(delay: number, run: () => void): Timer {
@@ -666,6 +680,16 @@ function isValidText(text: string): boolean {
 }
 
 /** The server refuses a whole handshake over a client tool it can't take, so a bad one rejects here, by name. */
+/** A wrong argument throws here, rather than coming back later as a frame the server refused. */
+export function checkContextualUpdate(text: string, {contextId}: {contextId?: string} = {}): void {
+    if (text.length === 0 || text.length > MAX_UPDATE_LENGTH) throw new TypeError(`A contextual update takes 1 to ${String(MAX_UPDATE_LENGTH)} characters.`);
+    if (contextId !== undefined && !CLIENT_MESSAGE_ID.test(contextId)) throw new TypeError(`A contextId must match ${String(CLIENT_MESSAGE_ID)}.`);
+}
+
+export function checkFeedback(eventId: number): void {
+    if (!Number.isSafeInteger(eventId) || eventId < 1) throw new TypeError("Feedback rates a reply by its eventId.");
+}
+
 function protocolOverrides({firstMessage, textOnly, ...same}: SessionOverrides): Overrides {
     const overrides: Overrides = same;
     if (firstMessage !== undefined) overrides.first_message = firstMessage;

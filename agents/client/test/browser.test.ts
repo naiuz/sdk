@@ -664,6 +664,45 @@ describe("changing devices", () => {
         expect((next.tracks[0] as FakeTrack).stopped).toBe(true);
     });
 
+    function answering() {
+        const answers: ((stream: unknown) => void)[] = [];
+        getUserMedia.mockImplementation(() => new Promise((resolve) => {
+            answers.push(resolve);
+        }));
+        return answers;
+    }
+
+    test("of two quick picks the newest wins whichever answers first, and the other is let go", async () => {
+        const {audio, context} = await capturing();
+        const answers = answering();
+        const [first, second] = [new FakeStream(), new FakeStream()];
+        const changes = [audio.changeInputDevice("mic-a"), audio.changeInputDevice("mic-b")];
+        answers[1]?.(second);
+        await changes[1];
+        answers[0]?.(first);
+        await changes[0];
+
+        expect((first.tracks[0] as FakeTrack).stopped).toBe(true);
+        expect((second.tracks[0] as FakeTrack).stopped).toBe(false);
+        const sources = context.made.filter((node): node is FakeSource => node instanceof FakeSource);
+        expect(sources.at(-1)?.mediaStream).toBe(second);
+    });
+
+    test("two quick picks answered in order leave no microphone open after the call", async () => {
+        const {audio} = await capturing();
+        const answers = answering();
+        const [first, second] = [new FakeStream(), new FakeStream()];
+        const changes = [audio.changeInputDevice("mic-a"), audio.changeInputDevice("mic-b")];
+        answers[0]?.(first);
+        await changes[0];
+        answers[1]?.(second);
+        await changes[1];
+        await audio.close();
+
+        expect((first.tracks[0] as FakeTrack).stopped).toBe(true);
+        expect((second.tracks[0] as FakeTrack).stopped).toBe(true);
+    });
+
     test("sends the agent's voice to the chosen speaker", async () => {
         const {audio, element} = await capturing();
         await audio.changeOutputDevice("speaker-2");

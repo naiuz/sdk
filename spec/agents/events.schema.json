@@ -131,7 +131,8 @@
     "EventId": {
       "description": "Counts up per conversation, across turns.",
       "type": "integer",
-      "minimum": 1
+      "minimum": 1,
+      "maximum": 9007199254740991
     },
     "DateTime": {
       "type": "string",
