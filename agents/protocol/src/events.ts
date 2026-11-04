@@ -406,7 +406,7 @@ export interface Feedback {
 export interface AgentToolResponse {
     type: "agent_tool_response";
     tool_name: string;
-    tool_type: "system" | "webhook" | "client" | "mcp" | "integration" | "transfer";
+    tool_type: "system" | "webhook" | "client" | "mcp" | "integration" | "transition";
     status: "running" | "done" | "failed";
 }
 
