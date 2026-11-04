@@ -7383,7 +7383,24 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\n// Make it on your server. It opens one conversation, within 15 minutes.\nconst link = await client.agents.signedUrl(\"<agent-id>\", {customer_id: \"crm-42\"});\n\nconsole.log(link.signed_url);"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\n# Make it on your server. It opens one conversation, within 15 minutes.\nlink = client.agents.signed_url(\"<agent-id>\", customer_id=\"crm-42\")\n\nprint(link.signed_url)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n// Make it on your server. It opens one conversation, within 15 minutes.\n$link = $client->agents->signedUrl('<agent-id>', ['customer_id' => 'crm-42']);\n\necho $link->signed_url, PHP_EOL;"
+          }
+        ]
       }
     },
     "/v1/agents": {
@@ -7572,7 +7589,7 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or the client IP is not in its allowlist (`ip_not_allowed`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -7586,6 +7603,18 @@
                 "schema": {
                   "type": "string",
                   "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
                 }
               }
             }
@@ -7670,7 +7699,24 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nfor await (const agent of client.agents.list({status: \"published\"})) {\n    console.log(agent.id, agent.name, agent.state);\n}"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\nfor agent in client.agents.list(status=\"published\"):\n    print(agent.id, agent.name, agent.state)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\nforeach ($client->agents->list(['status' => 'published']) as $agent) {\n    echo $agent->id, ' ', $agent->name, ' ', $agent->state, PHP_EOL;\n}"
+          }
+        ]
       },
       "post": {
         "operationId": "createAgent",
@@ -7701,7 +7747,8 @@
                   },
                   "answers": {
                     "type": "object",
-                    "description": "The answers to the template's questions, by question."
+                    "description": "The answers to the template's questions, by question.",
+                    "additionalProperties": {}
                   }
                 },
                 "required": [
@@ -7713,37 +7760,6 @@
           }
         },
         "responses": {
-          "200": {
-            "description": "`CreatedAgentData`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreatedAgentData"
-                }
-              }
-            },
-            "headers": {
-              "X-Request-Id": {
-                "description": "Identifies this request. A JSON body carries it as `request_id` too; quote it to support.",
-                "schema": {
-                  "type": "string",
-                  "format": "uuid"
-                }
-              },
-              "X-RateLimit-Limit": {
-                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "X-RateLimit-Remaining": {
-                "description": "How many of them are left this minute.",
-                "schema": {
-                  "type": "integer"
-                }
-              }
-            }
-          },
           "201": {
             "description": "Success.",
             "content": {
@@ -7820,7 +7836,7 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or the client IP is not in its allowlist (`ip_not_allowed`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -7834,6 +7850,18 @@
                 "schema": {
                   "type": "string",
                   "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
                 }
               }
             }
@@ -7949,7 +7977,29 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "shell",
+            "label": "cURL",
+            "source": "curl -X POST \"https://my.neuronai.uz/api/v1/agents\" \\\n  -H \"Authorization: Bearer <your-api-key>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"template\": \"support\",\n    \"language\": \"uz\",\n    \"name\": \"Yordam\",\n    \"answers\": {\"business\": \"Bodom Mebel\"}\n  }'"
+          },
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nconst agent = await client.agents.create({\n    template: \"support\",\n    language: \"uz\",\n    name: \"Yordam\",\n    answers: {business: \"Bodom Mebel\"},\n});\n\nconsole.log(agent.id);"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\nagent = client.agents.create(\n    template=\"support\",\n    language=\"uz\",\n    name=\"Yordam\",\n    answers={\"business\": \"Bodom Mebel\"},\n)\n\nprint(agent.id)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n$agent = $client->agents->create([\n    'template' => 'support',\n    'language' => 'uz',\n    'name' => 'Yordam',\n    'answers' => ['business' => 'Bodom Mebel'],\n]);\n\necho $agent->id, PHP_EOL;"
+          }
+        ]
       }
     },
     "/v1/agents/{agent}": {
@@ -8038,7 +8088,8 @@
                           "type": "integer"
                         },
                         "config": {
-                          "type": "object"
+                          "type": "object",
+                          "additionalProperties": {}
                         }
                       },
                       "required": [
@@ -8108,7 +8159,7 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or the client IP is not in its allowlist (`ip_not_allowed`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -8122,6 +8173,18 @@
                 "schema": {
                   "type": "string",
                   "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
                 }
               }
             }
@@ -8206,7 +8269,24 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nconst agent = await client.agents.retrieve(\"<agent-id>\");\n\nconsole.log(agent.name, agent.state, agent.live_version);"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\nagent = client.agents.retrieve(\"<agent-id>\")\n\nprint(agent.name, agent.state, agent.live_version)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n$agent = $client->agents->retrieve('<agent-id>');\n\necho $agent->name, ' ', $agent->state, ' ', $agent->live_version, PHP_EOL;"
+          }
+        ]
       },
       "patch": {
         "operationId": "updateAgent",
@@ -8239,7 +8319,8 @@
                   },
                   "sections": {
                     "type": "object",
-                    "description": "The top-level sections of the config to replace."
+                    "description": "The top-level sections of the config to replace.",
+                    "additionalProperties": {}
                   }
                 },
                 "required": [
@@ -8331,7 +8412,7 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or the client IP is not in its allowlist (`ip_not_allowed`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -8345,6 +8426,18 @@
                 "schema": {
                   "type": "string",
                   "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
                 }
               }
             }
@@ -8460,7 +8553,24 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\n// Send the revision you read. Someone else's save in between answers 409.\nconst draft = await client.agents.update(\"<agent-id>\", {\n    base_revision: 8,\n    sections: {prompt: {system: \"Qisqa javob bering.\"}},\n});\n\nconsole.log(draft.revision, draft.saved_at);"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\n# Send the revision you read. Someone else's save in between answers 409.\ndraft = client.agents.update(\n    \"<agent-id>\",\n    base_revision=8,\n    sections={\"prompt\": {\"system\": \"Qisqa javob bering.\"}},\n)\n\nprint(draft.revision, draft.saved_at)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n// Send the revision you read. Someone else's save in between answers 409.\n$draft = $client->agents->update('<agent-id>', [\n    'base_revision' => 8,\n    'sections' => ['prompt' => ['system' => 'Qisqa javob bering.']],\n]);\n\necho $draft->revision, ' ', $draft->saved_at, PHP_EOL;"
+          }
+        ]
       }
     },
     "/v1/agents/{agent}/publish": {
@@ -8593,7 +8703,7 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or the client IP is not in its allowlist (`ip_not_allowed`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -8607,6 +8717,18 @@
                 "schema": {
                   "type": "string",
                   "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
                 }
               }
             }
@@ -8722,7 +8844,24 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nconst published = await client.agents.publish(\"<agent-id>\", {base_revision: 9, note: \"Shorter answers\"});\n\nconsole.log(published.state, published.live_version);"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\npublished = client.agents.publish(\"<agent-id>\", base_revision=9, note=\"Shorter answers\")\n\nprint(published.state, published.live_version)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n$published = $client->agents->publish('<agent-id>', [\n    'base_revision' => 9,\n    'note' => 'Shorter answers',\n]);\n\necho $published->state, ' ', $published->live_version, PHP_EOL;"
+          }
+        ]
       }
     },
     "/v1/conversations": {
@@ -8746,7 +8885,8 @@
                   },
                   "variables": {
                     "type": "object",
-                    "description": "Values for the agent's `{{variables}}`."
+                    "description": "Values for the agent's `{{variables}}`.",
+                    "additionalProperties": {}
                   },
                   "contact": {
                     "type": "object",
@@ -9016,7 +9156,29 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "shell",
+            "label": "cURL",
+            "source": "# Start a conversation on your own channel\ncurl -X POST \"https://my.neuronai.uz/api/v1/conversations\" \\\n  -H \"Authorization: Bearer <your-api-key>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"agent_id\": \"<agent-id>\",\n    \"contact\": {\"external_id\": \"crm-42\", \"name\": \"Dilnoza\"},\n    \"variables\": {\"plan\": \"gold\"}\n  }'\n\n# Send what the customer said. The agent's reply reaches your webhook.\ncurl -X POST \"https://my.neuronai.uz/api/v1/conversations/<conversation-id>/messages\" \\\n  -H \"Authorization: Bearer <your-api-key>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"client_message_id\": \"msg-1\", \"text\": \"Yetkazib berish bormi?\"}'"
+          },
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nconst conversation = await client.conversations.create({\n    agent_id: \"agent_01JB8Z5R4Q6Y2N7K3M9D0F1H2J\",\n    contact: {external_id: \"crm-42\", name: \"Dilnoza\", phone: \"+998901234567\"},\n    variables: {plan: \"gold\"},\n});\n\nconsole.log(conversation.id, conversation.status);"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\nconversation = client.conversations.create(\n    agent_id=\"agent_01JB8Z5R4Q6Y2N7K3M9D0F1H2J\",\n    contact={\"external_id\": \"crm-42\", \"name\": \"Dilnoza\", \"phone\": \"+998901234567\"},\n    variables={\"plan\": \"gold\"},\n)\n\nprint(conversation.id, conversation.status)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n$conversation = $client->conversations->create([\n    'agent_id' => 'agent_01JB8Z5R4Q6Y2N7K3M9D0F1H2J',\n    'contact' => ['external_id' => 'crm-42', 'name' => 'Dilnoza', 'phone' => '+998901234567'],\n    'variables' => ['plan' => 'gold'],\n]);\n\necho $conversation->id, ' ', $conversation->status, PHP_EOL;"
+          }
+        ]
       },
       "get": {
         "operationId": "listConversations",
@@ -9228,7 +9390,7 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or the client IP is not in its allowlist (`ip_not_allowed`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -9242,6 +9404,18 @@
                 "schema": {
                   "type": "string",
                   "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
                 }
               }
             }
@@ -9326,7 +9500,24 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nfor await (const conversation of client.conversations.list({agent_id: \"agent_01JB8Z5R4Q6Y2N7K3M9D0F1H2J\"})) {\n    console.log(conversation.id, conversation.status);\n}"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\nfor conversation in client.conversations.list(agent_id=\"agent_01JB8Z5R4Q6Y2N7K3M9D0F1H2J\"):\n    print(conversation.id, conversation.status)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\nforeach ($client->conversations->list(['agent_id' => 'agent_01JB8Z5R4Q6Y2N7K3M9D0F1H2J']) as $conversation) {\n    echo $conversation->id, ' ', $conversation->status, PHP_EOL;\n}"
+          }
+        ]
       }
     },
     "/v1/conversations/{conversation}/messages": {
@@ -9587,7 +9778,24 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\n// The agent's reply reaches your webhook.\nconst message = await client.conversations.messages.create(\"<conversation-id>\", {\n    client_message_id: \"msg-1\",\n    text: \"Yetkazib berish bormi?\",\n});\n\nconsole.log(message.id, message.conversation_id);"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\n# The agent's reply reaches your webhook.\nmessage = client.conversations.messages.create(\n    \"<conversation-id>\",\n    client_message_id=\"msg-1\",\n    text=\"Yetkazib berish bormi?\",\n)\n\nprint(message.id, message.conversation_id)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n// The agent's reply reaches your webhook.\n$message = $client->conversations->messages->create('<conversation-id>', [\n    'client_message_id' => 'msg-1',\n    'text' => 'Yetkazib berish bormi?',\n]);\n\necho $message->id, ' ', $message->conversation_id, PHP_EOL;"
+          }
+        ]
       },
       "get": {
         "operationId": "listConversationMessages",
@@ -9832,7 +10040,24 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nfor await (const message of client.conversations.messages.list(\"<conversation-id>\", {after: 980})) {\n    console.log(message.role, message.text);\n}"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\nfor message in client.conversations.messages.list(\"<conversation-id>\", after=980):\n    print(message.role, message.text)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\nforeach ($client->conversations->messages->list('<conversation-id>', ['after' => 980]) as $message) {\n    echo $message->role, ' ', $message->text, PHP_EOL;\n}"
+          }
+        ]
       }
     },
     "/v1/conversations/{conversation}": {
@@ -9945,7 +10170,8 @@
                           ]
                         },
                         "variables": {
-                          "type": "object"
+                          "type": "object",
+                          "additionalProperties": {}
                         },
                         "summary": {
                           "type": [
@@ -10032,7 +10258,7 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or the client IP is not in its allowlist (`ip_not_allowed`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -10046,6 +10272,18 @@
                 "schema": {
                   "type": "string",
                   "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
                 }
               }
             }
@@ -10130,7 +10368,24 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nconst conversation = await client.conversations.retrieve(\"<conversation-id>\");\n\nconsole.log(conversation.status, conversation.language);"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\nconversation = client.conversations.retrieve(\"<conversation-id>\")\n\nprint(conversation.status, conversation.language)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n$conversation = $client->conversations->retrieve('<conversation-id>');\n\necho $conversation->status, ' ', $conversation->language, PHP_EOL;"
+          }
+        ]
       }
     },
     "/v1/conversations/{conversation}/transcript": {
@@ -10263,7 +10518,7 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or the client IP is not in its allowlist (`ip_not_allowed`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -10277,6 +10532,18 @@
                 "schema": {
                   "type": "string",
                   "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
                 }
               }
             }
@@ -10361,7 +10628,24 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nconst transcript = await client.conversations.transcript(\"<conversation-id>\");\n\nfor (const message of transcript.messages) {\n    console.log(message.role, message.text);\n}"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\ntranscript = client.conversations.transcript(\"<conversation-id>\")\n\nfor message in transcript.messages:\n    print(message.role, message.text)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n$transcript = $client->conversations->transcript('<conversation-id>');\n\nforeach ($transcript->messages as $message) {\n    echo $message->role, ' ', $message->text, PHP_EOL;\n}"
+          }
+        ]
       }
     },
     "/v1/conversations/{conversation}/audio": {
@@ -10395,6 +10679,13 @@
               }
             },
             "headers": {
+              "X-Content-Type-Options": {
+                "description": "Sent as `nosniff`, so a browser plays it as what it says it is.",
+                "schema": {
+                  "type": "string",
+                  "const": "nosniff"
+                }
+              },
               "X-Request-Id": {
                 "description": "Identifies this request. A JSON body carries it as `request_id` too; quote it to support.",
                 "schema": {
@@ -10436,7 +10727,7 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or the client IP is not in its allowlist (`ip_not_allowed`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -10450,6 +10741,18 @@
                 "schema": {
                   "type": "string",
                   "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
                 }
               }
             }
@@ -10565,7 +10868,24 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nconst audio = await client.conversations.audio(\"<conversation-id>\");\n\nawait audio.save(\"conversation.ogg\");"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\naudio = client.conversations.audio(\"<conversation-id>\")\n\naudio.save(\"conversation.ogg\")"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n$audio = $client->conversations->audio('<conversation-id>');\n\n$audio->save('conversation.ogg');"
+          }
+        ]
       }
     },
     "/v1/knowledge-base": {
@@ -10840,7 +11160,7 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or the client IP is not in its allowlist (`ip_not_allowed`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -10854,6 +11174,18 @@
                 "schema": {
                   "type": "string",
                   "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
                 }
               }
             }
@@ -10938,7 +11270,24 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nconst knowledge = await client.knowledgeBase.list();\n\nfor (const doc of knowledge.documents) {\n    console.log(doc.id, doc.name, doc.status);\n}"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\nknowledge = client.knowledge_base.list()\n\nfor doc in knowledge.documents:\n    print(doc.id, doc.name, doc.status)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n$knowledge = $client->knowledgeBase->list();\n\nforeach ($knowledge->documents as $doc) {\n    echo $doc->id, ' ', $doc->name, ' ', $doc->status, PHP_EOL;\n}"
+          }
+        ]
       }
     },
     "/v1/knowledge-base/{document}": {
@@ -11193,7 +11542,7 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or the client IP is not in its allowlist (`ip_not_allowed`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -11207,6 +11556,18 @@
                 "schema": {
                   "type": "string",
                   "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
                 }
               }
             }
@@ -11291,7 +11652,24 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nconst doc = await client.knowledgeBase.retrieve(\"<document-id>\");\n\nconsole.log(doc.name, doc.status);"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\ndoc = client.knowledge_base.retrieve(\"<document-id>\")\n\nprint(doc.name, doc.status)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n$doc = $client->knowledgeBase->retrieve('<document-id>');\n\necho $doc->name, ' ', $doc->status, PHP_EOL;"
+          }
+        ]
       },
       "put": {
         "operationId": "updateDocument",
@@ -11586,7 +11964,7 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or the client IP is not in its allowlist (`ip_not_allowed`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -11600,6 +11978,18 @@
                 "schema": {
                   "type": "string",
                   "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
                 }
               }
             }
@@ -11715,7 +12105,24 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nconst doc = await client.knowledgeBase.update(\"<document-id>\", {name: \"Yangi nom\"});\n\nconsole.log(doc.name, doc.status);"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\ndoc = client.knowledge_base.update(\"<document-id>\", name=\"Yangi nom\")\n\nprint(doc.name, doc.status)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n$doc = $client->knowledgeBase->update('<document-id>', ['name' => 'Yangi nom']);\n\necho $doc->name, ' ', $doc->status, PHP_EOL;"
+          }
+        ]
       },
       "delete": {
         "operationId": "deleteDocument",
@@ -11788,7 +12195,7 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or the client IP is not in its allowlist (`ip_not_allowed`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -11802,6 +12209,18 @@
                 "schema": {
                   "type": "string",
                   "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
                 }
               }
             }
@@ -11886,7 +12305,24 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\n// detach takes it off the agents that use it first.\nawait client.knowledgeBase.delete(\"<document-id>\", {detach: true});"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\n# detach takes it off the agents that use it first.\nclient.knowledge_base.delete(\"<document-id>\", detach=True)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n// detach takes it off the agents that use it first.\n$client->knowledgeBase->delete('<document-id>', ['detach' => true]);"
+          }
+        ]
       }
     },
     "/v1/knowledge-base/text": {
@@ -11923,37 +12359,6 @@
           }
         },
         "responses": {
-          "200": {
-            "description": "`DocumentRowData`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DocumentRowData"
-                }
-              }
-            },
-            "headers": {
-              "X-Request-Id": {
-                "description": "Identifies this request. A JSON body carries it as `request_id` too; quote it to support.",
-                "schema": {
-                  "type": "string",
-                  "format": "uuid"
-                }
-              },
-              "X-RateLimit-Limit": {
-                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "X-RateLimit-Remaining": {
-                "description": "How many of them are left this minute.",
-                "schema": {
-                  "type": "integer"
-                }
-              }
-            }
-          },
           "201": {
             "description": "Success.",
             "content": {
@@ -12186,7 +12591,7 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or the client IP is not in its allowlist (`ip_not_allowed`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -12200,6 +12605,18 @@
                 "schema": {
                   "type": "string",
                   "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
                 }
               }
             }
@@ -12315,7 +12732,29 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "shell",
+            "label": "cURL",
+            "source": "curl -X POST \"https://my.neuronai.uz/api/v1/knowledge-base/text\" \\\n  -H \"Authorization: Bearer <your-api-key>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"name\": \"Yetkazib berish\", \"text\": \"Toshkent boʻylab bepul.\"}'"
+          },
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nconst doc = await client.knowledgeBase.createText({\n    name: \"Yetkazib berish\",\n    text: \"Toshkent boʻylab bepul.\",\n});\n\nconsole.log(doc.id, doc.status);"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\ndoc = client.knowledge_base.create_text(\n    name=\"Yetkazib berish\",\n    text=\"Toshkent boʻylab bepul.\",\n)\n\nprint(doc.id, doc.status)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n$doc = $client->knowledgeBase->createText([\n    'name' => 'Yetkazib berish',\n    'text' => 'Toshkent boʻylab bepul.',\n]);\n\necho $doc->id, ' ', $doc->status, PHP_EOL;"
+          }
+        ]
       }
     },
     "/v1/knowledge-base/qa": {
@@ -12366,37 +12805,6 @@
           }
         },
         "responses": {
-          "200": {
-            "description": "`DocumentRowData`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DocumentRowData"
-                }
-              }
-            },
-            "headers": {
-              "X-Request-Id": {
-                "description": "Identifies this request. A JSON body carries it as `request_id` too; quote it to support.",
-                "schema": {
-                  "type": "string",
-                  "format": "uuid"
-                }
-              },
-              "X-RateLimit-Limit": {
-                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "X-RateLimit-Remaining": {
-                "description": "How many of them are left this minute.",
-                "schema": {
-                  "type": "integer"
-                }
-              }
-            }
-          },
           "201": {
             "description": "Success.",
             "content": {
@@ -12629,7 +13037,7 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or the client IP is not in its allowlist (`ip_not_allowed`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -12643,6 +13051,18 @@
                 "schema": {
                   "type": "string",
                   "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
                 }
               }
             }
@@ -12758,7 +13178,24 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nconst doc = await client.knowledgeBase.createQa({\n    name: \"Savollar\",\n    pairs: [{question: \"Qachon?\", answer: \"Bugun.\"}],\n});\n\nconsole.log(doc.id, doc.status);"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\ndoc = client.knowledge_base.create_qa(\n    name=\"Savollar\",\n    pairs=[{\"question\": \"Qachon?\", \"answer\": \"Bugun.\"}],\n)\n\nprint(doc.id, doc.status)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n$doc = $client->knowledgeBase->createQa([\n    'name' => 'Savollar',\n    'pairs' => [['question' => 'Qachon?', 'answer' => 'Bugun.']],\n]);\n\necho $doc->id, ' ', $doc->status, PHP_EOL;"
+          }
+        ]
       }
     },
     "/v1/knowledge-base/link": {
@@ -12797,37 +13234,6 @@
           }
         },
         "responses": {
-          "200": {
-            "description": "`DocumentRowData`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DocumentRowData"
-                }
-              }
-            },
-            "headers": {
-              "X-Request-Id": {
-                "description": "Identifies this request. A JSON body carries it as `request_id` too; quote it to support.",
-                "schema": {
-                  "type": "string",
-                  "format": "uuid"
-                }
-              },
-              "X-RateLimit-Limit": {
-                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "X-RateLimit-Remaining": {
-                "description": "How many of them are left this minute.",
-                "schema": {
-                  "type": "integer"
-                }
-              }
-            }
-          },
           "201": {
             "description": "Success.",
             "content": {
@@ -13060,7 +13466,7 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or the client IP is not in its allowlist (`ip_not_allowed`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -13074,6 +13480,18 @@
                 "schema": {
                   "type": "string",
                   "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
                 }
               }
             }
@@ -13189,7 +13607,24 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nconst doc = await client.knowledgeBase.createLink({\n    url: \"https://shop.uz/delivery\",\n    crawl_scope: \"page\",\n});\n\nconsole.log(doc.id, doc.status);"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\ndoc = client.knowledge_base.create_link(url=\"https://shop.uz/delivery\", crawl_scope=\"page\")\n\nprint(doc.id, doc.status)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n$doc = $client->knowledgeBase->createLink([\n    'url' => 'https://shop.uz/delivery',\n    'crawl_scope' => 'page',\n]);\n\necho $doc->id, ' ', $doc->status, PHP_EOL;"
+          }
+        ]
       }
     },
     "/v1/knowledge-base/file": {
@@ -13209,7 +13644,7 @@
                   "file": {
                     "type": "string",
                     "format": "binary",
-                    "description": "The file."
+                    "description": "A PDF, DOCX, TXT, XLSX or CSV file. At most 20 MB."
                   },
                   "name": {
                     "type": "string",
@@ -13224,37 +13659,6 @@
           }
         },
         "responses": {
-          "200": {
-            "description": "`DocumentRowData`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DocumentRowData"
-                }
-              }
-            },
-            "headers": {
-              "X-Request-Id": {
-                "description": "Identifies this request. A JSON body carries it as `request_id` too; quote it to support.",
-                "schema": {
-                  "type": "string",
-                  "format": "uuid"
-                }
-              },
-              "X-RateLimit-Limit": {
-                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "X-RateLimit-Remaining": {
-                "description": "How many of them are left this minute.",
-                "schema": {
-                  "type": "integer"
-                }
-              }
-            }
-          },
           "201": {
             "description": "Success.",
             "content": {
@@ -13487,7 +13891,7 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or the client IP is not in its allowlist (`ip_not_allowed`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -13501,6 +13905,18 @@
                 "schema": {
                   "type": "string",
                   "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
                 }
               }
             }
@@ -13616,7 +14032,24 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\nimport {readFile} from \"node:fs/promises\";\n\nconst client = new NeuronAI();\n\nconst doc = await client.knowledgeBase.createFile({\n    name: \"Narxlar\",\n    file: {data: await readFile(\"prices.pdf\"), filename: \"prices.pdf\"},\n});\n\nconsole.log(doc.id, doc.status);"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\ndoc = client.knowledge_base.create_file(name=\"Narxlar\", file=\"prices.pdf\")\n\nprint(doc.id, doc.status)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n$doc = $client->knowledgeBase->createFile(['name' => 'Narxlar', 'file' => 'prices.pdf']);\n\necho $doc->id, ' ', $doc->status, PHP_EOL;"
+          }
+        ]
       }
     },
     "/v1/knowledge-base/{document}/refresh": {
@@ -13683,7 +14116,7 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or the client IP is not in its allowlist (`ip_not_allowed`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -13697,6 +14130,18 @@
                 "schema": {
                   "type": "string",
                   "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
                 }
               }
             }
@@ -13781,7 +14226,24 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\n// It's read again in the background.\nawait client.knowledgeBase.refresh(\"<document-id>\");"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\n# It's read again in the background.\nclient.knowledge_base.refresh(\"<document-id>\")"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n// It's read again in the background.\n$client->knowledgeBase->refresh('<document-id>');"
+          }
+        ]
       }
     },
     "/v1/tools": {
@@ -13945,7 +14407,7 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or the client IP is not in its allowlist (`ip_not_allowed`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -13959,6 +14421,18 @@
                 "schema": {
                   "type": "string",
                   "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
                 }
               }
             }
@@ -14043,7 +14517,24 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nfor await (const tool of client.tools.list()) {\n    console.log(tool.id, tool.name);\n}"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\nfor tool in client.tools.list():\n    print(tool.id, tool.name)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\nforeach ($client->tools->list() as $tool) {\n    echo $tool->id, ' ', $tool->name, PHP_EOL;\n}"
+          }
+        ]
       },
       "post": {
         "operationId": "createTool",
@@ -14075,7 +14566,8 @@
                   },
                   "config": {
                     "type": "object",
-                    "description": "What it calls, with its parameters."
+                    "description": "What it calls, with its parameters.",
+                    "additionalProperties": {}
                   },
                   "last_test_status": {
                     "type": "string",
@@ -14093,37 +14585,6 @@
           }
         },
         "responses": {
-          "200": {
-            "description": "`ToolData`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ToolData"
-                }
-              }
-            },
-            "headers": {
-              "X-Request-Id": {
-                "description": "Identifies this request. A JSON body carries it as `request_id` too; quote it to support.",
-                "schema": {
-                  "type": "string",
-                  "format": "uuid"
-                }
-              },
-              "X-RateLimit-Limit": {
-                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "X-RateLimit-Remaining": {
-                "description": "How many of them are left this minute.",
-                "schema": {
-                  "type": "integer"
-                }
-              }
-            }
-          },
           "201": {
             "description": "Success.",
             "content": {
@@ -14147,7 +14608,8 @@
                           "type": "string"
                         },
                         "config": {
-                          "type": "object"
+                          "type": "object",
+                          "additionalProperties": {}
                         },
                         "last_test_at": {
                           "type": [
@@ -14270,7 +14732,7 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or the client IP is not in its allowlist (`ip_not_allowed`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -14284,6 +14746,18 @@
                 "schema": {
                   "type": "string",
                   "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
                 }
               }
             }
@@ -14399,7 +14873,29 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "shell",
+            "label": "cURL",
+            "source": "curl -X POST \"https://my.neuronai.uz/api/v1/tools\" \\\n  -H \"Authorization: Bearer <your-api-key>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"kind\": \"webhook\",\n    \"name\": \"check_order\",\n    \"description\": \"Finds an order by its number.\",\n    \"config\": {\"method\": \"GET\", \"url\": \"https://api.shop.uz/orders\", \"timeout_s\": 20}\n  }'"
+          },
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nconst tool = await client.tools.create({\n    kind: \"webhook\",\n    name: \"check_order\",\n    description: \"Finds an order by its number.\",\n    config: {method: \"GET\", url: \"https://api.shop.uz/orders\", timeout_s: 20},\n});\n\nconsole.log(tool.id, tool.name);"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\ntool = client.tools.create(\n    kind=\"webhook\",\n    name=\"check_order\",\n    description=\"Finds an order by its number.\",\n    config={\"method\": \"GET\", \"url\": \"https://api.shop.uz/orders\", \"timeout_s\": 20},\n)\n\nprint(tool.id, tool.name)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n$tool = $client->tools->create([\n    'kind' => 'webhook',\n    'name' => 'check_order',\n    'description' => 'Finds an order by its number.',\n    'config' => ['method' => 'GET', 'url' => 'https://api.shop.uz/orders', 'timeout_s' => 20],\n]);\n\necho $tool->id, ' ', $tool->name, PHP_EOL;"
+          }
+        ]
       }
     },
     "/v1/tools/{tool}": {
@@ -14445,7 +14941,8 @@
                           "type": "string"
                         },
                         "config": {
-                          "type": "object"
+                          "type": "object",
+                          "additionalProperties": {}
                         },
                         "last_test_at": {
                           "type": [
@@ -14568,7 +15065,7 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or the client IP is not in its allowlist (`ip_not_allowed`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -14582,6 +15079,18 @@
                 "schema": {
                   "type": "string",
                   "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
                 }
               }
             }
@@ -14666,7 +15175,24 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nconst tool = await client.tools.retrieve(\"<tool-id>\");\n\nconsole.log(tool.name, tool.target);"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\ntool = client.tools.retrieve(\"<tool-id>\")\n\nprint(tool.name, tool.target)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n$tool = $client->tools->retrieve('<tool-id>');\n\necho $tool->name, ' ', $tool->target, PHP_EOL;"
+          }
+        ]
       },
       "put": {
         "operationId": "updateTool",
@@ -14709,7 +15235,8 @@
                   },
                   "config": {
                     "type": "object",
-                    "description": "What it calls, with its parameters."
+                    "description": "What it calls, with its parameters.",
+                    "additionalProperties": {}
                   },
                   "last_test_status": {
                     "type": "string",
@@ -14750,7 +15277,8 @@
                           "type": "string"
                         },
                         "config": {
-                          "type": "object"
+                          "type": "object",
+                          "additionalProperties": {}
                         },
                         "last_test_at": {
                           "type": [
@@ -14873,7 +15401,7 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or the client IP is not in its allowlist (`ip_not_allowed`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -14887,6 +15415,18 @@
                 "schema": {
                   "type": "string",
                   "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
                 }
               }
             }
@@ -15002,7 +15542,24 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nconst tool = await client.tools.update(\"<tool-id>\", {\n    kind: \"webhook\",\n    name: \"check_order\",\n    description: \"Finds an order by its number.\",\n    config: {method: \"GET\", url: \"https://api.shop.uz/orders\", timeout_s: 20},\n});\n\nconsole.log(tool.name, tool.target);"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\ntool = client.tools.update(\n    \"<tool-id>\",\n    kind=\"webhook\",\n    name=\"check_order\",\n    description=\"Finds an order by its number.\",\n    config={\"method\": \"GET\", \"url\": \"https://api.shop.uz/orders\", \"timeout_s\": 20},\n)\n\nprint(tool.name, tool.target)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n$tool = $client->tools->update('<tool-id>', [\n    'kind' => 'webhook',\n    'name' => 'check_order',\n    'description' => 'Finds an order by its number.',\n    'config' => ['method' => 'GET', 'url' => 'https://api.shop.uz/orders', 'timeout_s' => 20],\n]);\n\necho $tool->name, ' ', $tool->target, PHP_EOL;"
+          }
+        ]
       },
       "delete": {
         "operationId": "deleteTool",
@@ -15075,7 +15632,7 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or the client IP is not in its allowlist (`ip_not_allowed`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -15089,6 +15646,18 @@
                 "schema": {
                   "type": "string",
                   "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
                 }
               }
             }
@@ -15173,7 +15742,24 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\n// detach takes it off the agents that use it first.\nawait client.tools.delete(\"<tool-id>\", {detach: true});"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\n# detach takes it off the agents that use it first.\nclient.tools.delete(\"<tool-id>\", detach=True)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n// detach takes it off the agents that use it first.\n$client->tools->delete('<tool-id>', ['detach' => true]);"
+          }
+        ]
       }
     },
     "/v1/webhooks": {
@@ -15323,7 +15909,7 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or the client IP is not in its allowlist (`ip_not_allowed`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -15337,6 +15923,18 @@
                 "schema": {
                   "type": "string",
                   "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
                 }
               }
             }
@@ -15421,7 +16019,24 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nfor await (const endpoint of client.webhooks.list()) {\n    console.log(endpoint.id, endpoint.url, endpoint.status);\n}"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\nfor endpoint in client.webhooks.list():\n    print(endpoint.id, endpoint.url, endpoint.status)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\nforeach ($client->webhooks->list() as $endpoint) {\n    echo $endpoint->id, ' ', $endpoint->url, ' ', $endpoint->status, PHP_EOL;\n}"
+          }
+        ]
       },
       "post": {
         "operationId": "createWebhookEndpoint",
@@ -15458,37 +16073,6 @@
           }
         },
         "responses": {
-          "200": {
-            "description": "`CreatedWebhookEndpointData`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreatedWebhookEndpointData"
-                }
-              }
-            },
-            "headers": {
-              "X-Request-Id": {
-                "description": "Identifies this request. A JSON body carries it as `request_id` too; quote it to support.",
-                "schema": {
-                  "type": "string",
-                  "format": "uuid"
-                }
-              },
-              "X-RateLimit-Limit": {
-                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
-                "schema": {
-                  "type": "integer"
-                }
-              },
-              "X-RateLimit-Remaining": {
-                "description": "How many of them are left this minute.",
-                "schema": {
-                  "type": "integer"
-                }
-              }
-            }
-          },
           "201": {
             "description": "Success.",
             "content": {
@@ -15629,7 +16213,7 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or the client IP is not in its allowlist (`ip_not_allowed`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -15643,6 +16227,18 @@
                 "schema": {
                   "type": "string",
                   "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
                 }
               }
             }
@@ -15758,7 +16354,29 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "shell",
+            "label": "cURL",
+            "source": "# The answer's secret signs every event, and you only see it now.\ncurl -X POST \"https://my.neuronai.uz/api/v1/webhooks\" \\\n  -H \"Authorization: Bearer <your-api-key>\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"url\": \"https://shop.uz/hooks/neuronai\", \"events\": [\"conversation.message.created\", \"conversation.ended\"]}'"
+          },
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\n// The secret signs every event, and you only see it now.\nconst created = await client.webhooks.create({\n    url: \"https://shop.uz/hooks/neuronai\",\n    events: [\"conversation.ended\"],\n});\n\nconsole.log(created.endpoint.id, created.secret);"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\n# The secret signs every event, and you only see it now.\ncreated = client.webhooks.create(\n    url=\"https://shop.uz/hooks/neuronai\",\n    events=[\"conversation.ended\"],\n)\n\nprint(created.endpoint.id, created.secret)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n// The secret signs every event, and you only see it now.\n$created = $client->webhooks->create([\n    'url' => 'https://shop.uz/hooks/neuronai',\n    'events' => ['conversation.ended'],\n]);\n\necho $created->endpoint->id, ' ', $created->secret, PHP_EOL;"
+          }
+        ]
       }
     },
     "/v1/webhooks/{endpoint}": {
@@ -15909,7 +16527,7 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or the client IP is not in its allowlist (`ip_not_allowed`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -15923,6 +16541,18 @@
                 "schema": {
                   "type": "string",
                   "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
                 }
               }
             }
@@ -16007,7 +16637,24 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nconst endpoint = await client.webhooks.retrieve(\"<endpoint-id>\");\n\nconsole.log(endpoint.url, endpoint.status);"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\nendpoint = client.webhooks.retrieve(\"<endpoint-id>\")\n\nprint(endpoint.url, endpoint.status)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n$endpoint = $client->webhooks->retrieve('<endpoint-id>');\n\necho $endpoint->url, ' ', $endpoint->status, PHP_EOL;"
+          }
+        ]
       },
       "patch": {
         "operationId": "updateWebhookEndpoint",
@@ -16182,7 +16829,7 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or the client IP is not in its allowlist (`ip_not_allowed`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -16196,6 +16843,18 @@
                 "schema": {
                   "type": "string",
                   "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
                 }
               }
             }
@@ -16311,7 +16970,24 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nconst endpoint = await client.webhooks.update(\"<endpoint-id>\", {enabled: false});\n\nconsole.log(endpoint.url, endpoint.status);"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\nendpoint = client.webhooks.update(\"<endpoint-id>\", enabled=False)\n\nprint(endpoint.url, endpoint.status)"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n$endpoint = $client->webhooks->update('<endpoint-id>', ['enabled' => false]);\n\necho $endpoint->url, ' ', $endpoint->status, PHP_EOL;"
+          }
+        ]
       },
       "delete": {
         "operationId": "deleteWebhookEndpoint",
@@ -16376,7 +17052,7 @@
             }
           },
           "403": {
-            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or the client IP is not in its allowlist (`ip_not_allowed`).",
+            "description": "The key lacks the permission this endpoint needs (`insufficient_permissions`), or its owner may not do this, or is no longer in the key's organization (`forbidden`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -16390,6 +17066,18 @@
                 "schema": {
                   "type": "string",
                   "format": "uuid"
+                }
+              },
+              "X-RateLimit-Limit": {
+                "description": "The requests a minute the rate limit on this endpoint allows. Sent once the limit has counted the request, so not when the key itself is refused.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "description": "How many of them are left this minute.",
+                "schema": {
+                  "type": "integer"
                 }
               }
             }
@@ -16474,7 +17162,24 @@
               }
             }
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "typescript",
+            "label": "TypeScript SDK",
+            "source": "import {NeuronAI} from \"@naiuz/sdk\";\n\nconst client = new NeuronAI();\n\nawait client.webhooks.delete(\"<endpoint-id>\");"
+          },
+          {
+            "lang": "python",
+            "label": "Python SDK",
+            "source": "from naiuz import NeuronAI\n\nclient = NeuronAI()\n\nclient.webhooks.delete(\"<endpoint-id>\")"
+          },
+          {
+            "lang": "php",
+            "label": "PHP SDK",
+            "source": "$client = new \\Naiuz\\NeuronAI();\n\n$client->webhooks->delete('<endpoint-id>');"
+          }
+        ]
       }
     }
   },
@@ -16685,47 +17390,6 @@
           "in_call"
         ],
         "title": "ConversationStatus"
-      },
-      "CrawlScope": {
-        "type": "string",
-        "description": "How much of a website to read: the site, up to 50 pages, or the one page.\n",
-        "enum": [
-          "site",
-          "page"
-        ],
-        "title": "CrawlScope"
-      },
-      "CreateAgentRequest": {
-        "type": "object",
-        "description": "The create flow: a template, the agent's main language, and the answers to its questions.",
-        "properties": {
-          "template": {
-            "type": "string",
-            "maxLength": 64
-          },
-          "language": {
-            "type": "string",
-            "maxLength": 3
-          },
-          "name": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "maxLength": 100
-          },
-          "answers": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
-        "required": [
-          "template",
-          "language"
-        ],
-        "title": "CreateAgentRequest"
       },
       "CreateApiKeyRequest": {
         "type": "object",
@@ -17092,100 +17756,6 @@
         ],
         "title": "CreateVoiceRequest"
       },
-      "CreatedAgentData": {
-        "type": "object",
-        "additionalProperties": {},
-        "title": "CreatedAgentData"
-      },
-      "CreatedWebhookEndpointData": {
-        "type": "object",
-        "additionalProperties": {},
-        "title": "CreatedWebhookEndpointData"
-      },
-      "DocumentFileRequest": {
-        "type": "object",
-        "description": "A file for the library. Here it's judged by its extension and size; the engine reads its content.",
-        "properties": {
-          "file": {
-            "type": "string",
-            "format": "binary",
-            "contentMediaType": "application/octet-stream",
-            "description": "At most 20 MB."
-          },
-          "name": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "maxLength": 255
-          }
-        },
-        "required": [
-          "file"
-        ],
-        "title": "DocumentFileRequest"
-      },
-      "DocumentLinkRequest": {
-        "type": "object",
-        "description": "A website or a Google file, by its address. Reaching it is the engine's, through its egress guard.",
-        "properties": {
-          "url": {
-            "type": "string",
-            "format": "uri",
-            "maxLength": 2048
-          },
-          "crawl_scope": {
-            "$ref": "#/components/schemas/CrawlScope"
-          },
-          "name": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "maxLength": 255
-          }
-        },
-        "required": [
-          "url"
-        ],
-        "title": "DocumentLinkRequest"
-      },
-      "DocumentPairsRequest": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "maxLength": 255
-          }
-        },
-        "required": [
-          "name"
-        ],
-        "title": "DocumentPairsRequest"
-      },
-      "DocumentRowData": {
-        "type": "object",
-        "additionalProperties": {},
-        "title": "DocumentRowData"
-      },
-      "DocumentTextRequest": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "maxLength": 255
-          },
-          "text": {
-            "type": "string",
-            "maxLength": 300000
-          }
-        },
-        "required": [
-          "name",
-          "text"
-        ],
-        "title": "DocumentTextRequest"
-      },
       "ErrorCode": {
         "type": "string",
         "description": "A stable, machine-readable code. The Errors page says what each one means.",
@@ -17334,26 +17904,6 @@
         ],
         "title": "ErrorEnvelope"
       },
-      "PublishAgentRequest": {
-        "type": "object",
-        "properties": {
-          "base_revision": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "note": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "maxLength": 140
-          }
-        },
-        "required": [
-          "base_revision"
-        ],
-        "title": "PublishAgentRequest"
-      },
       "ReplaceVoiceAudioRequest": {
         "type": "object",
         "description": "POST /v1/tts/voices/{id}/audio: a new reference sample, multipart, and\noptionally its transcript. It uses the same formats and size limit as\ncreating a clone.",
@@ -17411,155 +17961,6 @@
           "documents"
         ],
         "title": "RerankRequest"
-      },
-      "SaveDraftRequest": {
-        "type": "object",
-        "description": "An editor save: whole top-level sections, over the revision it started from.",
-        "properties": {
-          "base_revision": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "sections": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "minItems": 1
-          }
-        },
-        "required": [
-          "base_revision",
-          "sections"
-        ],
-        "title": "SaveDraftRequest"
-      },
-      "SaveToolRequest": {
-        "type": "object",
-        "description": "A tool as the editor sends it. Its shape is checked here; what the shape\ncan't say, ToolConfigRules checks against the organization.",
-        "properties": {
-          "kind": {
-            "type": "string",
-            "enum": [
-              "webhook",
-              "client"
-            ]
-          },
-          "name": {
-            "type": "string",
-            "maxLength": 64
-          },
-          "description": {
-            "type": "string",
-            "maxLength": 1000
-          },
-          "config": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "minItems": 1
-          },
-          "last_test_status": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "The test this very config passed in the sheet, before it was saved.",
-            "enum": [
-              "ok",
-              "error",
-              "timeout",
-              "rejected",
-              null
-            ]
-          }
-        },
-        "required": [
-          "kind",
-          "name",
-          "description",
-          "config"
-        ],
-        "title": "SaveToolRequest"
-      },
-      "SendConversationMessageRequest": {
-        "type": "object",
-        "properties": {
-          "client_message_id": {
-            "type": "string",
-            "pattern": "^[A-Za-z0-9_-]{1,64}$"
-          },
-          "text": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 10000
-          }
-        },
-        "required": [
-          "client_message_id",
-          "text"
-        ],
-        "title": "SendConversationMessageRequest"
-      },
-      "StartConversationRequest": {
-        "type": "object",
-        "properties": {
-          "agent_id": {
-            "type": "string",
-            "pattern": "^agent_[0-9A-HJKMNP-TV-Z]{26}$"
-          },
-          "variables": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "contact": {
-            "type": "object",
-            "properties": {
-              "external_id": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 128
-              },
-              "name": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 255
-              },
-              "phone": {
-                "type": "string",
-                "pattern": "^\\+?[0-9][0-9 ()-]{4,30}$"
-              }
-            }
-          }
-        },
-        "required": [
-          "agent_id"
-        ],
-        "title": "StartConversationRequest"
-      },
-      "StoreWebhookEndpointRequest": {
-        "type": "object",
-        "properties": {
-          "url": {
-            "type": "string",
-            "maxLength": 2048
-          },
-          "events": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/WebhookEvent"
-            },
-            "minItems": 1
-          }
-        },
-        "required": [
-          "url",
-          "events"
-        ],
-        "title": "StoreWebhookEndpointRequest"
       },
       "SynthesizeDialogueRequest": {
         "type": "object",
@@ -17816,11 +18217,6 @@
           "text"
         ],
         "title": "SynthesizeSpeechRequest"
-      },
-      "ToolData": {
-        "type": "object",
-        "additionalProperties": {},
-        "title": "ToolData"
       },
       "Transcription": {
         "type": "object",
@@ -18101,46 +18497,6 @@
         },
         "title": "UpdateApiKeyRequest"
       },
-      "UpdateDocumentRequest": {
-        "type": "object",
-        "description": "What can change in place: the name, and what each kind holds.",
-        "properties": {
-          "name": {
-            "type": "string",
-            "maxLength": 255
-          },
-          "text": {
-            "type": "string",
-            "maxLength": 300000
-          },
-          "crawl_scope": {
-            "$ref": "#/components/schemas/CrawlScope"
-          },
-          "pairs": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "question": {
-                  "type": "string",
-                  "maxLength": 1000
-                },
-                "answer": {
-                  "type": "string",
-                  "maxLength": 4900
-                }
-              },
-              "required": [
-                "question",
-                "answer"
-              ]
-            },
-            "minItems": 1,
-            "maxItems": 2000
-          }
-        },
-        "title": "UpdateDocumentRequest"
-      },
       "UpdateVoiceRequest": {
         "type": "object",
         "description": "The fields to change, as JSON; every one is optional. A new reference clip\ngoes through `POST /v1/tts/voices/{id}/audio` instead.",
@@ -18210,27 +18566,6 @@
         },
         "title": "UpdateVoiceRequest"
       },
-      "UpdateWebhookEndpointRequest": {
-        "type": "object",
-        "description": "Only what's sent changes.",
-        "properties": {
-          "url": {
-            "type": "string",
-            "maxLength": 2048
-          },
-          "enabled": {
-            "type": "boolean"
-          },
-          "events": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/WebhookEvent"
-            },
-            "minItems": 1
-          }
-        },
-        "title": "UpdateWebhookEndpointRequest"
-      },
       "Voice": {
         "type": "object",
         "properties": {
@@ -18295,15 +18630,6 @@
           "educational"
         ],
         "title": "VoiceCategory"
-      },
-      "WebhookEvent": {
-        "type": "string",
-        "description": "What an organization's webhook endpoints can ask to hear of.\n",
-        "enum": [
-          "conversation.message.created",
-          "conversation.ended"
-        ],
-        "title": "WebhookEvent"
       }
     }
   }

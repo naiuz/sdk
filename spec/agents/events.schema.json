@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/naiuz/sdk/spec/agents/events.schema.json",
-  "title": "NeuronAI agents protocol 0.2",
+  "title": "NeuronAI agents protocol 0.3",
   "description": "The events of the agents WebSocket protocol. protocol.md describes how they are used.",
   "$defs": {
     "ClientEvent": {
