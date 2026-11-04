@@ -87,7 +87,7 @@ export interface Callbacks {
 
 /** What a session may change about its agent, each only when the agent allows it. */
 export interface SessionOverrides {
-    /** Added to the agent's prompt for this session. */
+    /** The agent's prompt for this session, in place of its own. */
     prompt?: string;
     firstMessage?: string;
     language?: LanguageCode;

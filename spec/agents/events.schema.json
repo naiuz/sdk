@@ -126,7 +126,7 @@
       "type": "object",
       "properties": {
         "prompt": {
-          "description": "Added to the agent's prompt for this session.",
+          "description": "The agent's prompt for this session, in place of its own.",
           "type": "string",
           "minLength": 1,
           "maxLength": 100000

@@ -48,7 +48,7 @@ export type EventId = number;
 export type DateTime = string;
 
 export interface Overrides {
-    /** Added to the agent's prompt for this session. */
+    /** The agent's prompt for this session, in place of its own. */
     prompt?: string;
     first_message?: string;
     language?: LanguageCode;
