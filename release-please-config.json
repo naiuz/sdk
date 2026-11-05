@@ -59,6 +59,13 @@
       "extra-files": [
         {"type": "json", "path": "/agents/package-lock.json", "jsonpath": "$.packages.vue.version"}
       ]
+    },
+    "agents/react": {
+      "release-type": "node",
+      "component": "agents-react",
+      "extra-files": [
+        {"type": "json", "path": "/agents/package-lock.json", "jsonpath": "$.packages.react.version"}
+      ]
     }
   }
 }

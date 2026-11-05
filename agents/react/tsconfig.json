@@ -1,0 +1,8 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    // The client's source, as the tests use it: one Conversation for the hook and the fakes.
+    "paths": {"@naiuz/agents": ["../client/src/index.ts"], "@naiuz/agents/orb": ["../client/src/orb/index.ts"]}
+  },
+  "include": ["src", "test", "tsup.config.ts", "vitest.config.ts"]
+}

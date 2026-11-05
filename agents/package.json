@@ -2,14 +2,15 @@
   "name": "@naiuz/agents-workspace",
   "private": true,
   "type": "module",
-  "description": "The agents packages: the protocol's types, the client, and the Vue package.",
+  "description": "The agents packages: the protocol's types, the client, and the Vue and React packages.",
   "engines": {
     "node": ">=20"
   },
   "workspaces": [
     "protocol",
     "client",
-    "vue"
+    "vue",
+    "react"
   ],
   "scripts": {
     "build": "npm run build --workspaces",
@@ -21,7 +22,12 @@
   "devDependencies": {
     "@eslint/js": "^9.39.5",
     "@types/node": "^20.19.43",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-vue": "^6.0.10",
     "eslint": "^9.39.5",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
     "tsup": "^8.5.1",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.71.0",

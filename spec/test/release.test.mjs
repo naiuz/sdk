@@ -32,6 +32,7 @@ test("release-please gives each SDK and agents package its own release pull requ
     assert.deepEqual(packages, [
         ["js", "node", "js"], ["python", "python", "python"], ["php", "php", "php"],
         ["agents/protocol", "node", "agents-protocol"], ["agents/client", "node", "agents"], ["agents/vue", "node", "agents-vue"],
+        ["agents/react", "node", "agents-react"],
     ]);
     // Each changelog is CHANGELOG.md in the SDK's own folder, release-please's default.
     for (const options of Object.values(config.packages)) assert.equal(options["changelog-path"], undefined);
@@ -57,7 +58,7 @@ test("an agents package not yet released holds the first version, and takes its 
     const config = await json("release-please-config.json");
     const manifest = await json(".release-please-manifest.json");
     const lock = await json("agents/package-lock.json");
-    for (const path of ["agents/protocol", "agents/client", "agents/vue"]) {
+    for (const path of ["agents/protocol", "agents/client", "agents/vue", "agents/react"]) {
         const own = await json(`${path}/package.json`);
         assert.equal(own.version, manifest[path] ?? config["initial-version"], path);
         assert.equal(lock.packages[path.replace("agents/", "")].version, own.version, `${path} in agents/package-lock.json`);
@@ -66,12 +67,13 @@ test("an agents package not yet released holds the first version, and takes its 
     // breaking change bumps the minor version, and the package above has to change with it anyway.
     assert.equal((await json("agents/client/package.json")).dependencies["@naiuz/agents-protocol"], "^0.1.0");
     assert.equal((await json("agents/vue/package.json")).dependencies["@naiuz/agents"], "^0.1.0");
+    assert.equal((await json("agents/react/package.json")).dependencies["@naiuz/agents"], "^0.1.0");
     assert.equal(config.plugins, undefined);
 });
 
 test("a release of an agents package moves its version in the workspace's lock too", async () => {
     const config = await json("release-please-config.json");
-    for (const [path, folder] of [["agents/protocol", "protocol"], ["agents/client", "client"], ["agents/vue", "vue"]]) {
+    for (const [path, folder] of [["agents/protocol", "protocol"], ["agents/client", "client"], ["agents/vue", "vue"], ["agents/react", "react"]]) {
         // A path from the repository's root, since the lock sits above the package's folder.
         assert.deepEqual(
             config.packages[path]["extra-files"],

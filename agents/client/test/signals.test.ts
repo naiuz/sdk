@@ -178,7 +178,7 @@ test("a transfer replays, with the new agent's reply after the move", async () =
     const {sent, calls} = await replay(recorded, {idGenerator: () => "c-1"});
     expect(sent).toEqual(clientFrames(recorded));
     expect(calls.onAgentTransferred).toEqual([[{agentId: "agent_01JB8Z5R4Q6Y2N7K3M9D0F1H2J", agentName: "Yordam"}]]);
-    expect(calls.onMessage?.at(-1)?.[0]).toMatchObject({source: "ai", message: "Yetkazib berish ertaga boʻladi."});
+    expect(calls.onMessage.at(-1)?.[0]).toMatchObject({source: "ai", message: "Yetkazib berish ertaga boʻladi."});
 });
 
 test("a reply a check stopped replays, withdrawn before the one that follows it", async () => {
