@@ -238,3 +238,12 @@ describe("changing devices in a call", () => {
         expect(conversation.status).toBe("connected");
     });
 });
+
+test("a quoted message says what it answers, and an operator's typing and reply reach their callbacks", async () => {
+    const recorded = loadFixture("operator-reply");
+    const {sent, calls} = await replay(recorded, {idGenerator: () => "c-1"});
+    expect(sent).toEqual(clientFrames(recorded));
+    const operator = {name: "Dilshod", avatar_url: "https://cdn.neuronai.uz/avatars/dilshod.png"};
+    expect(calls.onOperatorTyping).toEqual([[{operator}]]);
+    expect(calls.onMessage.at(-1)?.[0]).toEqual({source: "operator", message: "Tekshirib koʻraman.", eventId: 2, operator, messageId: 42});
+});

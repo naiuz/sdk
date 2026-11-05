@@ -25,6 +25,7 @@ export type ServerEvent =
     | GuardrailTriggered
     | AgentTransferred
     | OperatorMessage
+    | OperatorTyping
     | Handoff
     | TurnDebug
     | Ping
@@ -141,6 +142,8 @@ export interface ClientUserMessage {
     type: "user_message";
     client_message_id: ClientMessageId;
     text: string;
+    /** The stored message this one answers, in the same conversation. Anything else is ignored. */
+    reply_to_message_id?: MessageId;
 }
 
 /** The answer to a ping. */
@@ -225,6 +228,14 @@ export interface OperatorMessage {
     type: "operator_message";
     event_id: EventId;
     text: string;
+    operator: Operator;
+    /** The stored message, for a page that reads its files or its quote from the message log. */
+    message_id?: number | null;
+}
+
+/** An operator is writing a reply. */
+export interface OperatorTyping {
+    type: "operator_typing";
     operator: Operator;
 }
 
@@ -449,4 +460,4 @@ export interface TurnGuardrail {
 export const CLIENT_EVENT_TYPES = ["conversation_initiation_client_data", "user_message", "pong", "playback", "client_tool_result", "contextual_update", "user_activity", "feedback"] as const;
 
 /** Every event type the server sends. */
-export const SERVER_EVENT_TYPES = ["conversation_initiation_metadata", "conversation_history", "message_ack", "message_error", "user_message", "agent_typing", "agent_chat_response_part", "agent_response", "agent_response_correction", "guardrail_triggered", "agent_transferred", "operator_message", "handoff", "turn_debug", "ping", "conversation_ended", "error", "agent_state", "user_transcript", "audio_pause", "audio_resume", "interruption", "client_tool_call", "agent_tool_response", "language_changed"] as const;
+export const SERVER_EVENT_TYPES = ["conversation_initiation_metadata", "conversation_history", "message_ack", "message_error", "user_message", "agent_typing", "agent_chat_response_part", "agent_response", "agent_response_correction", "guardrail_triggered", "agent_transferred", "operator_message", "operator_typing", "handoff", "turn_debug", "ping", "conversation_ended", "error", "agent_state", "user_transcript", "audio_pause", "audio_resume", "interruption", "client_tool_call", "agent_tool_response", "language_changed"] as const;

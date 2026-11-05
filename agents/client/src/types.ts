@@ -36,12 +36,14 @@ export interface MessageAck {
 export interface SendOptions {
     /** The id to send the message with. Pass a failed message's clientMessageId to send it again without a duplicate. */
     clientMessageId?: string;
+    /** The stored message this one answers, by the messageId its ack or the log gave. */
+    replyToMessageId?: number;
 }
 
 /** A message for the transcript: the agent's reply, an operator's, another viewer's, or what the customer said in a call. */
 export type IncomingMessage =
     | {source: "ai"; message: string; eventId: number}
-    | {source: "operator"; message: string; eventId: number; operator: Operator}
+    | {source: "operator"; message: string; eventId: number; operator: Operator; messageId: number | null}
     | {source: "user"; message: string; messageId: number; spoken?: false}
     | {source: "user"; message: string; spoken: true; language: LanguageCode; occurredAt: string};
 
@@ -77,6 +79,8 @@ export interface Callbacks {
     onAgentChatResponsePart?: (part: {eventId: number; type: "start" | "delta" | "stop"; text: string}) => void;
     onAgentResponseCorrection?: (correction: {eventId: number; text: string}) => void;
     onAgentTyping?: () => void;
+    /** An operator is writing a reply. Nothing says when they stop, so let it fade after a few seconds. */
+    onOperatorTyping?: (typing: {operator: Operator}) => void;
     onHistory?: (messages: HistoryMessage[]) => void;
     onHandoff?: (handoff: {reason: "agent" | "agent_failed" | "balance"}) => void;
     onDebug?: (event: TurnDebug) => void;

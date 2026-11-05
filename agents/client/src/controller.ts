@@ -22,6 +22,7 @@ const CALLBACKS: readonly (keyof Callbacks)[] = [
     "onAgentChatResponsePart",
     "onAgentResponseCorrection",
     "onAgentTyping",
+    "onOperatorTyping",
     "onHistory",
     "onHandoff",
     "onDebug",

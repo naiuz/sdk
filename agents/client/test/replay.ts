@@ -111,7 +111,8 @@ export async function replay(first: Recorded, options: ReplayOptions = {}) {
                 }
                 if (frame.type === "user_message" && !sentIds.has(id) && conversation !== undefined) {
                     sentIds.add(id);
-                    conversation.sendUserMessage(String(frame.text)).then((ack) => acks.push(ack), (error: unknown) => errors.push(error));
+                    const replyTo = frame.reply_to_message_id;
+                    conversation.sendUserMessage(String(frame.text), typeof replyTo === "number" ? {replyToMessageId: replyTo} : {}).then((ack) => acks.push(ack), (error: unknown) => errors.push(error));
                 }
                 await until(() => sentAll().length >= expected, `sent ${String(frame.type)}`);
             }

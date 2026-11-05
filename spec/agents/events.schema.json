@@ -73,6 +73,9 @@
           "$ref": "#/$defs/OperatorMessage"
         },
         {
+          "$ref": "#/$defs/OperatorTyping"
+        },
+        {
           "$ref": "#/$defs/Handoff"
         },
         {
@@ -495,6 +498,10 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 10000
+        },
+        "reply_to_message_id": {
+          "description": "The stored message this one answers, in the same conversation. Anything else is ignored.",
+          "$ref": "#/$defs/MessageId"
         }
       },
       "required": [
@@ -778,12 +785,37 @@
         },
         "operator": {
           "$ref": "#/$defs/Operator"
+        },
+        "message_id": {
+          "description": "The stored message, for a page that reads its files or its quote from the message log.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
         }
       },
       "required": [
         "type",
         "event_id",
         "text",
+        "operator"
+      ],
+      "additionalProperties": false
+    },
+    "OperatorTyping": {
+      "description": "An operator is writing a reply.",
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "operator_typing"
+        },
+        "operator": {
+          "$ref": "#/$defs/Operator"
+        }
+      },
+      "required": [
+        "type",
         "operator"
       ],
       "additionalProperties": false

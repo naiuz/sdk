@@ -42,6 +42,7 @@ type Timer = ReturnType<typeof setTimeout>;
 
 interface Pending {
     text: string;
+    replyToMessageId: number | undefined;
     retries: number;
     promise: Promise<MessageAck>;
     resolve: (ack: MessageAck) => void;
@@ -148,10 +149,10 @@ export class Conversation {
         if (waiting !== undefined) return waiting.promise;
         if (this.finished) return Promise.reject(new MessageError(clientMessageId, this.resumableAfterEnd, "unavailable"));
         if (!CLIENT_MESSAGE_ID.test(clientMessageId) || !isValidText(text)) return Promise.reject(new MessageError(clientMessageId, false, "invalid"));
-        const pending = {text, retries: 0, ...deferred<MessageAck>()};
+        const pending = {text, replyToMessageId: options.replyToMessageId, retries: 0, ...deferred<MessageAck>()};
         this.pending.set(clientMessageId, pending);
         this.sentIds.add(clientMessageId);
-        this.sendMessage(clientMessageId, text);
+        this.sendMessage(clientMessageId, pending);
         return pending.promise;
     }
 
@@ -351,7 +352,7 @@ export class Conversation {
                 this.settleFromHistory(event.messages);
                 if (this.resendOnHistory) {
                     this.resendOnHistory = false;
-                    for (const [clientMessageId, pending] of this.pending) this.sendMessage(clientMessageId, pending.text);
+                    for (const [clientMessageId, pending] of this.pending) this.sendMessage(clientMessageId, pending);
                 }
                 break;
             case "message_ack":
@@ -381,7 +382,10 @@ export class Conversation {
                 this.emit("onAgentResponseCorrection", {eventId: event.event_id, text: event.text});
                 break;
             case "operator_message":
-                this.emit("onMessage", {source: "operator", message: event.text, eventId: event.event_id, operator: event.operator});
+                this.emit("onMessage", {source: "operator", message: event.text, eventId: event.event_id, operator: event.operator, messageId: event.message_id ?? null});
+                break;
+            case "operator_typing":
+                this.emit("onOperatorTyping", {operator: event.operator});
                 break;
             case "handoff":
                 this.emit("onHandoff", {reason: event.reason});
@@ -457,7 +461,7 @@ export class Conversation {
         const delay = RETRY_DELAY_MS * 2 ** pending.retries;
         pending.retries++;
         this.later(delay, () => {
-            if (this.pending.get(clientMessageId) === pending) this.sendMessage(clientMessageId, pending.text);
+            if (this.pending.get(clientMessageId) === pending) this.sendMessage(clientMessageId, pending);
         });
     }
 
@@ -642,8 +646,13 @@ export class Conversation {
         );
     }
 
-    private sendMessage(clientMessageId: string, text: string): void {
-        this.send({type: "user_message", client_message_id: clientMessageId, text});
+    private sendMessage(clientMessageId: string, {text, replyToMessageId}: Pick<Pending, "text" | "replyToMessageId">): void {
+        this.send({
+            type: "user_message",
+            client_message_id: clientMessageId,
+            text,
+            ...(replyToMessageId === undefined ? {} : {reply_to_message_id: replyToMessageId}),
+        });
     }
 
     private send(frame: object): void {
