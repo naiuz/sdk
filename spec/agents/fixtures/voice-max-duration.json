@@ -1,5 +1,5 @@
 {
-  "description": "A resumed voice call that reaches the agent's max duration, 60 s here, while the agent listens: the server closes with 1000 max_duration and no conversation_ended, and the conversation goes on as chat.",
+  "description": "A resumed voice call that reaches the agent's max duration, 60 s here, while the agent listens: the server closes with 1000 max_duration and no conversation_ended.",
   "token": "resume",
   "frames": [
     {

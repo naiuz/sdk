@@ -372,8 +372,7 @@ def voice_max_duration() -> dict:
     call.close(60_060, 1000, "max_duration")
     return call.fixture(
         "A resumed voice call that reaches the agent's max duration, 60 s here, while the agent "
-        "listens: the server closes with 1000 max_duration and no conversation_ended, and the "
-        "conversation goes on as chat.",
+        "listens: the server closes with 1000 max_duration and no conversation_ended.",
         "resume",
         60_060,
     )

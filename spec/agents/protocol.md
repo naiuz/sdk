@@ -68,7 +68,7 @@ The server accepts every connection and then closes it with a [close code](#clos
 
 | Code | Meaning | What the client does |
 |---|---|---|
-| 1000 | Ended normally: the conversation ended, after `conversation_ended`; the client ended the session; or a call reached the agent's max duration (reason `max_duration`), and the conversation goes on as chat | Stop. After `max_duration`, resume with `text_only: true` to go on chatting |
+| 1000 | Ended normally: the conversation ended, after `conversation_ended`; the client ended the session; or a call reached the agent's max duration (reason `max_duration`) | Stop. After `max_duration`, resume with `text_only: true` to go on chatting |
 | 1001 | The server stopped hearing from the client: two pings went unanswered (reason `ping_timeout`), as when a phone suspends the page | Reconnect with the resume token |
 | 1008 | A protocol error: no handshake within 10 seconds, or a first frame that isn't one | Stop, and fix the client |
 | 1009 | A frame over 64 KB | Stop, and fix the client |
@@ -153,9 +153,9 @@ The server accepts every connection and then closes it with a [close code](#clos
   - Every viewer of the conversation, the call's connection among them, gets `user_transcript`, `agent_typing`, each reply's text and its correction.
   - The two streams aren't ordered against each other. For example, `agent_state` `thinking` can come before or after the `user_transcript` that began the turn.
 - **The call's lifecycle:**
-  - **Hanging up** is closing the socket. The conversation goes on as chat.
-  - **Max duration:** a call that reaches the agent's max duration is closed with 1000 `max_duration`, without `conversation_ended`. The conversation goes on as chat.
-  - **Silence:** a call left silent for as long as the agent allows is closed with 1000 `silence`, without `conversation_ended`. The conversation goes on as chat.
+  - **Hanging up** is closing the socket. A conversation that was only this call ends with it, and coming back opens the next one, which knows what was said. One that also had a chat goes on as chat.
+  - **Max duration:** a call that reaches the agent's max duration is closed with 1000 `max_duration`, without `conversation_ended`. It ends or goes on as a hang-up does.
+  - **Silence:** a call left silent for as long as the agent allows is closed with 1000 `silence`, without `conversation_ended`. It ends or goes on as a hang-up does.
   - **A goodbye:** the server closes when it reckons the last frame has played, and the network and your buffer are behind that. After a close from the server with 1000, let what you hold play out.
   - **One call per conversation:** a second connection that asks for a call takes it over, and the first is closed with 4008 `taken_over`. Text viewers are never replaced.
   - **Reconnecting:** after 4012, 1001 or 1011, or a dropped network, resume with `text_only: false` to go on with the call. Drop the reply that was playing, and number the microphone from 0 again.
