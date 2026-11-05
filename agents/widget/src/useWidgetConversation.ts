@@ -15,6 +15,7 @@ const TYPING_FADES_AFTER_MS = 6_000;
 const SEEN_AFTER_MS = 1_000;
 /** How long a call that handed off gets to say its line, before it's ended from here. */
 const HANDOFF_LINE_MS = 8_000;
+const RECORD_SETTLES_MS = 1_500;
 const OPEN_COUNTED_EVERY_MS = 30 * 60 * 1000;
 
 export type CallProblem = "microphone" | "busy" | "balance" | "failed";
@@ -61,6 +62,7 @@ export function useWidgetConversation(options: {
     let disposed = false;
     let loaded = false;
     let typingTimer: ReturnType<typeof setTimeout> | undefined;
+    let logTimer: ReturnType<typeof setTimeout> | undefined;
     let seenTimer: ReturnType<typeof setTimeout> | undefined;
     let handoffTimer: ReturnType<typeof setTimeout> | undefined;
     let pollTimer: ReturnType<typeof setInterval> | undefined;
@@ -124,6 +126,12 @@ export function useWidgetConversation(options: {
         void loadLog(last === null ? {} : {after: last});
     }
 
+    /** A reply's stored id, which it can be quoted by, is in the log once its record has landed. */
+    function readLogSoon(): void {
+        clearTimeout(logTimer);
+        logTimer = setTimeout(catchUp, RECORD_SETTLES_MS);
+    }
+
     const chat = useConversation({
         onMessage: (message) => {
             apply({type: "message", message});
@@ -134,6 +142,7 @@ export function useWidgetConversation(options: {
                 if (hasVisitor) catchUp();
             }
             if (message.source === "ai" || message.source === "operator") arrived();
+            if (message.source === "ai" && hasVisitor) readLogSoon();
         },
         onAgentChatResponsePart: (part) => {
             apply({type: "part", eventId: part.eventId, part: part.type, text: part.text});
@@ -446,6 +455,7 @@ export function useWidgetConversation(options: {
         calls += 1;
         stopPolling();
         clearTimeout(typingTimer);
+        clearTimeout(logTimer);
         clearTimeout(seenTimer);
         clearTimeout(handoffTimer);
     });

@@ -149,11 +149,13 @@ export const Message = defineComponent({
             return (
                 <div class={["message", actionsOpen.value && "message-open"]} {...openable()}>
                     <div class="message-body">
-                        <div class="bubble">
-                            {line.replyTo === null ? null : quote(line.replyTo)}
-                            <Markdown text={line.text} />
-                            {line.streaming ? <span class="caret" /> : null}
-                        </div>
+                        {line.text === "" && line.replyTo === null && !line.streaming ? null : (
+                            <div class="bubble">
+                                {line.replyTo === null ? null : quote(line.replyTo)}
+                                <Markdown text={line.text} />
+                                {line.streaming ? <span class="caret" /> : null}
+                            </div>
+                        )}
                         {replyButton(line.messageId)}
                     </div>
                     {line.attachments.map(attachment)}
@@ -171,10 +173,12 @@ export const Message = defineComponent({
                     <div class="message-stack">
                         {line.operator.name === null ? null : <span class="message-name">{line.operator.name}</span>}
                         <div class="message-body">
-                            <div class="bubble">
-                                {line.replyTo === null ? null : quote(line.replyTo)}
-                                <Markdown text={line.text} />
-                            </div>
+                            {line.text === "" && line.replyTo === null ? null : (
+                                <div class="bubble">
+                                    {line.replyTo === null ? null : quote(line.replyTo)}
+                                    <Markdown text={line.text} />
+                                </div>
+                            )}
                             {replyButton(line.messageId)}
                         </div>
                         {line.attachments.map(attachment)}

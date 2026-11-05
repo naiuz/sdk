@@ -357,6 +357,38 @@ describe("the conversation", () => {
         expect(asksOf(asked, "/sessions")).toEqual([]);
     });
 
+    test("a reply can be quoted a moment after it arrives, once the log has its id", async () => {
+        const stored = {id: 7, conversation_id: "conv_1", client_message_id: null, event_id: 4, feedback: null, operator: null, sender_type: "ai", content: "Javob", caption: null, display_text: null, reply_to: null, attachments: [], created_at: "2026-11-05T10:00:00Z"};
+        let log: unknown[] = [];
+        const {page, asked} = await show(widget({mode: "text"}), {}, {"/widget/messages": () => new Response(JSON.stringify({data: {messages: log, has_more: false, status: null, conversation_id: "conv_1"}}), {status: 200})});
+        await page.press("Open chat with Shop");
+        await settled();
+        chat().callbacks.onMessage?.({source: "ai", message: "Javob", eventId: 4} as never);
+        await settled();
+        expect(page.hasButton("Reply")).toBe(false);
+
+        // Its record reaches the log just after the reply ends.
+        log = [stored];
+        const before = asksOf(asked, "/messages").length;
+        await vi.advanceTimersByTimeAsync(1500);
+        await settled();
+
+        expect(asksOf(asked, "/messages").length).toBe(before + 1);
+        expect(page.hasButton("Reply")).toBe(true);
+    });
+
+    test("a file alone has no empty bubble over it", async () => {
+        localStorage.setItem(`neuronai-widget:${KEY}:visitor`, "visitor-1");
+        const file = {id: 1, file_name: "prices.txt", file_type: "text/plain", file_size: 19, preview_kind: null, preview_url: "https://x.uz/f?signature=s", download_url: "https://x.uz/f?signature=s"};
+        const line = {conversation_id: "conv_1", client_message_id: null, event_id: null, feedback: null, content: null, caption: null, display_text: null, reply_to: null, attachments: [file], created_at: null};
+        const log = {messages: [{...line, id: 1, sender_type: "operator", operator: {name: "Dilshod", avatar_url: null}}, {...line, id: 2, sender_type: "ai", operator: null}], has_more: false, status: null, conversation_id: "conv_1"};
+        const {page} = await show(widget({mode: "text"}), {}, {"/widget/messages": () => new Response(JSON.stringify({data: log}), {status: 200})});
+        await page.press("Open chat");
+        await settled();
+        expect(page.byClass("message-file")).toHaveLength(2);
+        expect(page.byClass("bubble")).toHaveLength(0);
+    });
+
     test("earlier messages show first, from the log", async () => {
         localStorage.setItem(`neuronai-widget:${KEY}:visitor`, "visitor-1");
         const log = {messages: [{id: 1, conversation_id: "conv_1", client_message_id: null, event_id: null, feedback: null, operator: null, sender_type: "ai", content: "Oldingi javob", reply_to: null, attachments: [], created_at: null}], has_more: true, status: null, conversation_id: null};
