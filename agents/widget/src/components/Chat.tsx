@@ -15,7 +15,7 @@ export const Chat = defineComponent({
     name: "Chat",
     emits: ["followedLink"],
     setup(_props, {emit}) {
-        const {settings, colors, i18n, go, close, conversation, screen, preview, fullScreen} = useWidget();
+        const {settings, colors, i18n, go, close, conversation, screen, preview, previewSample, fullScreen} = useWidget();
         const {t} = i18n;
         const {transcript, failure, callProblem, fileProblem, operatorTyping, loadingLog, hasEarlier, callLive} = conversation;
         const list = ref<HTMLElement | null>(null);
@@ -23,7 +23,7 @@ export const Chat = defineComponent({
         const replyTo = ref<Quote | null>(null);
 
         const samples = computed<Line[]>(() =>
-            !preview
+            !preview || !previewSample.value
                 ? []
                 : [
                       {kind: "customer", key: "sample-1", text: t("preview.sample_question"), spoken: false, state: "sent", clientMessageId: null, messageId: null, attachments: [], replyTo: null, at: null},
@@ -204,7 +204,7 @@ export const Chat = defineComponent({
                         ) : null}
                         {operatorTyping.value === null ? null : <p class="notice typing-name">{t("messages.typing", {name: operatorTyping.value.name ?? t("sender.operator")})}</p>}
                     </div>
-                    {!hasVisitorLine.value && texts.suggested_questions.length > 0 && !preview ? (
+                    {!hasVisitorLine.value && texts.suggested_questions.length > 0 ? (
                         <div class="suggestions suggestions-chat" role="group" aria-label={t("suggestions.label")}>
                             {texts.suggested_questions.map((question) => (
                                 <button
@@ -212,7 +212,7 @@ export const Chat = defineComponent({
                                     type="button"
                                     class="suggestion"
                                     onClick={() => {
-                                        void conversation.send(question);
+                                        if (!preview) void conversation.send(question);
                                     }}
                                 >
                                     <span>{question}</span>

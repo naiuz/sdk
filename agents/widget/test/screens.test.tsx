@@ -81,6 +81,40 @@ function must<Value>(value: Value | undefined): Value {
 const chat = () => must(sessions[0]);
 const call = () => must(sessions[1]);
 
+describe("the channel page's preview", () => {
+    test("Welcome on a text-only widget shows the welcome and its questions, and Chat a sample", async () => {
+        const parent = {postMessage: () => undefined};
+        let receive: (event: MessageEvent) => void = () => undefined;
+        vi.stubGlobal("window", {
+            location: {origin: "https://x.uz"},
+            parent,
+            matchMedia: () => ({matches: false, addEventListener: () => undefined, removeEventListener: () => undefined}),
+            addEventListener: (type: string, listener: (event: MessageEvent) => void) => {
+                if (type === "message") receive = listener;
+            },
+            removeEventListener: () => undefined,
+        });
+        const say = async (type: string, payload: unknown) => {
+            receive({origin: "https://x.uz", source: parent, data: {type: `neuron-widget:preview:${type}`, payload}} as never);
+            await settled();
+        };
+        const page = mount(App, {preview: true, lang: "en"});
+        await settled();
+        const text = widget({mode: "text"});
+        await say("settings", {...text, texts: {...text.texts, suggested_questions: ["Narxi qancha?"]}});
+
+        await say("state", "welcome");
+        expect(page.text()).toContain("Hi, I'm Madina");
+        expect(page.hasButton("Narxi qancha?")).toBe(true);
+        expect(page.byClass("bubble-mine")).toHaveLength(0);
+
+        await say("state", "chat");
+        expect(page.text()).not.toContain("Hi, I'm Madina");
+        expect(page.byClass("bubble-mine")).toHaveLength(1);
+        expect(chat().started).toEqual([]);
+    });
+});
+
 describe("what a page shows", () => {
     test("a launcher, and nothing connects until someone opens it", async () => {
         const {page} = await show(widget());

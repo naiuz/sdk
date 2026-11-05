@@ -245,6 +245,7 @@ export const App = defineComponent({
             orbColors,
             conversation,
             preview: props.preview,
+            previewSample: computed(() => previewState.value !== "welcome"),
             fullScreen,
             screen,
             go,

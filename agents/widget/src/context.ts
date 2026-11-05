@@ -16,6 +16,8 @@ export interface WidgetContext {
     conversation: WidgetConversation;
     /** The channel page's preview: it shows the look, and nothing goes anywhere. */
     preview: boolean;
+    /** What the preview shows in the chat: a sample conversation, or a first look with its welcome. */
+    previewSample: Ref<boolean>;
     fullScreen: Ref<boolean>;
     screen: Ref<Screen>;
     /** Goes through the terms and the contact form, if they're still to come, and then there. */
