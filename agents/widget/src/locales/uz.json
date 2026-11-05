@@ -1,0 +1,19 @@
+{
+    "launcher": {"open": "{name} bilan chatni ochish", "unread": "Yangi javoblar: {count}"},
+    "header": {"close": "Chatni yopish", "back": "Orqaga", "call": "Qoʻngʻiroq qilish", "minimize": "Kichraytirish", "language": "Til", "assistant": "AI yordamchi"},
+    "home": {"call": "Qoʻngʻiroq qilish", "call_hint": "Ovozli, darhol javob beradi", "message": "Xabar yozish", "message_hint": "Odatda bir daqiqada javob beradi", "last": "Oxirgi suhbat", "online": "Onlayn"},
+    "call": {"start": "Qoʻngʻiroqni boshlash", "connecting": "Ulanmoqda…", "listening": "Tinglayapman", "speaking": "Gapirmoqda", "thinking": "Oʻylayapti", "mute": "Ovozni oʻchirish", "unmute": "Ovozni yoqish", "type": "Yozish", "end": "Tugatish", "you": "Siz", "back_to_call": "Qoʻngʻiroqqa qaytish", "ended": "Qoʻngʻiroq tugadi.", "again": "Yana qoʻngʻiroq qilish"},
+    "problems": {"connect": "Ulanib boʻlmadi. Qayta urinib koʻring.", "try_again": "Qayta urinish", "busy": "Barcha liniyalar band. Xabar yozing.", "microphone": "Gapirish uchun mikrofonga ruxsat bering. Xabar ham yozishingiz mumkin.", "balance": "Hozir qoʻngʻiroqlar mavjud emas. Xabar yozing.", "call_failed": "Qoʻngʻiroq boshlanmadi. Qayta urinib koʻring.", "busy_voice": "Barcha liniyalar band. Birozdan keyin urinib koʻring.", "microphone_voice": "Gapirish uchun mikrofonga ruxsat bering."},
+    "messages": {"empty": "Suhbatni boshlash uchun birinchi xabaringizni yuboring.", "loading": "Suhbat yuklanmoqda…", "typing": "{name} yozmoqda…", "agent_typing": "Yozmoqda…", "not_sent": "Yuborilmadi", "retry": "Qayta yuborish", "earlier": "Avvalgi xabarlar", "attachment": "Ilova", "open_media": "{name} ni ochish", "like": "Yaxshi javob", "dislike": "Yomon javob"},
+    "notices": {"waiting": "Operator tez orada shu yerda javob beradi.", "joined": "{name} suhbatga qoʻshildi", "joined_someone": "Operator suhbatga qoʻshildi", "ended": "Bu suhbat tugadi. Davom etish uchun yozing.", "transferred": "Endi suhbatni {name} olib bormoqda", "no_balance": "Operator tez orada shu yerda javob beradi."},
+    "sender": {"you": "Siz", "ai": "AI", "operator": "Operator"},
+    "reply": {"action": "Javob berish", "cancel": "Javobni bekor qilish"},
+    "download": {"file": "{name} ni yuklab olish"},
+    "contact": {"title": "Boshlashdan oldin", "description": "Chatni boshlash uchun maʼlumotlaringizni kiriting, soʻng birinchi xabaringizni yuboring.", "name": "Ism", "name_placeholder": "Ismingiz", "phone": "Telefon raqami", "continue": "Chatni boshlash", "name_required": "Ismingizni kiriting.", "phone_invalid": "Toʻgʻri telefon raqamini kiriting.", "email": "Email", "email_placeholder": "you@example.com", "email_invalid": "Toʻgʻri email manzilini kiriting.", "optional": "(ixtiyoriy)", "consent_default": "Shaxsiy maʼlumotlarim qayta ishlanishiga roziman.", "privacy_policy": "Maxfiylik siyosati", "consent_required": "Davom etish uchun rozilik bering.", "country": "Mamlakat", "country_other": "Boshqa mamlakat", "phone_international": "+ mamlakat kodi va raqam", "consent_notice": "Xabar yuborib, shaxsiy maʼlumotlaringiz qayta ishlanishiga rozilik bildirasiz."},
+    "terms": {"title": "Boshlashdan oldin", "default": "Davom etib, foydalanish shartlarimizni qabul qilasiz.", "link": "Shartlarni oʻqish", "accept": "Qabul qilish"},
+    "composer": {"placeholder": "Xabaringizni yozing…", "send": "Yuborish"},
+    "footer": {"powered_by": "NeuronAI asosida ishlaydi"},
+    "suggestions": {"label": "Tavsiya etilgan savollar"},
+    "preview": {"sample_question": "Assalomu alaykum, buyurtmam haqida savolim bor.", "sample_answer": "Albatta. Buyurtmangiz raqami qanday?", "sample_spoken": "Albatta. Buyurtmangiz raqami qanday?"},
+    "attachments": {"attach": "Fayl biriktirish", "too_large": "Fayl hajmi 10 MB gacha boʻlishi kerak.", "type": "Bunday faylni yuborib boʻlmaydi. Rasm, PDF, Office yoki matn faylini yuboring.", "failed": "Faylingiz yuborilmadi. Qayta urinib koʻring."}
+}

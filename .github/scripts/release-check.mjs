@@ -11,7 +11,7 @@ import {appendFileSync, readFileSync} from "node:fs";
 const packageVersion = (folder) => () => JSON.parse(readFileSync(`${folder}/package.json`, "utf8")).version;
 
 // Each package's folder, the key the manifest keeps its version under, and how to read its own version there.
-const FOLDER = {js: "js", python: "python", php: "php", "agents-protocol": "agents/protocol", agents: "agents/client", "agents-vue": "agents/vue", "agents-react": "agents/react"};
+const FOLDER = {js: "js", python: "python", php: "php", "agents-protocol": "agents/protocol", agents: "agents/client", "agents-vue": "agents/vue", "agents-react": "agents/react", "agents-widget": "agents/widget"};
 const OWN_VERSION = {
     js: packageVersion("js"),
     python: () => /^version = "([^"]+)"$/m.exec(readFileSync("python/pyproject.toml", "utf8"))?.[1],
@@ -20,6 +20,7 @@ const OWN_VERSION = {
     agents: packageVersion("agents/client"),
     "agents-vue": packageVersion("agents/vue"),
     "agents-react": packageVersion("agents/react"),
+    "agents-widget": packageVersion("agents/widget"),
 };
 
 function refuse(message) {
@@ -37,7 +38,7 @@ function git(...args) {
 }
 
 const [component, tag] = process.argv.slice(2);
-if (!Object.hasOwn(OWN_VERSION, component ?? "")) refuse(`"${component}" isn't a package this repository releases: give js, python, php, agents-protocol, agents, agents-vue or agents-react.`);
+if (!Object.hasOwn(OWN_VERSION, component ?? "")) refuse(`"${component}" isn't a package this repository releases: give js, python, php, agents-protocol, agents, agents-vue, agents-react or agents-widget.`);
 const version = new RegExp(`^${component}-v(\\d+\\.\\d+\\.\\d+)$`).exec(tag ?? "")?.[1];
 if (version === undefined) refuse(`"${tag}" isn't a release tag of ${component}, such as ${component}-v0.1.0.`);
 const tagged = git("rev-parse", "--verify", "--quiet", `refs/tags/${tag}^{commit}`);

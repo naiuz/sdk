@@ -2,7 +2,7 @@
   "name": "@naiuz/agents-workspace",
   "private": true,
   "type": "module",
-  "description": "The agents packages: the protocol's types, the client, and the Vue and React packages.",
+  "description": "The agents packages: the protocol's types, the client, the Vue and React packages, and the widget.",
   "engines": {
     "node": ">=20"
   },
@@ -10,7 +10,8 @@
     "protocol",
     "client",
     "vue",
-    "react"
+    "react",
+    "widget"
   ],
   "scripts": {
     "build": "npm run build --workspaces",

@@ -1,0 +1,16 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react",
+    "jsxFactory": "h",
+    "jsxFragmentFactory": "Fragment",
+    "resolveJsonModule": true,
+    // The packages' source, as the tests use it.
+    "paths": {
+      "@naiuz/agents": ["../client/src/index.ts"],
+      "@naiuz/agents/orb": ["../client/src/orb/index.ts"],
+      "@naiuz/agents-vue": ["../vue/src/index.ts"]
+    }
+  },
+  "include": ["src", "test", "vite.config.ts", "vitest.config.ts"]
+}

@@ -235,7 +235,7 @@ test("the release workflow runs on each push to main and by hand, never for a pu
     assert.match(release, /^permissions:\n {2}contents: read\n/m);
     assert.match(release, /^concurrency:\n {2}group: release\n {2}cancel-in-progress: false\n/m);
     // Only naiuz/sdk runs it, not a fork, and no job can hold the concurrency group for GitHub's six hours.
-    assert.equal(release.match(/github\.repository == 'naiuz\/sdk'/g)?.length, 8);
+    assert.equal(release.match(/github\.repository == 'naiuz\/sdk'/g)?.length, 9);
     assert.equal(release.match(/timeout-minutes:/g)?.length, release.match(/runs-on:/g)?.length);
 });
 
@@ -247,7 +247,7 @@ test("release-please runs on the release app's token, so that CI runs on the rel
     // The action names each package's outputs by its path, so the agents packages' carry their folder.
     for (const [output, path] of [
         ["js", "js"], ["python", "python"], ["php", "php"],
-        ["agents-protocol", "agents/protocol"], ["agents", "agents/client"], ["agents-vue", "agents/vue"], ["agents-react", "agents/react"],
+        ["agents-protocol", "agents/protocol"], ["agents", "agents/client"], ["agents-vue", "agents/vue"], ["agents-react", "agents/react"], ["agents-widget", "agents/widget"],
     ]) {
         assert.match(job, new RegExp(`${output}: \\$\\{\\{ steps\\.release\\.outputs\\['${path}--tag_name'\\] \\}\\}\\n`));
     }
@@ -257,7 +257,7 @@ test("each SDK's publish takes only a release-please tag of that SDK on main, on
     const release = await read("release.yml");
     for (const [job, component] of [
         ["npm-build", "js"], ["pypi-build", "python"], ["packagist", "php"],
-        ["agents-protocol-npm-build", "agents-protocol"], ["agents-npm-build", "agents"], ["agents-vue-npm-build", "agents-vue"], ["agents-react-npm-build", "agents-react"],
+        ["agents-protocol-npm-build", "agents-protocol"], ["agents-npm-build", "agents"], ["agents-vue-npm-build", "agents-vue"], ["agents-react-npm-build", "agents-react"], ["agents-widget-npm-build", "agents-widget"],
     ]) {
         const text = jobText(release, job);
         assert.match(text, new RegExp(`!cancelled\\(\\) && github\\.repository == 'naiuz/sdk' && github\\.ref == 'refs/heads/main' &&\\n\\s+\\(needs\\.release-please\\.outputs\\.${component} != '' \\|\\| startsWith\\(inputs\\.tag, '${component}-v'\\)\\)\\n`), job);
@@ -267,7 +267,7 @@ test("each SDK's publish takes only a release-please tag of that SDK on main, on
     }
     for (const [job, environment] of [
         ["npm", "npm"], ["pypi", "pypi"], ["packagist", "packagist"],
-        ["agents-protocol-npm", "npm"], ["agents-npm", "npm"], ["agents-vue-npm", "npm"], ["agents-react-npm", "npm"],
+        ["agents-protocol-npm", "npm"], ["agents-npm", "npm"], ["agents-vue-npm", "npm"], ["agents-react-npm", "npm"], ["agents-widget-npm", "npm"],
     ]) {
         assert.match(jobText(release, job), new RegExp(`environment:\\n\\s+name: ${environment}\\n`), job);
     }
@@ -299,7 +299,7 @@ test("npm gets @naiuz/sdk once, with provenance, through trusted publishing or t
     assert.match(npm, /NODE_AUTH_TOKEN: \$\{\{ secrets\.NPM_TOKEN \}\}\n\s+VERSION: \$\{\{ needs\.npm-build\.outputs\.version \}\}\n/);
     assert.match(npm, /if \[ "\$\(npm view "@naiuz\/sdk@\$VERSION" version 2>\/dev\/null\)" = "\$VERSION" \]; then\n[\s\S]*else\n\s+npm publish "\.\/naiuz-sdk-\$VERSION\.tgz"\n/);
     // Each npm publish reads the token, and nothing else does.
-    assert.equal(release.match(/secrets\.NPM_TOKEN/g)?.length, 5);
+    assert.equal(release.match(/secrets\.NPM_TOKEN/g)?.length, 6);
 });
 
 test("npm gets each agents package once, with provenance, after the package it depends on, and never after it failed", async () => {
@@ -309,6 +309,7 @@ test("npm gets each agents package once, with provenance, after the package it d
         ["agents", "client", "naiuz-agents", "agents-protocol-npm"],
         ["agents-vue", "vue", "naiuz-agents-vue", "agents-npm"],
         ["agents-react", "react", "naiuz-agents-react", "agents-npm"],
+        ["agents-widget", "widget", "naiuz-agents-widget", "agents-npm"],
     ]) {
         const build = jobText(release, `${component}-npm-build`);
         assert.doesNotMatch(build, /id-token|secrets\./, component);

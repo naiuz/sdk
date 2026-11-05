@@ -66,6 +66,13 @@
       "extra-files": [
         {"type": "json", "path": "/agents/package-lock.json", "jsonpath": "$.packages.react.version"}
       ]
+    },
+    "agents/widget": {
+      "release-type": "node",
+      "component": "agents-widget",
+      "extra-files": [
+        {"type": "json", "path": "/agents/package-lock.json", "jsonpath": "$.packages.widget.version"}
+      ]
     }
   }
 }

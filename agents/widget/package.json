@@ -1,0 +1,55 @@
+{
+  "name": "@naiuz/agents-widget",
+  "version": "0.1.0",
+  "description": "The NeuronAI agent widget: one tag on a page for voice and text with an agent.",
+  "keywords": [
+    "neuronai",
+    "agents",
+    "widget",
+    "web-component",
+    "conversational-ai",
+    "voice",
+    "uzbek"
+  ],
+  "homepage": "https://github.com/naiuz/sdk/tree/main/agents/widget#readme",
+  "bugs": {
+    "url": "https://github.com/naiuz/sdk/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/naiuz/sdk.git",
+    "directory": "agents/widget"
+  },
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "unpkg": "./dist/widget.js",
+  "jsdelivr": "./dist/widget.js",
+  "exports": {
+    ".": "./dist/index.js",
+    "./widget.js": "./dist/widget.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": true,
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "build": "vite build && vite build --mode module",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.build.json",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@naiuz/agents": "^0.1.0",
+    "@naiuz/agents-vue": "^0.1.0"
+  }
+}
