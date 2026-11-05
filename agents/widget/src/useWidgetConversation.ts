@@ -125,8 +125,7 @@ export function useWidgetConversation(options: {
         if (first !== null) await loadLog({before: first});
     }
 
-    function catchUp(): void {
-        const last = lastStoredId(transcript.value);
+    function catchUp(last = lastStoredId(transcript.value)): void {
         void loadLog(last === null ? {} : {after: last});
     }
 
@@ -138,13 +137,14 @@ export function useWidgetConversation(options: {
 
     const chat = useConversation({
         onMessage: (message) => {
+            const newestBefore = lastStoredId(transcript.value);
             apply({type: "message", message});
             if (message.source === "operator") {
                 clearTimeout(typingTimer);
                 operatorTyping.value = null;
                 operatorWrote.value += 1;
-                // Its files and quote are in the log.
-                if (hasVisitor) catchUp();
+                // Its files and quote are in the log, and it's stored already, so that's read from before it.
+                if (hasVisitor) catchUp(newestBefore);
             }
             if (message.source === "ai" || message.source === "operator") arrived();
             if (message.source === "ai" && hasVisitor) readLogSoon();

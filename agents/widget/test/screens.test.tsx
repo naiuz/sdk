@@ -527,6 +527,15 @@ describe("what the review found", () => {
         expect(page.hasClass("chat")).toBe(true);
     });
 
+    test("an operator's file is read from the log, starting before its own message", async () => {
+        localStorage.setItem(`neuronai-widget:${KEY}:visitor`, "visitor-1");
+        const {page, asked} = await show(widget({mode: "text"}));
+        await page.press("Open chat");
+        (chat().callbacks as Record<string, (value: unknown) => void>).onMessage?.({source: "operator", message: "", eventId: 3, operator: {name: "Dilshod", avatar_url: null}, messageId: 9});
+        await settled();
+        expect(asksOf(asked, "/messages").at(-1)?.url).not.toContain("after=9");
+    });
+
     test("a call that failed offers the chat, where there is one", async () => {
         const {page} = await show(widget());
         await page.press("Open chat");
