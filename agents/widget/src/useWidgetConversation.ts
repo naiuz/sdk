@@ -175,6 +175,10 @@ export function useWidgetConversation(options: {
     });
 
     const call = useConversation({
+        // The first words of a call come before the text session is there, and a reply is one line whichever socket says it.
+        onMessage: (message) => {
+            if (message.source === "ai") apply({type: "message", message});
+        },
         onDisconnect: () => {
             callStartedAt.value = null;
             callEnded.value = true;
@@ -182,10 +186,13 @@ export function useWidgetConversation(options: {
         },
     });
 
-    watch(chat.status, (status) => {
+    /** The newest resume token, each time the socket opens. The session only has it once its start has finished. */
+    function keepSession(): void {
         const token = chat.getResumeToken();
-        if (status === "connected" && token !== null && serverUrl !== null) storage.setSession({token, url: serverUrl});
-    });
+        if (chat.status.value === "connected" && token !== null && serverUrl !== null) storage.setSession({token, url: serverUrl});
+    }
+
+    watch(chat.status, keepSession);
 
     function common() {
         const clientTools = options.clientTools();
@@ -209,6 +216,7 @@ export function useWidgetConversation(options: {
                 try {
                     serverUrl = kept.url;
                     await chat.startSession({...common(), token: kept.token, serverUrl: kept.url});
+                    keepSession();
                     return !disposed;
                 } catch (error) {
                     // Past its life: a new session finds the same visitor. Anything else says nothing against it.
@@ -221,6 +229,7 @@ export function useWidgetConversation(options: {
             serverUrl = issued.url;
             if (disposed) return false;
             await chat.startSession({...common(), token: issued.token, serverUrl: issued.url});
+            keepSession();
             return !disposed;
         } catch (error) {
             if (error instanceof WidgetApiError && error.status === 422) contactErrors.value = error.fields;
@@ -309,32 +318,57 @@ export function useWidgetConversation(options: {
         if (chat.sendFeedback(line.eventId, next)) apply({type: "feedback", key: line.key, score: next});
     }
 
-    /** A call on the conversation, as a second connection beside the text session, which goes on hearing every turn. */
-    async function startCall(): Promise<void> {
-        if (calling.value || call.status.value !== "disconnected" || disposed) return;
+    /** The session a call opens the conversation with, so the agent greets by voice. The text session follows on its token. */
+    async function openWithCall(contact: ContactDetails): Promise<void> {
+        const issued = await api.session({mode: "voice", visitorToken: storage.visitorToken(), contact, test: options.test});
+        if (issued.visitor_token !== undefined) storage.setVisitorToken(issued.visitor_token);
+        serverUrl = issued.url;
+        await call.startSession({...common(), textOnly: false, token: issued.token, serverUrl: issued.url});
+        const token = call.getResumeToken();
+        if (token !== null && !disposed) {
+            await chat.startSession({...common(), token, serverUrl: issued.url}).catch(() => undefined);
+            keepSession();
+        }
+    }
+
+    /**
+     * A call on the conversation, as a second connection beside the text session, which goes on hearing every turn. With
+     * neither open and nothing to go on with, the call is what opens it. Says whether it got as far as a call.
+     */
+    async function startCall(contact: ContactDetails = {}): Promise<boolean> {
+        if (calling.value || call.status.value !== "disconnected" || disposed) return false;
         const number = ++calls;
         const current = () => number === calls && !disposed;
         calling.value = true;
         callProblem.value = null;
         callEnded.value = false;
         handedOffInCall.value = false;
+        contactErrors.value = {};
         try {
-            if (!(await startChat())) {
-                if (current()) callProblem.value = "failed";
-                return;
+            if (chat.status.value === "disconnected" && storage.session() === null) {
+                await openWithCall(contact);
+            } else {
+                if (!(await startChat())) {
+                    if (current()) callProblem.value = "failed";
+                    return false;
+                }
+                // Read now: a reconnect on the way renews it.
+                const token = chat.getResumeToken();
+                if (!current() || token === null || serverUrl === null) return false;
+                await call.startSession({token, serverUrl, textOnly: false});
             }
-            // Read now: a reconnect on the way renews it.
-            const token = chat.getResumeToken();
-            if (!current() || token === null || serverUrl === null) return;
-            await call.startSession({token, serverUrl, textOnly: false});
             if (current()) callStartedAt.value = Date.now();
+            return true;
         } catch (error) {
             // A start ended on its way says nothing.
-            if (!current()) return;
-            if (error instanceof MicrophoneError) callProblem.value = "microphone";
+            if (!current()) return false;
+            if (error instanceof WidgetApiError && error.status === 422) contactErrors.value = error.fields;
+            else if (error instanceof WidgetApiError && error.status === 402) callProblem.value = "balance";
+            else if (error instanceof MicrophoneError) callProblem.value = "microphone";
             else if (error instanceof SessionError && error.code === 4009) callProblem.value = "busy";
             else if (error instanceof SessionError && error.code === 4010) callProblem.value = "balance";
             else callProblem.value = "failed";
+            return false;
         } finally {
             if (number === calls) calling.value = false;
         }
@@ -356,6 +390,7 @@ export function useWidgetConversation(options: {
         try {
             await chat.endSession();
             await chat.startSession({...common(), token, serverUrl});
+            keepSession();
         } catch {
             failure.value = "connect";
         }
@@ -427,6 +462,7 @@ export function useWidgetConversation(options: {
         unread,
         conversationStatus: chat.conversationStatus,
         chatStatus: chat.status,
+        conversationId: () => chat.getId(),
         startChat,
         loadEarlier,
         send,

@@ -23,6 +23,8 @@ export interface CustomerLine {
 export interface AgentLine {
     kind: "agent";
     key: string;
+    /** The conversation the log says it's in; null for one said just now. */
+    conversationId: string | null;
     eventId: number | null;
     messageId: number | null;
     text: string;
@@ -124,7 +126,7 @@ function fromLog(message: LogMessage, key: string): Line | null {
         case "customer":
             return {...common, kind: "customer", spoken: false, state: "sent", clientMessageId: message.client_message_id};
         case "ai":
-            return {...common, kind: "agent", eventId: message.event_id, streaming: false, feedback: message.feedback};
+            return {...common, kind: "agent", conversationId: message.conversation_id, eventId: message.event_id, streaming: false, feedback: message.feedback};
         case "operator":
             return {...common, kind: "operator", eventId: message.event_id, operator: message.operator ?? {name: null, avatar_url: null}};
         default:
@@ -181,6 +183,7 @@ function withMessage(state: Transcript, message: IncomingMessage): Transcript {
             return adding({...state, typing: false}, (key) => ({
                 kind: "agent",
                 key,
+                conversationId: null,
                 eventId: message.eventId,
                 messageId: null,
                 text: message.message,
@@ -262,6 +265,7 @@ export function nextTranscript(state: Transcript, event: TranscriptEvent): Trans
                 return adding({...state, typing: false}, (key) => ({
                     kind: "agent",
                     key,
+                    conversationId: null,
                     eventId: event.eventId,
                     messageId: null,
                     text: event.text,
@@ -291,7 +295,10 @@ export function nextTranscript(state: Transcript, event: TranscriptEvent): Trans
         case "handoff":
             return noticed({...state, typing: false}, event.reason === "balance" ? "no_balance" : "waiting");
         case "ended":
-            return hasNotice(state, "ended") && state.lines.at(-1)?.kind === "notice" ? state : noticed({...state, typing: false}, "ended");
+            // What's said in the next conversation counts its events afresh, so these are past a thumb.
+            return hasNotice(state, "ended") && state.lines.at(-1)?.kind === "notice"
+                ? state
+                : noticed({...state, typing: false, lines: state.lines.map((line) => (line.kind === "agent" ? {...line, eventId: null} : line))}, "ended");
         case "transferred":
             return noticed(state, "transferred", event.name);
         case "feedback":
@@ -308,7 +315,7 @@ export function nextTranscript(state: Transcript, event: TranscriptEvent): Trans
                 const common = {key: `line-${String(next)}`, messageId: message.message_id, text: message.text, attachments: [], replyTo: null, at: message.at};
                 next += 1;
                 if (message.role === "customer") fresh.push({...common, kind: "customer", spoken: false, state: "sent", clientMessageId: message.client_message_id});
-                else if (message.role === "agent") fresh.push({...common, kind: "agent", eventId: null, streaming: false, feedback: null});
+                else if (message.role === "agent") fresh.push({...common, kind: "agent", conversationId: null, eventId: null, streaming: false, feedback: null});
                 else fresh.push({...common, kind: "operator", eventId: null, operator: {name: null, avatar_url: null}});
             }
             const unsent = state.lines.filter((line) => line.kind === "customer" && line.state !== "sent");

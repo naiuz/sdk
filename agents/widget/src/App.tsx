@@ -136,9 +136,13 @@ export const App = defineComponent({
         async function submitContact(details: ContactDetails): Promise<void> {
             if (busy.value) return;
             busy.value = true;
-            const started = await conversation.startChat(details);
+            const {target, question} = pending;
+            // What they said goes with the session that opens the conversation.
+            const started = target === "call" ? await conversation.startCall(details) : await conversation.startChat(details);
             busy.value = false;
-            if (started) enter();
+            if (Object.keys(conversation.contactErrors.value).length > 0) return;
+            screen.value = target;
+            if (started && question !== undefined) void conversation.send(question);
         }
 
         function open(): void {
@@ -156,7 +160,9 @@ export const App = defineComponent({
 
         // A call that can't be goes on as text, where there is text.
         watch(conversation.callProblem, (problem) => {
-            if (problem !== null && problem !== "failed" && settings.value?.mode !== "voice") screen.value = "chat";
+            if (problem === null || problem === "failed" || settings.value?.mode === "voice") return;
+            screen.value = "chat";
+            void conversation.startChat();
         });
         watch(conversation.callEnded, (ended) => {
             if (ended && (conversation.handedOffInCall.value || settings.value?.mode !== "voice")) screen.value = "chat";

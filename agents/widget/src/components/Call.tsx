@@ -75,6 +75,15 @@ export const Call = defineComponent({
                         : callProblem.value === "failed"
                           ? t("problems.call_failed")
                           : null;
+            const stateWord = calling.value
+                ? t("call.connecting")
+                : preview || agentMode.value === "speaking"
+                  ? t("call.speaking")
+                  : agentMode.value === "thinking"
+                    ? t("call.thinking")
+                    : live
+                      ? t("call.listening")
+                      : (problem ?? (conversation.callEnded.value ? t("call.ended") : null));
             return (
                 <div class="screen call" style={{"--brand": brand}}>
                     <header class="call-header">
@@ -91,17 +100,11 @@ export const Call = defineComponent({
                         <div class="call-orb">
                             <AgentOrb state={orbState.value} colors={orbColors.value} size={184} level={level} />
                         </div>
-                        <p class="call-state" aria-live="polite">
-                            {calling.value
-                                ? t("call.connecting")
-                                : preview || agentMode.value === "speaking"
-                                  ? t("call.speaking")
-                                  : agentMode.value === "thinking"
-                                    ? t("call.thinking")
-                                    : live
-                                      ? t("call.listening")
-                                      : problem ?? t("call.start")}
-                        </p>
+                        {stateWord === null ? null : (
+                            <p class={["call-state", !live && problem !== null && "call-problem"]} aria-live="polite">
+                                {stateWord}
+                            </p>
+                        )}
                         {parts === null ? null : (
                             <div class="caption">
                                 <strong>{line?.kind === "customer" ? t("call.you") : texts.title}</strong>

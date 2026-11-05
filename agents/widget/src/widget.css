@@ -509,13 +509,20 @@ p {
     height: 28px;
     border-radius: 9999px;
     color: var(--slate-500);
-    opacity: 0;
-    transition: opacity 120ms;
+    visibility: hidden;
 }
-.message:hover .message-action,
-.message-action:focus-visible,
+.message-open .message-action,
+.message-action:focus-visible {
+    visibility: visible;
+}
+@media (hover: hover) {
+    .message:hover .message-action {
+        visibility: visible;
+    }
+}
 .panel-full .message-action {
-    opacity: 1;
+    width: 44px;
+    height: 44px;
 }
 .message-action:hover {
     background: var(--slate-100);
@@ -853,6 +860,9 @@ p {
     font-size: 13px;
     font-weight: 500;
     text-align: center;
+}
+.call-problem {
+    color: #b91c1c;
 }
 .caption {
     width: 100%;

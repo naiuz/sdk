@@ -7,7 +7,7 @@ const play = (...events: TranscriptEvent[]): Transcript => events.reduce(nextTra
 const texts = (state: Transcript) => state.lines.map((line) => (line.kind === "notice" ? `[${line.notice}]` : line.text));
 
 function logged(id: number, change: Partial<LogMessage> = {}): LogMessage {
-    return {id, client_message_id: null, event_id: null, feedback: null, operator: null, sender_type: "ai", content: `m${String(id)}`, reply_to: null, attachments: [], created_at: "2026-11-05T10:00:00Z", ...change};
+    return {id, conversation_id: "conv_1", client_message_id: null, event_id: null, feedback: null, operator: null, sender_type: "ai", content: `m${String(id)}`, reply_to: null, attachments: [], created_at: "2026-11-05T10:00:00Z", ...change};
 }
 
 const operator = {name: "Dilshod", avatar_url: null};
@@ -128,6 +128,11 @@ describe("the protocol's history, for an element with no log", () => {
 
 test("the end of a conversation says so, once", () => {
     expect(texts(play({type: "ended"}, {type: "ended"}))).toEqual(["[ended]"]);
+});
+
+test("what was said before the end is past a thumb, as the next conversation counts its events afresh", () => {
+    const state = play({type: "message", message: {source: "ai", message: "Salom", eventId: 2}}, {type: "ended"});
+    expect(state.lines[0]).toMatchObject({eventId: null});
 });
 
 test("the caption follows the last thing said, the visitor's too", () => {

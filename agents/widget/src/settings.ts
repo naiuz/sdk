@@ -91,6 +91,8 @@ export interface Quote {
 /** A message as the log gives it: GET /api/agents/v1/widgets/{key}/messages. */
 export interface LogMessage {
     id: number;
+    /** The conversation it's in: a visitor's log runs across them, and a thumb goes to the one going on. */
+    conversation_id: string | null;
     client_message_id: string | null;
     event_id: number | null;
     feedback: "like" | "dislike" | null;

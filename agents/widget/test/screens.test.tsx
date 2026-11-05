@@ -143,9 +143,43 @@ describe("each mode", () => {
         expect(page.hasClass("call")).toBe(true);
         expect(chat().started).toEqual([]);
         await page.press("Start call");
-        expect(call().started[0]).toMatchObject({token: "resume-1", textOnly: false});
+        // The call opens the conversation, so the agent greets by voice, and the text session follows on its token.
+        expect(call().started[0]).toMatchObject({token: "session-1", textOnly: false});
+        expect(chat().started[0]).toMatchObject({token: "resume-1", textOnly: true});
         expect(page.hasButton("Type")).toBe(false);
         expect(page.hasButton("End")).toBe(true);
+    });
+
+    test("a call from a chat already going on is a second connection on it", async () => {
+        const {page} = await show(widget());
+        await page.press("Open chat");
+        await page.press("Message");
+        expect(chat().started[0]).toMatchObject({token: "session-1"});
+        await page.press("Call");
+        expect(call().started[0]).toMatchObject({token: "resume-1", textOnly: false});
+    });
+
+    test("the agent's words in a call reach the caption", async () => {
+        const {page} = await show(widget({mode: "voice"}));
+        await page.press("Open chat");
+        await page.press("Start call");
+        (call().callbacks as Record<string, (value: unknown) => void>).onMessage?.({source: "ai", message: "Assalomu alaykum", eventId: 1});
+        await settled();
+        expect(page.hasClass("caption")).toBe(true);
+        expect(page.text()).toContain("Assalomu alaykum");
+    });
+
+    test("a contact form before a call sends what it asked with the call's session", async () => {
+        const {page, asked} = await show(widget({mode: "voice", contact: {...widget().contact, mode: "before_chat"}}));
+        await page.press("Open chat");
+        await page.press("Start call");
+        fire(must(page.all().find((node) => node.props.autocomplete === "name")), "onInput", {target: {value: "Aziz"}});
+        await settled();
+        fire(must(page.all().find((node) => node.tag === "form")), "onSubmit", {preventDefault: () => undefined});
+        await settled();
+        expect(JSON.parse(asksOf(asked, "/sessions")[0]?.init.body as string)).toMatchObject({mode: "voice", contact: {name: "Aziz"}});
+        expect(page.hasClass("call")).toBe(true);
+        expect(call().started).toHaveLength(1);
     });
 
     test("a suggested question starts a text conversation with it", async () => {
@@ -266,6 +300,18 @@ describe("the conversation", () => {
         expect(chat().feedback).toEqual([[2, "like"], [2, null]]);
     });
 
+    test("thumbs stay off replies of an earlier conversation, and off everything once the session is over", async () => {
+        localStorage.setItem(`neuronai-widget:${KEY}:visitor`, "visitor-1");
+        const line = {client_message_id: null, event_id: 2, feedback: null, operator: null, sender_type: "ai", reply_to: null, attachments: [], created_at: null};
+        const log = {messages: [{...line, id: 1, conversation_id: "conv_0", content: "Oldin"}, {...line, id: 2, conversation_id: "conv_1", event_id: 3, content: "Hozir"}], has_more: false, status: null, conversation_id: "conv_1"};
+        const {page} = await show(widget({mode: "text", features: {...widget().features, feedback: true}}), {}, {"/widget/messages": () => new Response(JSON.stringify({data: log}))});
+        await page.press("Open chat");
+        expect(page.byClass("message-thumbs")).toHaveLength(1);
+        chat().status.value = "disconnected";
+        await settled();
+        expect(page.byClass("message-thumbs")).toHaveLength(0);
+    });
+
     test("a reply nobody could see counts and chimes, and one they can is seen", async () => {
         localStorage.setItem(`neuronai-widget:${KEY}:visitor`, "visitor-1");
         const {page, asked} = await inChat();
@@ -313,7 +359,7 @@ describe("the conversation", () => {
 
     test("earlier messages show first, from the log", async () => {
         localStorage.setItem(`neuronai-widget:${KEY}:visitor`, "visitor-1");
-        const log = {messages: [{id: 1, client_message_id: null, event_id: null, feedback: null, operator: null, sender_type: "ai", content: "Oldingi javob", reply_to: null, attachments: [], created_at: null}], has_more: true, status: null, conversation_id: null};
+        const log = {messages: [{id: 1, conversation_id: "conv_1", client_message_id: null, event_id: null, feedback: null, operator: null, sender_type: "ai", content: "Oldingi javob", reply_to: null, attachments: [], created_at: null}], has_more: true, status: null, conversation_id: null};
         const {page} = await show(widget({mode: "text"}), {}, {"/widget/messages": () => new Response(JSON.stringify({data: log}))});
         await page.press("Open chat");
         expect(page.text()).toContain("Oldingi javob");
@@ -333,6 +379,7 @@ describe("a call that can't be", () => {
     test("the microphone refused goes on as text, and says so", async () => {
         const page = await calling("voice_and_text", new MicrophoneError("denied"));
         expect(page.hasClass("chat")).toBe(true);
+        expect(chat().started).toHaveLength(1);
         expect(page.text()).toContain("Allow microphone access to talk. You can also send a message.");
     });
 
@@ -351,7 +398,7 @@ describe("a call that can't be", () => {
     test("a handoff in a call opens the chat with the card once the call has ended", async () => {
         const {page} = await show(widget());
         await page.press("Open chat");
-        await page.press("Call");
+        await page.press("By voice");
         (chat().callbacks as Record<string, (value: unknown) => void>).onHandoff?.({reason: "agent"});
         await settled();
         expect(page.hasClass("call")).toBe(true);

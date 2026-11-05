@@ -1,4 +1,4 @@
-import {defineComponent, h} from "vue";
+import {defineComponent, h, ref} from "vue";
 import type {PropType, VNode} from "vue";
 import {useWidget} from "../context";
 import {isSafeLink} from "../links";
@@ -21,6 +21,13 @@ export const Message = defineComponent({
     setup(props, {emit}) {
         const {i18n, colors, settings, conversation, openImage, preview} = useWidget();
         const {t} = i18n;
+        /** A touch screen has no hover: a tap on a message shows what can be done with it. */
+        const actionsOpen = ref(false);
+        const openable = () => ({
+            onClick: () => {
+                actionsOpen.value = !actionsOpen.value;
+            },
+        });
 
         function attachment(file: Attachment): VNode {
             const url = file.preview_url ?? file.download_url ?? null;
@@ -85,7 +92,7 @@ export const Message = defineComponent({
 
         function customer(line: CustomerLine): VNode {
             return (
-                <div class="message message-mine">
+                <div class={["message message-mine", actionsOpen.value && "message-open"]} {...openable()}>
                     <div class="message-body">
                         {replyButton(line.messageId)}
                         {line.text === "" && line.replyTo === null ? null : (
@@ -115,6 +122,8 @@ export const Message = defineComponent({
 
         function thumbs(line: AgentLine): VNode | null {
             if (!settings.value.features.feedback || line.eventId === null || line.streaming || line.text === "") return null;
+            // A thumb goes through the session, to the conversation going on.
+            if (!preview && (conversation.chatStatus.value !== "connected" || (line.conversationId !== null && line.conversationId !== conversation.conversationId()))) return null;
             const thumb = (score: "like" | "dislike", icon: "thumb-up" | "thumb-down", label: string) => (
                 <button
                     type="button"
@@ -138,7 +147,7 @@ export const Message = defineComponent({
 
         function agent(line: AgentLine): VNode {
             return (
-                <div class="message">
+                <div class={["message", actionsOpen.value && "message-open"]} {...openable()}>
                     <div class="message-body">
                         <div class="bubble">
                             {line.replyTo === null ? null : quote(line.replyTo)}
@@ -155,7 +164,7 @@ export const Message = defineComponent({
 
         function operator(line: OperatorLine): VNode {
             return (
-                <div class="message message-operator">
+                <div class={["message message-operator", actionsOpen.value && "message-open"]} {...openable()}>
                     <span class="avatar" aria-hidden="true">
                         {line.operator.avatar_url !== null && isSafeLink(line.operator.avatar_url) ? <img src={line.operator.avatar_url} alt="" /> : initials(line.operator.name)}
                     </span>

@@ -27,7 +27,7 @@ export const Chat = defineComponent({
                 ? []
                 : [
                       {kind: "customer", key: "sample-1", text: t("preview.sample_question"), spoken: false, state: "sent", clientMessageId: null, messageId: null, attachments: [], replyTo: null, at: null},
-                      {kind: "agent", key: "sample-2", eventId: 1, messageId: null, text: t("preview.sample_answer"), streaming: false, feedback: null, attachments: [], replyTo: null, at: null},
+                      {kind: "agent", key: "sample-2", conversationId: null, eventId: 1, messageId: null, text: t("preview.sample_answer"), streaming: false, feedback: null, attachments: [], replyTo: null, at: null},
                   ],
         );
         const lines = computed(() => (preview ? samples.value : transcript.value.lines));
