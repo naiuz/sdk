@@ -126,6 +126,69 @@ describe("the protocol's history, for an element with no log", () => {
     });
 });
 
+describe("a visitor back after an earlier conversation", () => {
+    test("a reply that reuses an old conversation's event id is a line of its own", () => {
+        const state = play(
+            {type: "log", messages: [logged(1, {content: "Yesterday's greeting", event_id: 1, conversation_id: "conv_0"}), logged(2, {content: "Yesterday's answer", event_id: 2, conversation_id: "conv_0"})]},
+            {type: "message", message: {source: "ai", message: "Today's greeting", eventId: 1}},
+            {type: "part", eventId: 2, part: "delta", text: "Today"},
+            {type: "correction", eventId: 2, text: "Today's answer"},
+        );
+        expect(texts(state)).toEqual(["Yesterday's greeting", "Yesterday's answer", "Today's greeting", "Today's answer"]);
+    });
+
+    test("a stored message of an earlier conversation doesn't take a live line, and its own does", () => {
+        const state = play(
+            {type: "message", message: {source: "ai", message: "Today's greeting", eventId: 1}},
+            {type: "log", conversation: "conv_1", messages: [logged(1, {content: "Yesterday's greeting", event_id: 1, conversation_id: "conv_0"})]},
+        );
+        expect(texts(state)).toEqual(["Yesterday's greeting", "Today's greeting"]);
+        expect(state.lines[1]).toMatchObject({messageId: null});
+
+        const stored = nextTranscript(state, {type: "log", conversation: "conv_1", messages: [logged(2, {content: "Today's greeting", event_id: 1, conversation_id: "conv_1"})]});
+        expect(texts(stored)).toEqual(["Yesterday's greeting", "Today's greeting"]);
+        expect(stored.lines[1]).toMatchObject({messageId: 2});
+    });
+
+    test("a reply stored after its conversation ended isn't said twice", () => {
+        const state = play(
+            {type: "message", message: {source: "ai", message: "Xayr", eventId: 7}},
+            {type: "ended"},
+            {type: "log", conversation: "conv_2", messages: [logged(3, {content: "Xayr", event_id: 7, conversation_id: "conv_1"})]},
+        );
+        expect(texts(state)).toEqual(["Xayr", "[ended]"]);
+    });
+});
+
+describe("a dropped connection", () => {
+    test("stops a cut reply's caret, and the log gives the rest", () => {
+        const state = play({type: "part", eventId: 3, part: "delta", text: "Yarim"}, {type: "cut"});
+        expect(state.lines[0]).toMatchObject({text: "Yarim", streaming: false});
+
+        const stored = nextTranscript(state, {type: "log", conversation: "conv_1", messages: [logged(4, {content: "Yarim emas, butun gap", event_id: 3})]});
+        expect(stored.lines).toHaveLength(1);
+        expect(stored.lines[0]).toMatchObject({text: "Yarim emas, butun gap", messageId: 4, streaming: false});
+    });
+
+    test("a reconnect with no log doesn't double what the agent said, and mends what was cut", () => {
+        const history = [
+            {role: "customer" as const, text: "Salom", at: "t", message_id: 5, client_message_id: "c1"},
+            {role: "agent" as const, text: "Va alaykum", at: "t", message_id: 6, client_message_id: null},
+            {role: "agent" as const, text: "Yarim emas, butun gap", at: "t", message_id: 7, client_message_id: null},
+        ];
+        const state = play(
+            {type: "sending", clientMessageId: "c1", text: "Salom"},
+            {type: "acked", clientMessageId: "c1", messageId: 5, at: "t"},
+            {type: "message", message: {source: "ai", message: "Va alaykum", eventId: 1}},
+            {type: "part", eventId: 2, part: "delta", text: "Yarim"},
+            {type: "cut"},
+            {type: "history", messages: history},
+        );
+        expect(texts(state)).toEqual(["Salom", "Va alaykum", "Yarim emas, butun gap"]);
+        expect(texts(nextTranscript(state, {type: "history", messages: history}))).toEqual(["Salom", "Va alaykum", "Yarim emas, butun gap"]);
+    });
+});
+
 test("the end of a conversation says so, once", () => {
     expect(texts(play({type: "ended"}, {type: "ended"}))).toEqual(["[ended]"]);
 });

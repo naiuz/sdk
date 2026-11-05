@@ -82,7 +82,9 @@ export type TranscriptEvent =
     | {type: "transferred"; name: string}
     | {type: "feedback"; key: string; score: "like" | "dislike" | null}
     | {type: "history"; messages: HistoryMessage[]}
-    | {type: "log"; messages: LogMessage[]; earlier?: boolean};
+    | {type: "log"; messages: LogMessage[]; earlier?: boolean; conversation?: string | null}
+    /** The connection dropped: nothing is being written any more, as far as this page can tell. */
+    | {type: "cut"};
 
 /** The last line that passes, newest first, as a reply's event id can come round again after a quiet day. */
 export function lastLine<Found extends Line>(lines: Line[], passes: (line: Line) => line is Found): Found | undefined {
@@ -93,8 +95,9 @@ export function lastLine<Found extends Line>(lines: Line[], passes: (line: Line)
     return undefined;
 }
 
+/** A reply said on this page. The log's lines keep their event ids, which a later conversation counts afresh. */
 function agentReply(lines: Line[], eventId: number): AgentLine | undefined {
-    return lastLine(lines, (line): line is AgentLine => line.kind === "agent" && line.eventId === eventId);
+    return lastLine(lines, (line): line is AgentLine => line.kind === "agent" && line.conversationId === null && line.eventId === eventId);
 }
 
 function replacing(lines: Line[], line: Line, change: Partial<Line>): Line[] {
@@ -134,8 +137,8 @@ function fromLog(message: LogMessage, key: string): Line | null {
     }
 }
 
-/** The line a stored message already is on this page: by its id, its client id, its event, or a spoken line's words. */
-function matchOf(lines: Line[], message: LogMessage): Line | undefined {
+/** The line a stored message already is on this page: by its id, its client id, its event in this conversation, or its words. */
+function matchOf(lines: Line[], message: LogMessage, conversation: string | null): Line | undefined {
     const byId = lines.find((line) => line.kind !== "notice" && line.messageId === message.id);
     if (byId !== undefined) return byId;
     const unstored = lines.filter((line) => line.kind !== "notice" && line.messageId === null);
@@ -147,30 +150,46 @@ function matchOf(lines: Line[], message: LogMessage): Line | undefined {
         );
     }
     if (message.sender_type === "ai") {
-        return unstored.find((line) => line.kind === "agent" && line.eventId !== null && line.eventId === message.event_id);
+        const here = conversation === null || message.conversation_id === conversation;
+        return unstored.find(
+            (line) =>
+                line.kind === "agent" &&
+                // The end of a conversation takes its replies' event ids, and one stored after that has only its words.
+                (line.eventId === null ? line.text === message.content : here && line.eventId === message.event_id),
+        );
     }
     return unstored.find((line) => line.kind === "operator" && line.text === message.content);
 }
 
-function withLog(state: Transcript, messages: LogMessage[], earlier: boolean): Transcript {
+/** Where a stored message the page hasn't got goes: in order among the stored, before what this conversation is saying if it's from an earlier one, and before anything still going out. */
+function placeOf(lines: Line[], message: LogMessage, conversation: string | null): number {
+    const later = lines.findIndex((line) => line.kind !== "notice" && line.messageId !== null && line.messageId > message.id);
+    if (later !== -1) return later;
+    if (conversation !== null && message.conversation_id !== conversation) {
+        const live = lines.findIndex((line) => line.kind !== "notice" && line.messageId === null);
+        if (live !== -1) return live;
+    }
+    const stillOut = lines.findIndex((line) => line.kind === "customer" && line.state !== "sent");
+    return stillOut === -1 ? lines.length : stillOut;
+}
+
+function withLog(state: Transcript, messages: LogMessage[], earlier: boolean, conversation: string | null): Transcript {
     let {lines, next} = state;
     const fresh: Line[] = [];
     for (const message of messages) {
         const line = fromLog(message, `line-${String(next)}`);
         if (line === null) continue;
-        const known = matchOf(lines, message);
+        const known = matchOf(lines, message, conversation);
         if (known === undefined) {
-            fresh.push(line);
             next += 1;
+            if (earlier) fresh.push(line);
+            else lines = [...lines.slice(0, placeOf(lines, message, conversation)), line, ...lines.slice(placeOf(lines, message, conversation))];
             continue;
         }
         // What only the log knows goes on the line the visitor already has; a reply being written stays as it is.
         lines = replacing(lines, known, known.kind === "agent" && known.streaming ? {messageId: message.id} : {...line, key: known.key, ...(known.kind === "customer" ? {spoken: known.spoken} : {})});
     }
-    if (earlier) return {...state, lines: [...fresh, ...lines], next};
-    const stillOut = lines.findIndex((line) => line.kind === "customer" && line.state !== "sent");
-    const at = stillOut === -1 ? lines.length : stillOut;
-    return {...state, lines: [...lines.slice(0, at), ...fresh, ...lines.slice(at)], next};
+    return {...state, lines: earlier ? [...fresh, ...lines] : lines, next};
 }
 
 function withMessage(state: Transcript, message: IncomingMessage): Transcript {
@@ -226,6 +245,17 @@ function withMessage(state: Transcript, message: IncomingMessage): Transcript {
             }));
         }
     }
+}
+
+/** Whether a line on the page is this message of the protocol's history: by its id, or for what was said live by its words. */
+function saysTheSame(line: Line, message: HistoryMessage): boolean {
+    if (line.kind === "notice") return false;
+    if (message.message_id !== null && line.messageId === message.message_id) return true;
+    if (line.messageId !== null) return false;
+    if (message.role === "customer") return line.kind === "customer" && ((message.client_message_id !== null && line.clientMessageId === message.client_message_id) || (line.spoken && line.text === message.text));
+    // What the connection cut short is the start of what was stored.
+    if (message.role === "agent") return line.kind === "agent" && !line.streaming && line.text !== "" && message.text.startsWith(line.text);
+    return line.kind === "operator" && line.text === message.text;
 }
 
 export function nextTranscript(state: Transcript, event: TranscriptEvent): Transcript {
@@ -307,23 +337,28 @@ export function nextTranscript(state: Transcript, event: TranscriptEvent): Trans
                 lines: state.lines.map((line) => (line.key === event.key && line.kind === "agent" ? {...line, feedback: event.score} : line)),
             };
         case "history": {
-            const known = new Set(state.lines.flatMap((line) => (line.kind !== "notice" && line.messageId !== null ? [line.messageId] : [])));
-            let next = state.next;
-            const fresh: Line[] = [];
-            for (const message of event.messages) {
-                if (message.message_id !== null && known.has(message.message_id)) continue;
+            // It's the whole conversation, in order, so what's on the page takes its place in it.
+            let {next} = state;
+            let rest = state.lines;
+            const told = event.messages.map((message): Line => {
+                const line = rest.find((other) => saysTheSame(other, message));
+                if (line !== undefined) {
+                    rest = rest.filter((other) => other !== line);
+                    return {...line, messageId: message.message_id, text: message.text, ...(line.kind === "agent" ? {streaming: false} : {})} as Line;
+                }
                 const common = {key: `line-${String(next)}`, messageId: message.message_id, text: message.text, attachments: [], replyTo: null, at: message.at};
                 next += 1;
-                if (message.role === "customer") fresh.push({...common, kind: "customer", spoken: false, state: "sent", clientMessageId: message.client_message_id});
-                else if (message.role === "agent") fresh.push({...common, kind: "agent", conversationId: null, eventId: null, streaming: false, feedback: null});
-                else fresh.push({...common, kind: "operator", eventId: null, operator: {name: null, avatar_url: null}});
-            }
-            const unsent = state.lines.filter((line) => line.kind === "customer" && line.state !== "sent");
-            const sent = state.lines.filter((line) => !unsent.includes(line));
-            return {...state, lines: [...sent, ...fresh, ...unsent], next};
+                if (message.role === "customer") return {...common, kind: "customer", spoken: false, state: "sent", clientMessageId: message.client_message_id};
+                if (message.role === "agent") return {...common, kind: "agent", conversationId: null, eventId: null, streaming: false, feedback: null};
+                return {...common, kind: "operator", eventId: null, operator: {name: null, avatar_url: null}};
+            });
+            const unsent = rest.filter((line) => line.kind === "customer" && line.state !== "sent");
+            return {...state, lines: [...told, ...rest.filter((line) => !unsent.includes(line)), ...unsent], next};
         }
         case "log":
-            return withLog(state, event.messages, event.earlier === true);
+            return withLog(state, event.messages, event.earlier === true, event.conversation ?? null);
+        case "cut":
+            return {...state, typing: false, lines: state.lines.map((line) => (line.kind === "agent" && line.streaming ? {...line, streaming: false} : line))};
     }
 }
 

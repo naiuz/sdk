@@ -140,7 +140,7 @@ export interface SessionOptions extends Callbacks {
     WebSocket?: WebSocketFactory;
     /** How agentId asks for a session. Defaults to globalThis.fetch. */
     fetch?: typeof globalThis.fetch;
-    /** Makes each message's client_message_id. Defaults to crypto.randomUUID. */
+    /** Makes each message's client_message_id. Defaults to crypto.randomUUID, or random values where a page isn't secure. */
     idGenerator?: () => string;
     /**
      * The client tools this page runs, by name. A handler gets the agent's values and returns what the agent reads back:

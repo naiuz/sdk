@@ -2,6 +2,9 @@
  * What a widget keeps in the visitor's browser, by the widget it's for. A page can forbid storage, or a browser can
  * throw when asked: then it lasts as long as the page does, and the visitor starts over next time.
  */
+/** A followed link reopens the panel on the page it leads to, not on a visit later on. */
+const RESUME_OPEN_FOR_MS = 15_000;
+
 export interface WidgetStorage {
     visitorToken(): string | null;
     setVisitorToken(token: string): void;
@@ -107,12 +110,12 @@ export function createStorage(
             local.setItem(key("language"), language);
         },
         takeResumeOpen() {
-            const open = tab.getItem(key("resume-open")) === "1";
+            const at = Number(tab.getItem(key("resume-open")));
             tab.removeItem(key("resume-open"));
-            return open;
+            return at > 0 && Date.now() - at < RESUME_OPEN_FOR_MS;
         },
         setResumeOpen: () => {
-            tab.setItem(key("resume-open"), "1");
+            tab.setItem(key("resume-open"), String(Date.now()));
         },
     };
 }

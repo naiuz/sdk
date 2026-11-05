@@ -55,10 +55,18 @@ async function show(settings: WidgetSettings | null, props: Record<string, unkno
     return {page, asked};
 }
 
+const pageEvents = new Map<string, () => void>();
+
 beforeEach(() => {
     vi.useFakeTimers({toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval"]});
     sessions.length = 0;
-    vi.stubGlobal("document", {documentElement: {lang: "", style: {}}, visibilityState: "visible"});
+    pageEvents.clear();
+    vi.stubGlobal("document", {
+        documentElement: {lang: "", style: {}},
+        visibilityState: "visible",
+        addEventListener: (type: string, listener: () => void) => pageEvents.set(type, listener),
+        removeEventListener: (type: string) => pageEvents.delete(type),
+    });
     vi.stubGlobal("window", {matchMedia: () => ({matches: false, addEventListener: () => undefined, removeEventListener: () => undefined}), addEventListener: () => undefined, removeEventListener: () => undefined, location: {origin: "https://shop.uz", hostname: "shop.uz"}, parent: {postMessage: vi.fn()}});
     vi.stubGlobal("navigator", {languages: ["en"]});
     vi.stubGlobal("requestAnimationFrame", () => 1);
@@ -78,6 +86,7 @@ function must<Value>(value: Value | undefined): Value {
     return value;
 }
 
+const conversationFailed = (page: {text: () => string}) => page.text().includes("The call couldn't start");
 const chat = () => must(sessions[0]);
 const call = () => must(sessions[1]);
 
@@ -473,6 +482,279 @@ describe("a call that can't be", () => {
         await settled();
         expect(page.hasClass("chat")).toBe(true);
         expect(page.text()).toContain("An operator will reply here soon.");
+    });
+});
+
+describe("what the review found", () => {
+    const typed = async (page: Awaited<ReturnType<typeof show>>["page"], text: string) => {
+        fire(must(page.all().find((node) => node.tag === "textarea")), "onInput", {target: {value: text, style: {}, scrollHeight: 20}});
+        await settled();
+        fire(must(page.all().find((node) => node.tag === "form")), "onSubmit", {preventDefault: () => undefined});
+        await settled();
+    };
+    const fillContact = async (page: Awaited<ReturnType<typeof show>>["page"]) => {
+        fire(must(page.all().find((node) => node.props.autocomplete === "name")), "onInput", {target: {value: "Aziz"}});
+        await settled();
+        fire(must(page.all().find((node) => node.tag === "form")), "onSubmit", {preventDefault: () => undefined});
+        await settled();
+    };
+    const sessionBodies = (asked: {url: string; init: RequestInit}[]) => asksOf(asked, "/sessions").map(({init}) => JSON.parse(init.body as string) as Record<string, unknown>);
+    const ok = () => new Response(JSON.stringify({data: {token: "session-1", url: "wss://x.uz/ws", voice: true, visitor_token: "visitor-1"}}), {status: 200});
+    const operatorLine = {id: 9, conversation_id: "conv_1", client_message_id: null, event_id: 3, feedback: null, operator: {name: "Dilshod", avatar_url: null}, sender_type: "operator", content: "Javobim tayyor", caption: null, display_text: null, reply_to: null, attachments: [], created_at: null};
+
+    test("a reply waiting opens where it can be read, on any mode", async () => {
+        localStorage.setItem(`neuronai-widget:${KEY}:visitor`, "visitor-1");
+        for (const mode of ["voice", "voice_and_text"] as const) {
+            const {page} = await show(widget({mode, unread: 1}), {}, {"/widget/messages": () => new Response(JSON.stringify({data: {messages: [operatorLine], has_more: false, status: null, conversation_id: "conv_1"}}), {status: 200})});
+            await page.press("Open chat");
+            await settled();
+            expect(page.hasClass("chat")).toBe(true);
+            expect(page.text()).toContain("Javobim tayyor");
+            page.unmount();
+        }
+    });
+
+    test("an operator's reply reaches a panel on a quiet call screen", async () => {
+        const {page} = await show(widget({mode: "voice"}));
+        await page.press("Open chat");
+        await page.press("Start call");
+        call().status.value = "disconnected";
+        (call().callbacks as Record<string, () => void>).onDisconnect?.();
+        await settled();
+        expect(page.hasClass("call")).toBe(true);
+        (chat().callbacks as Record<string, (value: unknown) => void>).onMessage?.({source: "operator", message: "Salom", eventId: 3, operator: {name: "Dilshod", avatar_url: null}, messageId: 9});
+        await settled();
+        expect(page.hasClass("chat")).toBe(true);
+    });
+
+    test("a call that failed offers the chat, where there is one", async () => {
+        const {page} = await show(widget());
+        await page.press("Open chat");
+        call().startWith = () => Promise.reject(new SessionError(1011, "down"));
+        await page.press("By voice");
+        expect(page.hasClass("call")).toBe(true);
+        expect(page.text()).toContain("The call couldn't start");
+        await page.press("Type");
+        expect(page.hasClass("chat")).toBe(true);
+        expect(chat().started).toHaveLength(1);
+    });
+
+    test("a text session's token that can't call gives way to a session that can", async () => {
+        const {page, asked} = await show(widget());
+        await page.press("Open chat");
+        await page.press("Message");
+        let tries = 0;
+        call().startWith = () => {
+            tries += 1;
+            return tries === 1 ? Promise.reject(new SessionError(4003, "not_allowed")) : Promise.resolve();
+        };
+        await page.press("Call");
+        expect(call().started).toHaveLength(2);
+        expect(call().started[1]).toMatchObject({token: "session-1", textOnly: false});
+        expect(sessionBodies(asked).at(-1)).toMatchObject({mode: "voice"});
+        expect(page.hasClass("call")).toBe(true);
+        expect(conversationFailed(page)).toBe(false);
+    });
+
+    test("an agent's id with such a token goes on as text, and says so", async () => {
+        const {page} = await show(widget(), {widgetKey: undefined, agentId: "agent_1"});
+        await page.press("Open chat");
+        await page.press("Message");
+        call().startWith = () => Promise.reject(new SessionError(4003, "not_allowed"));
+        await page.press("Call");
+        expect(page.hasClass("chat")).toBe(true);
+        expect(page.text()).toContain("Calls aren't available right now.");
+    });
+
+    test("the contact form doesn't undo a call's fall back to text", async () => {
+        const {page} = await show(widget({contact: {...widget().contact, mode: "before_chat"}}));
+        await page.press("Open chat");
+        await page.press("By voice");
+        call().startWith = () => Promise.reject(new MicrophoneError("denied"));
+        await fillContact(page);
+        expect(page.hasClass("chat")).toBe(true);
+        expect(page.text()).toContain("Allow microphone access to talk.");
+    });
+
+    test("what the contact form said survives a call that couldn't be paid for", async () => {
+        let tries = 0;
+        const {page, asked} = await show(widget({contact: {...widget().contact, mode: "before_chat"}}), {}, {
+            "/sessions": () => {
+                tries += 1;
+                return tries === 1 ? new Response(JSON.stringify({error: {code: "insufficient_balance", message: "No"}}), {status: 402}) : ok();
+            },
+        });
+        await page.press("Open chat");
+        await page.press("By voice");
+        await fillContact(page);
+        expect(page.hasClass("chat")).toBe(true);
+        expect(sessionBodies(asked).at(-1)).toMatchObject({mode: "text", contact: {name: "Aziz"}});
+    });
+
+    test("what the contact form said survives a network failure, and Try again sends it", async () => {
+        let tries = 0;
+        const {page, asked} = await show(widget({mode: "text", contact: {...widget().contact, mode: "before_chat"}}), {}, {
+            "/sessions": () => {
+                tries += 1;
+                return tries === 1 ? new Response("{}", {status: 503}) : ok();
+            },
+        });
+        await page.press("Open chat");
+        await fillContact(page);
+        expect(page.text()).toContain("We couldn't connect");
+        await page.press("Try again");
+        expect(sessionBodies(asked).at(-1)).toMatchObject({contact: {name: "Aziz"}});
+        expect(chat().started).toHaveLength(1);
+    });
+
+    test("a kept session the server won't take gives way to a new one, for the same visitor", async () => {
+        localStorage.setItem(`neuronai-widget:${KEY}:visitor`, "visitor-1");
+        localStorage.setItem(`neuronai-widget:${KEY}:session`, JSON.stringify({token: "old", url: "wss://x.uz/ws"}));
+        const {page} = await show(widget({mode: "text"}));
+        let tries = 0;
+        chat().startWith = () => {
+            tries += 1;
+            return tries === 1 ? Promise.reject(new SessionError(1011, "internal_error")) : Promise.resolve();
+        };
+        await page.press("Open chat");
+        expect(chat().started.map((one) => one.token)).toEqual(["old", "session-1"]);
+        expect(page.text()).not.toContain("We couldn't connect");
+    });
+
+    test("a language the agent no longer has is dropped, not a dead end", async () => {
+        const {page} = await show(widget({mode: "text"}));
+        let tries = 0;
+        chat().startWith = () => {
+            tries += 1;
+            return tries === 1 ? Promise.reject(new SessionError(4003, "not_allowed")) : Promise.resolve();
+        };
+        await page.press("Open chat");
+        expect(chat().started[0]).toMatchObject({overrides: {language: "en"}});
+        expect(chat().started[1]?.overrides).toBeUndefined();
+        expect(page.text()).not.toContain("We couldn't connect");
+    });
+
+    test("when the agent asks, the consent line sits over the first message, and writing keeps it", async () => {
+        const contact = {...widget().contact, mode: "agent_asks" as const, consent: {text: "Maʼlumotlarimni qayta ishlashga roziman", privacy_policy_url: "https://x.uz/p"}};
+        const {page, asked} = await show(widget({mode: "text", contact}));
+        await page.press("Open chat");
+        expect(page.text()).toContain("Maʼlumotlarimni qayta ishlashga roziman");
+        expect(sessionBodies(asked).every((body) => (body.contact as Record<string, unknown>).consent === undefined)).toBe(true);
+        await typed(page, "Salom");
+        expect(sessionBodies(asked).at(-1)).toMatchObject({visitor_token: "visitor-1", contact: {consent: true}});
+        expect(page.text()).not.toContain("Maʼlumotlarimni qayta ishlashga roziman");
+    });
+
+    test("a plain http page, with no crypto.randomUUID, still sends", async () => {
+        vi.stubGlobal("crypto", {getRandomValues: (bytes: Uint8Array) => bytes.fill(7)});
+        const {page} = await show(widget({mode: "text"}));
+        await page.press("Open chat");
+        await typed(page, "Salom");
+        expect(chat().sent).toHaveLength(1);
+        expect(chat().sent[0]?.options.clientMessageId).toMatch(/^[0-9a-f]{32}$/);
+    });
+
+    test("a language that can't load leaves the widget where it is, and any call on it", async () => {
+        let reads = 0;
+        const {page} = await show(widget({languages: ["en", "ru"]}), {}, {
+            "/widget": () => {
+                reads += 1;
+                return reads === 1 ? new Response(JSON.stringify({data: widget({languages: ["en", "ru"]})}), {status: 200}) : new Response("{}", {status: 503});
+            },
+        });
+        await page.press("Open chat");
+        await page.press("By voice");
+        await page.press("Type");
+        fire(must(page.all().find((node) => node.tag === "select")), "onChange", {target: {value: "ru"}});
+        await settled();
+        expect(page.hasClass("panel")).toBe(true);
+        expect(page.hasClass("back-to-call")).toBe(true);
+    });
+
+    test("closing the panel on a call says the call goes on, and it can end from there", async () => {
+        const {page} = await show(widget());
+        await page.press("Open chat");
+        await page.press("By voice");
+        await page.press("Type");
+        expect(page.hasButton("Close chat")).toBe(false);
+        await page.press("Minimize");
+        expect(page.hasClass("launcher-call")).toBe(true);
+        expect(page.text()).toContain("On a call");
+        await page.press("End");
+        expect(call().ended).toBe(1);
+    });
+
+    test("a call on its way can be stopped, and opens nothing after", async () => {
+        let answer: (response: Response) => void = () => undefined;
+        const pending = new Promise<Response>((resolve) => {
+            answer = resolve;
+        });
+        const {page} = await show(widget(), {}, {"/sessions": () => pending as unknown as Response});
+        await page.press("Open chat");
+        await page.press("By voice");
+        await page.press("End");
+        answer(ok());
+        await settled();
+        expect(call().started).toEqual([]);
+    });
+
+    test("a call on its way when the element goes opens nothing", async () => {
+        let answer: (response: Response) => void = () => undefined;
+        const pending = new Promise<Response>((resolve) => {
+            answer = resolve;
+        });
+        const {page} = await show(widget(), {}, {"/sessions": () => pending as unknown as Response});
+        await page.press("Open chat");
+        await page.press("By voice");
+        page.unmount();
+        answer(ok());
+        await settled();
+        expect(call().started).toEqual([]);
+    });
+
+    test("a reply read on coming back to the tab is seen, with no count left", async () => {
+        localStorage.setItem(`neuronai-widget:${KEY}:visitor`, "visitor-1");
+        const {page, asked} = await show(widget({mode: "text"}));
+        await page.press("Open chat");
+        await vi.advanceTimersByTimeAsync(1100);
+        const before = asksOf(asked, "/seen").length;
+        (document as unknown as {visibilityState: string}).visibilityState = "hidden";
+        (chat().callbacks as Record<string, (value: unknown) => void>).onMessage?.({source: "ai", message: "Salom", eventId: 2});
+        await vi.advanceTimersByTimeAsync(1100);
+        expect(asksOf(asked, "/seen")).toHaveLength(before);
+
+        (document as unknown as {visibilityState: string}).visibilityState = "visible";
+        pageEvents.get("visibilitychange")?.();
+        await vi.advanceTimersByTimeAsync(1100);
+        expect(asksOf(asked, "/seen").length).toBeGreaterThan(before);
+        await page.press("Close chat");
+        expect(page.hasClass("launcher-badge")).toBe(false);
+    });
+
+    test("the widget's own test page counts no opens", async () => {
+        const {page, asked} = await show(widget({mode: "text"}), {test: true});
+        await page.press("Open chat");
+        expect(asksOf(asked, "/events")).toEqual([]);
+    });
+
+    test("a voice-only widget doesn't tell anyone to send a message", async () => {
+        const {page} = await show(widget({mode: "voice"}));
+        await page.press("Open chat");
+        call().startWith = () => Promise.reject(new SessionError(4010, "balance"));
+        await page.press("Start call");
+        expect(page.text()).toContain("Calls aren't available right now.");
+        expect(page.text()).not.toContain("Send a message");
+    });
+
+    test("what's typed in the panel stays out of the page's hotkeys", async () => {
+        const {page} = await show(widget({mode: "text"}));
+        await page.press("Open chat");
+        const panel = page.byClass("panel")[0] as NonNullable<ReturnType<typeof page.byClass>[0]>;
+        for (const name of ["onKeydown", "onKeyup", "onKeypress"]) {
+            const stopped = vi.fn();
+            fire(panel, name, {key: "k", stopPropagation: stopped});
+            expect(stopped).toHaveBeenCalled();
+        }
     });
 });
 

@@ -1,4 +1,4 @@
-import {MessageError, MicrophoneError, SessionError} from "@naiuz/agents";
+import {BrowserAudio, MessageError, MicrophoneError, newClientMessageId, SessionError} from "@naiuz/agents";
 import type {ClientToolHandler} from "@naiuz/agents";
 import {useConversation} from "@naiuz/agents-vue";
 import {computed, onScopeDispose, ref, shallowRef, watch} from "vue";
@@ -55,12 +55,16 @@ export function useWidgetConversation(options: {
     const callStartedAt = ref<number | null>(null);
     const handedOffInCall = ref(false);
     const callEnded = ref(false);
+    /** Goes up with each operator's reply, for a screen with nowhere to show it. */
+    const operatorWrote = ref(0);
 
     let serverUrl: string | null = null;
     let starting: Promise<boolean> | null = null;
     let calls = 0;
     let disposed = false;
     let loaded = false;
+    /** What a visitor told a session that never came: the next one takes it. */
+    let unsentContact: ContactDetails = {};
     let typingTimer: ReturnType<typeof setTimeout> | undefined;
     let logTimer: ReturnType<typeof setTimeout> | undefined;
     let seenTimer: ReturnType<typeof setTimeout> | undefined;
@@ -99,7 +103,7 @@ export function useWidgetConversation(options: {
         if (!hasVisitor || token === null) return;
         try {
             const log = await api.messages(token, position);
-            apply({type: "log", messages: log.messages, earlier: position.before !== undefined});
+            apply({type: "log", messages: log.messages, earlier: position.before !== undefined, conversation: chat.getId() || call.getId() || null});
             if (position.after === undefined) hasEarlier.value = log.has_more;
         } catch {
             // What's on the page stays, and the socket goes on.
@@ -138,6 +142,7 @@ export function useWidgetConversation(options: {
             if (message.source === "operator") {
                 clearTimeout(typingTimer);
                 operatorTyping.value = null;
+                operatorWrote.value += 1;
                 // Its files and quote are in the log.
                 if (hasVisitor) catchUp();
             }
@@ -173,8 +178,11 @@ export function useWidgetConversation(options: {
             apply({type: "transferred", name: agentName});
         },
         onHistory: (messages) => {
-            if (hasVisitor) catchUp();
-            else apply({type: "history", messages});
+            if (hasVisitor) {
+                catchUp();
+                // A reply that ended while the connection was down may not have reached the log yet.
+                readLogSoon();
+            } else apply({type: "history", messages});
         },
         onDisconnect: (details) => {
             if (details.reason === "error" && !disposed) failure.value = "connect";
@@ -201,9 +209,12 @@ export function useWidgetConversation(options: {
         if (chat.status.value === "connected" && token !== null && serverUrl !== null) storage.setSession({token, url: serverUrl});
     }
 
-    watch(chat.status, keepSession);
+    watch(chat.status, (status) => {
+        keepSession();
+        if (status !== "connected") apply({type: "cut"});
+    });
 
-    function common() {
+    function common(language = true) {
         const clientTools = options.clientTools();
         const dynamicVariables = options.dynamicVariables();
         return {
@@ -211,8 +222,26 @@ export function useWidgetConversation(options: {
             ...(clientTools === undefined ? {} : {clientTools}),
             ...(dynamicVariables === undefined ? {} : {dynamicVariables}),
             // The chip is a widget's own, within the agent's languages; an agent's id has only what the agent allows.
-            ...(hasVisitor && settings.value?.languages.includes(locale.value) === true ? {overrides: {language: locale.value}} : {}),
+            ...(language && hasVisitor && settings.value?.languages.includes(locale.value) === true ? {overrides: {language: locale.value}} : {}),
         };
+    }
+
+    /** The text session on this token. A language the conversation's agent hasn't got, as after a transfer, is dropped. */
+    async function connect(token: string, url: string): Promise<void> {
+        const session = {...common(), token, serverUrl: url};
+        try {
+            await chat.startSession(session);
+        } catch (error) {
+            if (!(error instanceof SessionError && error.code === 4003 && session.overrides !== undefined)) throw error;
+            await chat.startSession({...common(false), token, serverUrl: url});
+        }
+        keepSession();
+    }
+
+    /** What to send with a new session: what was just said, or what the last one that never came was told. */
+    function contactToSend(contact: ContactDetails): ContactDetails {
+        if (Object.keys(contact).length > 0) unsentContact = contact;
+        return unsentContact;
     }
 
     async function open(contact: ContactDetails): Promise<boolean> {
@@ -220,29 +249,31 @@ export function useWidgetConversation(options: {
         failure.value = null;
         contactErrors.value = {};
         try {
+            const details = contactToSend(contact);
             const kept = storage.session();
-            if (kept !== null && Object.keys(contact).length === 0) {
+            if (kept !== null && Object.keys(details).length === 0) {
                 try {
                     serverUrl = kept.url;
-                    await chat.startSession({...common(), token: kept.token, serverUrl: kept.url});
-                    keepSession();
+                    await connect(kept.token, kept.url);
                     return !disposed;
                 } catch (error) {
-                    // Past its life: a new session finds the same visitor. Anything else says nothing against it.
-                    if (!(error instanceof SessionError && error.code === 4001)) throw error;
+                    // A new session finds the same visitor and whatever they had open. An agent's id has only this token to go on, so only a clear no gives it up.
+                    if (!(error instanceof SessionError) || !(hasVisitor || error.code === 4001 || error.code === 4003)) throw error;
                     storage.forgetSession();
                 }
             }
-            const issued = await api.session({mode: "text", visitorToken: storage.visitorToken(), contact, test: options.test});
+            const issued = await api.session({mode: "text", visitorToken: storage.visitorToken(), contact: details, test: options.test});
+            unsentContact = {};
             if (issued.visitor_token !== undefined) storage.setVisitorToken(issued.visitor_token);
             serverUrl = issued.url;
             if (disposed) return false;
-            await chat.startSession({...common(), token: issued.token, serverUrl: issued.url});
-            keepSession();
+            await connect(issued.token, issued.url);
             return !disposed;
         } catch (error) {
-            if (error instanceof WidgetApiError && error.status === 422) contactErrors.value = error.fields;
-            else if (!disposed) failure.value = "connect";
+            if (error instanceof WidgetApiError && error.status === 422) {
+                contactErrors.value = error.fields;
+                unsentContact = {};
+            } else if (!disposed) failure.value = "connect";
             return false;
         } finally {
             connecting.value = false;
@@ -268,13 +299,22 @@ export function useWidgetConversation(options: {
         }
     }
 
+    /** When the agent asks for details, the consent line sits over the first message, and whoever read it and wrote has agreed. */
+    function keepConsent(): void {
+        const token = storage.visitorToken();
+        if (!hasVisitor || token === null || settings.value?.contact.mode !== "agent_asks" || settings.value.contact.consent === null) return;
+        api.session({mode: "text", visitorToken: token, contact: {consent: true}, test: options.test}).catch(() => undefined);
+    }
+
     /** Shows the message at once, and turns it into Not sent if the server refuses it or the connection drops first. */
     async function send(text: string, replyTo: Quote | null = null): Promise<void> {
         const message = text.trim();
         if (message === "") return;
-        const clientMessageId = globalThis.crypto.randomUUID();
+        const clientMessageId = newClientMessageId();
+        const first = !transcript.value.lines.some((line) => line.kind === "customer");
         apply({type: "sending", clientMessageId, text: message, replyTo});
         await deliver(clientMessageId, message, replyTo?.id ?? null);
+        if (first) keepConsent();
     }
 
     const filesAwaitingRetry = new Map<string, {file: File; caption: string | null; replyTo: number | null}>();
@@ -301,7 +341,7 @@ export function useWidgetConversation(options: {
             fileProblem.value = "too_large";
             return;
         }
-        const clientMessageId = globalThis.crypto.randomUUID();
+        const clientMessageId = newClientMessageId();
         apply({
             type: "sending",
             clientMessageId,
@@ -327,16 +367,42 @@ export function useWidgetConversation(options: {
         if (chat.sendFeedback(line.eventId, next)) apply({type: "feedback", key: line.key, score: next});
     }
 
+    /**
+     * The call's audio, made and started now, as the session comes after an await and some browsers let audio start only
+     * inside the gesture. None where there's no Web Audio, and the session then says so.
+     */
+    function warmedUpAudio(): BrowserAudio | undefined {
+        if (typeof AudioContext === "undefined") return undefined;
+        const audio = new BrowserAudio();
+        audio.warmUp();
+        return audio;
+    }
+
     /** The session a call opens the conversation with, so the agent greets by voice. The text session follows on its token. */
-    async function openWithCall(contact: ContactDetails): Promise<void> {
-        const issued = await api.session({mode: "voice", visitorToken: storage.visitorToken(), contact, test: options.test});
+    async function openWithCall(contact: ContactDetails, current: () => boolean, passOnAudio: () => {audio?: BrowserAudio}): Promise<void> {
+        const issued = await api.session({mode: "voice", visitorToken: storage.visitorToken(), contact: contactToSend(contact), test: options.test});
+        unsentContact = {};
         if (issued.visitor_token !== undefined) storage.setVisitorToken(issued.visitor_token);
         serverUrl = issued.url;
-        await call.startSession({...common(), textOnly: false, token: issued.token, serverUrl: issued.url});
+        if (!current()) return;
+        await call.startSession({...common(), ...passOnAudio(), textOnly: false, token: issued.token, serverUrl: issued.url});
         const token = call.getResumeToken();
         if (token !== null && !disposed) {
             await chat.startSession({...common(), token, serverUrl: issued.url}).catch(() => undefined);
             keepSession();
+        }
+    }
+
+    /** A call beside the text session. Its token says what the organization could pay for when it opened, so a no may be out of date. */
+    async function joinWithCall(token: string, url: string, current: () => boolean, audio: {audio?: BrowserAudio}): Promise<void> {
+        try {
+            await call.startSession({token, serverUrl: url, textOnly: false, ...audio});
+        } catch (error) {
+            if (!(error instanceof SessionError && error.code === 4003) || !current()) throw error;
+            // An agent's id has no visitor, so a new session would be another conversation.
+            if (!hasVisitor) throw new WidgetApiError(402, "insufficient_balance", error.message);
+            const issued = await api.session({mode: "voice", visitorToken: storage.visitorToken(), contact: {}, test: options.test});
+            if (current()) await call.startSession({token: issued.token, serverUrl: issued.url, textOnly: false});
         }
     }
 
@@ -348,6 +414,12 @@ export function useWidgetConversation(options: {
         if (calling.value || call.status.value !== "disconnected" || disposed) return false;
         const number = ++calls;
         const current = () => number === calls && !disposed;
+        let audio = warmedUpAudio();
+        const passOnAudio = () => {
+            const passed = audio === undefined ? {} : {audio};
+            audio = undefined;
+            return passed;
+        };
         calling.value = true;
         callProblem.value = null;
         callEnded.value = false;
@@ -355,24 +427,27 @@ export function useWidgetConversation(options: {
         contactErrors.value = {};
         try {
             if (chat.status.value === "disconnected" && storage.session() === null) {
-                await openWithCall(contact);
+                await openWithCall(contact, current, passOnAudio);
             } else {
-                if (!(await startChat())) {
-                    if (current()) callProblem.value = "failed";
+                if (!(await startChat(contact))) {
+                    if (current() && Object.keys(contactErrors.value).length === 0) callProblem.value = "failed";
                     return false;
                 }
                 // Read now: a reconnect on the way renews it.
                 const token = chat.getResumeToken();
                 if (!current() || token === null || serverUrl === null) return false;
-                await call.startSession({token, serverUrl, textOnly: false});
+                await joinWithCall(token, serverUrl, current, passOnAudio());
             }
-            if (current()) callStartedAt.value = Date.now();
+            if (!current()) return false;
+            callStartedAt.value = Date.now();
             return true;
         } catch (error) {
             // A start ended on its way says nothing.
             if (!current()) return false;
-            if (error instanceof WidgetApiError && error.status === 422) contactErrors.value = error.fields;
-            else if (error instanceof WidgetApiError && error.status === 402) callProblem.value = "balance";
+            if (error instanceof WidgetApiError && error.status === 422) {
+                contactErrors.value = error.fields;
+                unsentContact = {};
+            } else if (error instanceof WidgetApiError && error.status === 402) callProblem.value = "balance";
             else if (error instanceof MicrophoneError) callProblem.value = "microphone";
             else if (error instanceof SessionError && error.code === 4009) callProblem.value = "busy";
             else if (error instanceof SessionError && error.code === 4010) callProblem.value = "balance";
@@ -380,6 +455,7 @@ export function useWidgetConversation(options: {
             return false;
         } finally {
             if (number === calls) calling.value = false;
+            audio?.close().catch(() => undefined);
         }
     }
 
@@ -424,7 +500,8 @@ export function useWidgetConversation(options: {
     }
 
     function countOpen(): void {
-        if (!hasVisitor) return;
+        // The widget's own test page proves nothing about a site.
+        if (!hasVisitor || options.test) return;
         const now = Date.now();
         const last = storage.lastOpenedAt();
         if (last !== null && last <= now && now - last < OPEN_COUNTED_EVERY_MS) return;
@@ -432,7 +509,15 @@ export function useWidgetConversation(options: {
         api.opened();
     }
 
+    /** What came while the tab was away is read once the visitor is back to it. */
+    function onVisibilityChange(): void {
+        if (!visible()) return;
+        unread.value = 0;
+        markSeenSoon();
+    }
+
     if (!options.preview) {
+        document.addEventListener("visibilitychange", onVisibilityChange);
         watch(
             isOpen,
             (opened) => {
@@ -454,6 +539,7 @@ export function useWidgetConversation(options: {
         disposed = true;
         calls += 1;
         stopPolling();
+        if (!options.preview) document.removeEventListener("visibilitychange", onVisibilityChange);
         clearTimeout(typingTimer);
         clearTimeout(logTimer);
         clearTimeout(seenTimer);
@@ -488,6 +574,7 @@ export function useWidgetConversation(options: {
         callStartedAt,
         callEnded,
         handedOffInCall,
+        operatorWrote,
         callLive: computed(() => call.status.value !== "disconnected"),
         agentMode: call.mode,
         muted: call.micMuted,

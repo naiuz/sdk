@@ -237,6 +237,13 @@ describe("capture", () => {
         expect(audio.inputLevel()).toBe(0);
     });
 
+    test("warming up starts what needs the user's gesture, before anything asks for the microphone", () => {
+        const audio = new BrowserAudio();
+        audio.warmUp();
+        expect(context().resume).toHaveBeenCalled();
+        expect(getUserMedia).not.toHaveBeenCalled();
+    });
+
     test("a refused microphone is a MicrophoneError", async () => {
         const refusal = new DOMException("Permission denied", "NotAllowedError");
         getUserMedia.mockImplementation(() => Promise.reject(refusal));

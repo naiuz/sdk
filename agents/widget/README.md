@@ -37,4 +37,4 @@ document.querySelector("neuronai-agent").clientTools = {
 
 With in-page links on, a link to the page's own site stays on the page, and the visitor keeps the chat. A site with a router can take it, by listening for `neuron-widget:navigate` on `window` and cancelling it.
 
-A site with a Content-Security-Policy needs to allow the script's origin in `script-src` and `connect-src`, its socket in `connect-src`, and `blob:` in `worker-src` for a call's audio.
+A site with a Content-Security-Policy needs to allow the script's origin in `script-src` and `connect-src`, its socket in `connect-src`, and for a call's audio, whose worklets load from a `blob:` address, `blob:` in `script-src`. Logos and operators' avatars come from `img-src`. Its styles need nothing: they're a constructed sheet, which `style-src` leaves alone. A browser too old for one falls back to a `<style>`, which needs `'unsafe-inline'`.

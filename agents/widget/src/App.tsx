@@ -98,9 +98,10 @@ export const App = defineComponent({
         let pending: {target: "chat" | "call"; question: string | undefined} = {target: "chat", question: undefined};
         let opened = false;
 
-        function firstScreen(): void {
+        /** Where the panel opens: the chat where there's only text, or a reply waiting to be read. */
+        function firstScreen(replyWaiting: boolean): void {
             const mode = settings.value?.mode;
-            if (mode === "text") go("chat");
+            if (mode === "text" || replyWaiting) go("chat");
             else screen.value = mode === "voice" ? "call" : "home";
         }
 
@@ -141,16 +142,20 @@ export const App = defineComponent({
             const started = target === "call" ? await conversation.startCall(details) : await conversation.startChat(details);
             busy.value = false;
             if (Object.keys(conversation.contactErrors.value).length > 0) return;
+            // A call that can't be goes on as text, with what they said.
+            const problem = conversation.callProblem.value;
+            if (target === "call" && !started && problem !== null && problem !== "failed" && settings.value?.mode !== "voice") return;
             screen.value = target;
             if (started && question !== undefined) void conversation.send(question);
         }
 
         function open(): void {
+            const replyWaiting = conversation.unread.value > 0;
             isOpen.value = true;
             invited.value = false;
             if (!opened) {
                 opened = true;
-                firstScreen();
+                firstScreen(replyWaiting);
             }
         }
 
@@ -164,6 +169,11 @@ export const App = defineComponent({
             screen.value = "chat";
             void conversation.startChat();
         });
+        // An operator's reply has nowhere to show on a screen with no conversation on it.
+        watch(conversation.operatorWrote, () => {
+            const onCall = conversation.callLive.value || conversation.calling.value;
+            if (screen.value === "home" || (screen.value === "call" && !onCall)) screen.value = "chat";
+        });
         watch(conversation.callEnded, (ended) => {
             if (ended && (conversation.handedOffInCall.value || settings.value?.mode !== "voice")) screen.value = "chat";
         });
@@ -171,7 +181,8 @@ export const App = defineComponent({
         async function load(language: Locale | null): Promise<void> {
             try {
                 const found = await api.settings(language, storage.visitorToken());
-                settings.value = found;
+                // On a change of language, what's on the page stays, with any call on it.
+                if (found !== null || settings.value === null) settings.value = found;
                 if (found !== null) {
                     i18n.locale.value = language ?? found.locale;
                     conversation.unread.value = isOpen.value ? 0 : found.unread;
@@ -180,7 +191,6 @@ export const App = defineComponent({
                 if (error instanceof WidgetApiError && error.code === "origin_not_allowed") {
                     console.warn(`[neuronai-agent] ${error.message}`);
                 }
-                settings.value = null;
             }
         }
 
@@ -256,6 +266,11 @@ export const App = defineComponent({
             },
         });
 
+        /** A shadow root hides the field from a page's hotkeys, which would take what's typed here for shortcuts. */
+        const keepFromThePage = (event: KeyboardEvent) => {
+            event.stopPropagation();
+        };
+
         return () => {
             const current = settings.value;
             if (current === null) return null;
@@ -274,7 +289,10 @@ export const App = defineComponent({
                             class={["panel", onLeft && "panel-left", fullScreen.value && "panel-full"]}
                             role="dialog"
                             aria-label={current.texts.title}
+                            onKeyup={keepFromThePage}
+                            onKeypress={keepFromThePage}
                             onKeydown={(event: KeyboardEvent) => {
+                                keepFromThePage(event);
                                 if (event.key !== "Escape") return;
                                 if (image.value !== null) image.value = null;
                                 else close();

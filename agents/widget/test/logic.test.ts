@@ -1,5 +1,5 @@
 import {readFileSync} from "node:fs";
-import {describe, expect, test} from "vitest";
+import {describe, expect, test, vi} from "vitest";
 import {brandColors, contrastRatio, lighterTint, orbColors} from "../src/brand";
 import {callClock, captionSplit} from "../src/caption";
 import {createI18n, resolveLocale} from "../src/i18n";
@@ -161,6 +161,16 @@ describe("what's kept in the browser", () => {
         const local = area();
         local.setItem("neuronai-widget:a:session", "{not json");
         expect(createStorage("a", {local: () => local, session: area}).session()).toBeNull();
+    });
+
+    test("a link's reopening doesn't wait for a later visit", () => {
+        const tab = area();
+        const storage = createStorage("a", {local: area, session: () => tab});
+        const now = vi.spyOn(Date, "now").mockReturnValue(1_000_000);
+        storage.setResumeOpen();
+        now.mockReturnValue(1_000_000 + 60_000);
+        expect(storage.takeResumeOpen()).toBe(false);
+        now.mockRestore();
     });
 
     test("a link's reopening is taken once", () => {

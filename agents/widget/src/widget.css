@@ -102,6 +102,30 @@ p {
     font-variant-numeric: tabular-nums;
     pointer-events: none;
 }
+.launcher-call {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 6px 6px 14px;
+    border: 1px solid var(--slate-200);
+    border-radius: 9999px;
+    background: #fff;
+    color: var(--slate-900);
+    font-weight: 500;
+    white-space: nowrap;
+    box-shadow: 0 8px 24px rgb(15 23 42 / 0.14);
+}
+.launcher-call-end {
+    min-height: 44px;
+    padding: 0 16px;
+    border-radius: 9999px;
+    background: var(--slate-900);
+    color: #fff;
+    font-weight: 600;
+}
+.launcher-call-end:hover {
+    background: var(--slate-700);
+}
 .launcher-message {
     max-width: 208px;
     padding: 10px 14px;
@@ -480,8 +504,10 @@ p {
     min-width: 0;
 }
 .message-name {
+    max-width: 100%;
     color: var(--slate-500);
     font-size: 12px;
+    overflow-wrap: anywhere;
 }
 .message-body {
     display: flex;
@@ -703,6 +729,7 @@ p {
 .notice {
     align-self: center;
     max-width: 90%;
+    overflow-wrap: anywhere;
     padding: 2px 8px;
     color: var(--slate-500);
     font-size: 12px;
@@ -710,6 +737,22 @@ p {
 }
 .typing-name {
     align-self: flex-start;
+}
+.handoff-card > span:last-child {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+.consent-line {
+    align-self: stretch;
+    padding: 2px 4px;
+    color: var(--slate-500);
+    font-size: 12px;
+    line-height: 16px;
+    overflow-wrap: anywhere;
+}
+.consent-line a {
+    color: inherit;
+    text-decoration: underline;
 }
 .handoff-card {
     display: flex;

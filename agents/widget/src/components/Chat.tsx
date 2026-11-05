@@ -1,6 +1,6 @@
-import {computed, defineComponent, h, nextTick, onBeforeUnmount, onMounted, ref, watch} from "vue";
+import {computed, defineComponent, Fragment, h, nextTick, onBeforeUnmount, onMounted, ref, watch} from "vue";
 import {useWidget} from "../context";
-import {followOnThisSite, isSameSite} from "../links";
+import {followOnThisSite, isSafeLink, isSameSite} from "../links";
 import type {Quote} from "../settings";
 import type {Line} from "../transcript";
 import {Composer} from "./Composer";
@@ -17,7 +17,7 @@ export const Chat = defineComponent({
     setup(_props, {emit}) {
         const {settings, colors, i18n, go, close, conversation, screen, preview, previewSample, fullScreen} = useWidget();
         const {t} = i18n;
-        const {transcript, failure, callProblem, fileProblem, operatorTyping, loadingLog, hasEarlier, callLive} = conversation;
+        const {transcript, failure, callProblem, fileProblem, operatorTyping, loadingLog, hasEarlier, callLive, calling} = conversation;
         const list = ref<HTMLElement | null>(null);
         const following = ref(true);
         const replyTo = ref<Quote | null>(null);
@@ -102,7 +102,9 @@ export const Chat = defineComponent({
         }
 
         return () => {
-            const {texts, mode} = settings.value;
+            const {texts, mode, contact} = settings.value;
+            // When the agent asks for details, the consent line sits over the first message.
+            const consentLine = contact.mode === "agent_asks" ? contact.consent : null;
             const problem =
                 failure.value === "connect"
                     ? null
@@ -146,7 +148,8 @@ export const Chat = defineComponent({
                                 }}
                             />
                         ) : null}
-                        <HeaderButton label={t("header.close")} icon="x" onClick={close} />
+                        {/* The call goes on with the panel shut, and the launcher says so. */}
+                        {callLive.value || calling.value ? <HeaderButton label={t("header.minimize")} icon="down" onClick={close} /> : <HeaderButton label={t("header.close")} icon="x" onClick={close} />}
                     </header>
                     {callLive.value ? (
                         <button
@@ -179,6 +182,19 @@ export const Chat = defineComponent({
                                     <div class="bubble">{texts.welcome}</div>
                                 </div>
                             </div>
+                        ) : null}
+                        {consentLine !== null && !hasVisitorLine.value && !preview ? (
+                            <p class="consent-line">
+                                {consentLine.text ?? t("contact.consent_default")}
+                                {consentLine.privacy_policy_url === null || !isSafeLink(consentLine.privacy_policy_url) ? null : (
+                                    <>
+                                        {" "}
+                                        <a href={consentLine.privacy_policy_url} target="_blank" rel="noopener noreferrer">
+                                            {t("contact.privacy_policy")}
+                                        </a>
+                                    </>
+                                )}
+                            </p>
                         ) : null}
                         {lines.value.map((line) =>
                             line.kind === "notice" ? (

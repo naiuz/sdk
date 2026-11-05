@@ -71,7 +71,7 @@ export const Call = defineComponent({
                     : callProblem.value === "busy"
                       ? t("problems.busy_voice")
                       : callProblem.value === "balance"
-                        ? t("problems.balance")
+                        ? t(mode === "voice" ? "problems.balance_voice" : "problems.balance")
                         : callProblem.value === "failed"
                           ? t("problems.call_failed")
                           : null;
@@ -94,7 +94,7 @@ export const Call = defineComponent({
                                 {callStartedAt.value === null ? null : <span class="clock"> {callClock(Math.max(0, now.value - callStartedAt.value))}</span>}
                             </p>
                         </div>
-                        <HeaderButton label={live ? t("header.minimize") : t("header.close")} icon={live ? "down" : "x"} onClick={close} />
+                        <HeaderButton label={live || calling.value ? t("header.minimize") : t("header.close")} icon={live || calling.value ? "down" : "x"} onClick={close} />
                     </header>
                     <div class="call-stage">
                         <div class="call-orb">
@@ -152,18 +152,40 @@ export const Call = defineComponent({
                         </div>
                     ) : (
                         <div class="call-controls">
-                            <button
-                                type="button"
-                                class="primary-button"
-                                style={{background: brand, color: colors.value.onBrand}}
-                                disabled={calling.value}
-                                aria-busy={calling.value}
-                                onClick={() => {
-                                    go("call");
-                                }}
-                            >
-                                {conversation.callEnded.value ? t("call.again") : t("call.start")}
-                            </button>
+                            {mode === "voice" ? null : (
+                                <button
+                                    type="button"
+                                    class="round-control"
+                                    onClick={() => {
+                                        go("chat");
+                                    }}
+                                >
+                                    <Icon name="keyboard" size={20} />
+                                    <span>{t("call.type")}</span>
+                                </button>
+                            )}
+                            {calling.value ? (
+                                <button
+                                    type="button"
+                                    class="end-button"
+                                    onClick={() => {
+                                        void conversation.endCall();
+                                    }}
+                                >
+                                    {t("call.end")}
+                                </button>
+                            ) : (
+                                <button
+                                    type="button"
+                                    class="primary-button"
+                                    style={{background: brand, color: colors.value.onBrand}}
+                                    onClick={() => {
+                                        go("call");
+                                    }}
+                                >
+                                    {conversation.callEnded.value ? t("call.again") : t("call.start")}
+                                </button>
+                            )}
                         </div>
                     )}
                 </div>

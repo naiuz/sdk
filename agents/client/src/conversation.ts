@@ -1,5 +1,6 @@
 import type {AudioFormat, AudioFormats, ClientToolCall, ConversationInitiationClientData, HistoryMessage, Overrides, ServerEvent} from "@naiuz/agents-protocol";
 import {BrowserAudio} from "./audio/browser";
+import {newClientMessageId} from "./ids";
 import type {AudioIO} from "./audio/io";
 import {Call} from "./call";
 import {MessageError, MicrophoneError, SessionError} from "./errors";
@@ -99,7 +100,7 @@ export class Conversation {
         if (link !== null) link.search = "";
         this.serverUrl = link?.href ?? options.serverUrl ?? DEFAULT_URL;
         this.WebSocketClass = options.WebSocket ?? (globalThis.WebSocket as unknown as WebSocketFactory);
-        this.nextId = options.idGenerator ?? (() => globalThis.crypto.randomUUID());
+        this.nextId = options.idGenerator ?? newClientMessageId;
         // Made here, before startSession's first await, so its context starts inside the caller's gesture.
         this.audio = (options.overrides?.textOnly ?? options.textOnly) === false ? (options.audio ?? new BrowserAudio()) : null;
     }

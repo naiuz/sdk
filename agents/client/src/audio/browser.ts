@@ -89,6 +89,13 @@ export class BrowserAudio implements AudioIO {
         this.ambienceGain.connect(this.gain);
     }
 
+    /** For a call whose session comes after an await: starts now, inside the user's gesture, what a browser lets start only there. */
+    warmUp(): void {
+        if (this.context.state === "suspended") this.context.resume().catch(() => undefined);
+        this.element.srcObject = this.output.stream;
+        this.element.play().catch(() => undefined);
+    }
+
     async startCapture(): Promise<void> {
         // Everything a browser lets start only inside the user's gesture starts before the first await.
         const resumed = this.context.state === "suspended" ? this.context.resume() : Promise.resolve();

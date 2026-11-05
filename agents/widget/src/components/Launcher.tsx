@@ -18,7 +18,7 @@ export const Launcher = defineComponent({
     },
     emits: ["open"],
     setup(props, {emit}) {
-        const {settings, colors, i18n} = useWidget();
+        const {settings, colors, i18n, conversation} = useWidget();
         const shown = ref(false);
         let timer: ReturnType<typeof setTimeout> | undefined;
         let shows = 0;
@@ -66,7 +66,22 @@ export const Launcher = defineComponent({
             const name = settings.value.texts.title;
             return (
                 <div class={["launcher", onLeft && "launcher-left"]}>
-                    {message.value !== null && shown.value ? (
+                    {conversation.callLive.value || conversation.calling.value ? (
+                        <div class="launcher-call" role="status">
+                            <Icon name={conversation.muted.value ? "mic-off" : "mic"} size={16} />
+                            <span>{i18n.t("launcher.on_call")}</span>
+                            <button
+                                type="button"
+                                class="launcher-call-end"
+                                onClick={() => {
+                                    void conversation.endCall();
+                                }}
+                            >
+                                {i18n.t("call.end")}
+                            </button>
+                        </div>
+                    ) : null}
+                    {message.value !== null && shown.value && !conversation.callLive.value && !conversation.calling.value ? (
                         <button
                             type="button"
                             class={["launcher-message", `enter-${timing.value.style}`]}
