@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/naiuz/sdk/compare/js-v0.1.1...js-v0.1.2) (2026-11-17)
+
+
+### Bug Fixes
+
+* link the TypeScript package's npm page to the API's page on neuronai.uz and to the docs ([4447d90](https://github.com/naiuz/sdk/commit/4447d90016bcf5c3b45ed9a4011aaeb2b38d681b))
+
 ## [0.1.1](https://github.com/naiuz/sdk/compare/js-v0.1.0...js-v0.1.1) (2026-10-07)
 
 
