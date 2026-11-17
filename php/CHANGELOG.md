@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/naiuz/sdk/compare/php-v0.1.1...php-v0.1.2) (2026-11-17)
+
+
+### Bug Fixes
+
+* link the PHP package's Packagist page to the API's page on neuronai.uz and to the docs ([70e9324](https://github.com/naiuz/sdk/commit/70e932467d178a4938da02e7108f23ad52c54995))
+
 ## [0.1.1](https://github.com/naiuz/sdk/compare/php-v0.1.0...php-v0.1.1) (2026-10-07)
 
 
