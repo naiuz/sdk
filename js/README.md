@@ -1,6 +1,8 @@
 # NeuronAI TypeScript SDK
 
-The official TypeScript and JavaScript client for the NeuronAI API: speech synthesis and dialogue, voice cloning, transcription, chat completions, embeddings and rerank. It has no dependencies, and runs on Node 20 or newer, Bun, Deno and Cloudflare Workers.
+The official TypeScript and JavaScript client for the [NeuronAI API](https://neuronai.uz/en/api/): speech synthesis and dialogue, voice cloning, transcription, chat completions, embeddings and rerank. It has no dependencies, and runs on Node 20 or newer, Bun, Deno and Cloudflare Workers.
+
+The [API docs](https://docs.neuronai.uz/api) have a guide for each product, and their [SDK page](https://docs.neuronai.uz/api/sdks) takes you from install to your first speech.
 
 ## Install
 

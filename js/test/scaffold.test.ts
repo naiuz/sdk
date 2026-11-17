@@ -32,9 +32,12 @@ describe("the package", () => {
 
     it("names its folder of the GitHub repository, which npm checks a provenance statement against", () => {
         expect(manifest.repository).toEqual({type: "git", url: "git+https://github.com/naiuz/sdk.git", directory: "js"});
-        expect(manifest.homepage).toBe("https://github.com/naiuz/sdk/tree/main/js#readme");
         expect(manifest.bugs).toEqual({url: "https://github.com/naiuz/sdk/issues"});
         expect(manifest.keywords).toContain("neuronai");
+    });
+
+    it("names the API's page as its homepage, which npm's page links", () => {
+        expect(manifest.homepage).toBe("https://neuronai.uz/en/api/");
     });
 
     it("is published public, with provenance", () => {
@@ -46,5 +49,14 @@ describe("the package", () => {
         expect(readme).toContain("[examples/](https://github.com/naiuz/sdk/tree/main/js/examples)");
         const targets = [...readme.matchAll(/\]\(([^)]*)\)/g)].map((match) => match[1]);
         expect(targets.filter((target) => !target?.startsWith("https://"))).toEqual([]);
+    });
+
+    it("opens its README with links to the API's page and the docs", () => {
+        const opening = readme.split("\n## ")[0];
+        expect(opening).toContain("[NeuronAI API](https://neuronai.uz/en/api/)");
+        expect(opening).toContain("[API docs](https://docs.neuronai.uz/api)");
+        expect(opening).toContain("[SDK page](https://docs.neuronai.uz/api/sdks)");
+        // The dashboard's old docs pages only redirect to docs.neuronai.uz now.
+        expect(readme).not.toContain("my.neuronai.uz/docs");
     });
 });
