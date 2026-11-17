@@ -1,6 +1,8 @@
 # NeuronAI SDKs
 
-Official client libraries for the NeuronAI API: speech synthesis, voices, transcription, chat completions, embeddings and rerank.
+Official client libraries for the [NeuronAI API](https://neuronai.uz/en/api/): speech synthesis, voices, transcription, chat completions, embeddings and rerank.
+
+The [API docs](https://docs.neuronai.uz/api) have a guide for each product, and their [SDK page](https://docs.neuronai.uz/api/sdks) takes each of these SDKs from install to its first speech.
 
 | Language | Package | Source |
 |---|---|---|
