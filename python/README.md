@@ -1,6 +1,8 @@
 # NeuronAI Python SDK
 
-The official Python client for the NeuronAI API: speech synthesis and dialogue, voice cloning, transcription, chat completions, embeddings and rerank. It runs on Python 3.10 to 3.14, with a sync and an async client, and depends only on httpx and pydantic.
+The official Python client for the [NeuronAI API](https://neuronai.uz/en/api/): speech synthesis and dialogue, voice cloning, transcription, chat completions, embeddings and rerank. It runs on Python 3.10 to 3.14, with a sync and an async client, and depends only on httpx and pydantic.
+
+The [API docs](https://docs.neuronai.uz/api) have a guide for each product, and their [SDK page](https://docs.neuronai.uz/api/sdks) takes you from install to your first speech.
 
 ## Install
 

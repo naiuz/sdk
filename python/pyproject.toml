@@ -40,8 +40,8 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/naiuz/sdk/tree/main/python"
-Documentation = "https://github.com/naiuz/sdk/blob/main/python/api.md"
+Homepage = "https://neuronai.uz/en/api/"
+Documentation = "https://docs.neuronai.uz/api/sdks"
 Repository = "https://github.com/naiuz/sdk"
 Issues = "https://github.com/naiuz/sdk/issues"
 Changelog = "https://github.com/naiuz/sdk/blob/main/python/CHANGELOG.md"
