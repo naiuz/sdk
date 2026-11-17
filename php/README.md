@@ -1,6 +1,8 @@
 # NeuronAI PHP SDK
 
-The official PHP client for the NeuronAI API: speech synthesis and dialogue, voice cloning, transcription, chat completions, embeddings and rerank. It runs on PHP 8.2 to 8.5, sends its calls through any PSR-18 HTTP client, such as Guzzle or Symfony HttpClient, and depends only on the PSR interfaces and php-http/discovery.
+The official PHP client for the [NeuronAI API](https://neuronai.uz/en/api/): speech synthesis and dialogue, voice cloning, transcription, chat completions, embeddings and rerank. It runs on PHP 8.2 to 8.5, sends its calls through any PSR-18 HTTP client, such as Guzzle or Symfony HttpClient, and depends only on the PSR interfaces and php-http/discovery.
+
+The [API docs](https://docs.neuronai.uz/api) have a guide for each product, and their [SDK page](https://docs.neuronai.uz/api/sdks) takes you from install to your first speech.
 
 ## Install
 

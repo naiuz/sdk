@@ -68,12 +68,23 @@ final class ScaffoldTest extends TestCase
         self::assertSame([], array_values(array_filter($links[1], static fn(string $target): bool => !str_starts_with($target, 'https://'))));
     }
 
-    public function test_packagist_s_page_links_the_sdk_s_folder_of_the_github_repository(): void
+    public function test_the_readme_opens_with_links_to_the_api_s_page_and_the_docs(): void
+    {
+        $readme = (string) file_get_contents(self::PHP_DIR . '/README.md');
+        $opening = explode("\n## ", $readme, 2)[0];
+        self::assertStringContainsString('[NeuronAI API](https://neuronai.uz/en/api/)', $opening);
+        self::assertStringContainsString('[API docs](https://docs.neuronai.uz/api)', $opening);
+        self::assertStringContainsString('[SDK page](https://docs.neuronai.uz/api/sdks)', $opening);
+        // The dashboard's old docs pages only redirect to docs.neuronai.uz now.
+        self::assertStringNotContainsString('my.neuronai.uz/docs', $readme);
+    }
+
+    public function test_packagist_s_page_links_the_api_s_page_the_sdk_docs_and_the_sdk_s_folder(): void
     {
         $composer = self::composer();
-        self::assertSame('https://github.com/naiuz/sdk/tree/main/php', $composer['homepage'] ?? null);
+        self::assertSame('https://neuronai.uz/en/api/', $composer['homepage'] ?? null);
         self::assertSame(
-            ['issues' => 'https://github.com/naiuz/sdk/issues', 'source' => 'https://github.com/naiuz/sdk/tree/main/php', 'docs' => 'https://github.com/naiuz/sdk/blob/main/php/api.md'],
+            ['issues' => 'https://github.com/naiuz/sdk/issues', 'source' => 'https://github.com/naiuz/sdk/tree/main/php', 'docs' => 'https://docs.neuronai.uz/api/sdks'],
             $composer['support'] ?? null,
         );
         self::assertIsArray($composer['keywords'] ?? null);

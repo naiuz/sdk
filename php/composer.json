@@ -14,12 +14,12 @@
         "embeddings",
         "uzbek"
     ],
-    "homepage": "https://github.com/naiuz/sdk/tree/main/php",
+    "homepage": "https://neuronai.uz/en/api/",
     "license": "MIT",
     "support": {
         "issues": "https://github.com/naiuz/sdk/issues",
         "source": "https://github.com/naiuz/sdk/tree/main/php",
-        "docs": "https://github.com/naiuz/sdk/blob/main/php/api.md"
+        "docs": "https://docs.neuronai.uz/api/sdks"
     },
     "require": {
         "php": "^8.2",
